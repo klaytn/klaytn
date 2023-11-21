@@ -71,48 +71,48 @@ func TestBytesConversion(t *testing.T) {
 
 func TestExtHash(t *testing.T) {
 	var (
-		sHash      = "0x1122334411223344112233441122334411223344112233441122334411223344"
-		nNonce     = uint64(0xccccddddeeee01)
-		sNonce     = "0xccccddddeeee01"
-		sExtHash   = "0x1122334411223344112233441122334411223344112233441122334411223344ccccddddeeee01"
-		sExtHash2  = "0x1122334411223344112233441122334411223344112233441122334411223344ccccddddeeee02"
-		sExtLegacy = "0x112233441122334411223344112233441122334411223344112233441122334400000000000000"
-		sEmpty     = "0x000000000000000000000000000000000000000000000000000000000000000000000000000000"
-		bHash      = hexutil.MustDecode(sHash)
-		bNonce     = hexutil.MustDecode(sNonce)
-		bExtHash   = hexutil.MustDecode(sExtHash)
+		sHash     = "0x1122334411223344112233441122334411223344112233441122334411223344"
+		nCounter  = uint64(0xccccddddeeee01)
+		sCounter  = "0xccccddddeeee01"
+		sExtHash  = "0x1122334411223344112233441122334411223344112233441122334411223344ccccddddeeee01"
+		sExtHash2 = "0x1122334411223344112233441122334411223344112233441122334411223344ccccddddeeee02"
+		sExtZero  = "0x112233441122334411223344112233441122334411223344112233441122334400000000000000"
+		sEmpty    = "0x000000000000000000000000000000000000000000000000000000000000000000000000000000"
+		bHash     = hexutil.MustDecode(sHash)
+		bCounter  = hexutil.MustDecode(sCounter)
+		bExtHash  = hexutil.MustDecode(sExtHash)
 	)
 
 	h := BytesToHash(bHash)
-	nonce := BytesToExtHashNonce(bNonce)
-	eh := h.extend(nonce)
+	counter := BytesToExtHashCounter(bCounter)
+	eh := h.extend(counter)
 
 	// ExtHash methods
 	assert.Equal(t, bExtHash, eh.Bytes())
 	assert.Equal(t, sExtHash, eh.Hex())
-	assert.Equal(t, nonce, eh.Nonce())
+	assert.Equal(t, counter, eh.Counter())
 
 	assert.Equal(t, sEmpty, BytesToExtHash(nil).Hex())
-	assert.Equal(t, sExtLegacy, BytesToExtHash(bHash).Hex())
+	assert.Equal(t, sExtZero, BytesToExtHash(bHash).Hex())
 	assert.Equal(t, sExtHash, BytesToExtHash(bExtHash).Hex())
-	assert.Equal(t, sNonce, BytesToExtHashNonce(bNonce).Hex())
+	assert.Equal(t, sCounter, BytesToExtHashCounter(bCounter).Hex())
 
 	assert.Equal(t, sExtHash, HexToExtHash(sExtHash).Hex())
-	assert.Equal(t, sExtLegacy, HexToExtHash(sHash).Hex())
+	assert.Equal(t, sExtZero, HexToExtHash(sHash).Hex())
 
 	// Hash <-> ExtHash
 	assert.Equal(t, h, eh.Unextend())
-	assert.Equal(t, sExtLegacy, h.ExtendLegacy().Hex())
-	ResetExtHashCounterForTest(nNonce - 1)
+	assert.Equal(t, sExtZero, h.ExtendZero().Hex())
+	ResetExtHashCounterForTest(nCounter - 1)
 	assert.Equal(t, sExtHash, h.Extend().Hex())
 	assert.Equal(t, sExtHash2, h.Extend().Hex())
 
 	// Predicates
-	assert.False(t, eh.IsLegacy())
-	assert.True(t, h.ExtendLegacy().IsLegacy())
+	assert.False(t, eh.IsZeroExtended())
+	assert.True(t, h.ExtendZero().IsZeroExtended())
 
 	assert.False(t, EmptyExtHash(eh))
-	assert.True(t, EmptyExtHash(Hash{}.ExtendLegacy()))
+	assert.True(t, EmptyExtHash(Hash{}.ExtendZero()))
 	assert.True(t, EmptyExtHash(ExtHash{}))
 }
 

@@ -36,6 +36,7 @@ import (
 	istanbulCore "github.com/klaytn/klaytn/consensus/istanbul/core"
 	"github.com/klaytn/klaytn/consensus/istanbul/validator"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/crypto/bls"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/log"
@@ -50,28 +51,45 @@ const (
 
 var logger = log.NewModuleLogger(log.ConsensusIstanbulBackend)
 
-func New(rewardbase common.Address, config *istanbul.Config, privateKey *ecdsa.PrivateKey, db database.DBManager, governance governance.Engine, nodetype common.ConnType) consensus.Istanbul {
+type BackendOpts struct {
+	IstanbulConfig    *istanbul.Config // Istanbul consensus core config
+	Rewardbase        common.Address
+	PrivateKey        *ecdsa.PrivateKey // Consensus message signing key
+	BlsSecretKey      bls.SecretKey     // Randao signing key. Required since Randao fork
+	DB                database.DBManager
+	Governance        governance.Engine // Governance parameter provider
+	BlsPubkeyProvider BlsPubkeyProvider // If not nil, override the default BLS public key provider
+	NodeType          common.ConnType
+}
+
+func New(opts *BackendOpts) consensus.Istanbul {
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
 	knownMessages, _ := lru.NewARC(inmemoryMessages)
 	backend := &backend{
-		config:            config,
+		config:            opts.IstanbulConfig,
 		istanbulEventMux:  new(event.TypeMux),
-		privateKey:        privateKey,
-		address:           crypto.PubkeyToAddress(privateKey.PublicKey),
+		privateKey:        opts.PrivateKey,
+		address:           crypto.PubkeyToAddress(opts.PrivateKey.PublicKey),
+		blsSecretKey:      opts.BlsSecretKey,
 		logger:            logger.NewWith(),
-		db:                db,
+		db:                opts.DB,
 		commitCh:          make(chan *types.Result, 1),
 		recents:           recents,
 		candidates:        make(map[common.Address]bool),
 		coreStarted:       false,
 		recentMessages:    recentMessages,
 		knownMessages:     knownMessages,
-		rewardbase:        rewardbase,
-		governance:        governance,
-		nodetype:          nodetype,
-		rewardDistributor: reward.NewRewardDistributor(governance),
+		rewardbase:        opts.Rewardbase,
+		governance:        opts.Governance,
+		blsPubkeyProvider: opts.BlsPubkeyProvider,
+		nodetype:          opts.NodeType,
+		rewardDistributor: reward.NewRewardDistributor(opts.Governance),
 	}
+	if backend.blsPubkeyProvider == nil {
+		backend.blsPubkeyProvider = newChainBlsPubkeyProvider()
+	}
+
 	backend.currentView.Store(&istanbul.View{Sequence: big.NewInt(0), Round: big.NewInt(0)})
 	backend.core = istanbulCore.New(backend, backend.config)
 	return backend
@@ -84,6 +102,7 @@ type backend struct {
 	istanbulEventMux *event.TypeMux
 	privateKey       *ecdsa.PrivateKey
 	address          common.Address
+	blsSecretKey     bls.SecretKey
 	core             istanbulCore.Engine
 	logger           log.Logger
 	db               database.DBManager
@@ -116,8 +135,9 @@ type backend struct {
 
 	// Reference to the governance.Engine
 	governance governance.Engine
-	// Last Block Number which has current Governance Config
-	lastGovernanceBlock uint64
+
+	// Reference to BlsPubkeyProvider
+	blsPubkeyProvider BlsPubkeyProvider
 
 	rewardDistributor *reward.RewardDistributor
 

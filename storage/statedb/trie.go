@@ -44,6 +44,7 @@ type TrieOpts struct {
 	// If PruningBlockNumber is nonzero, trie update and delete operations
 	// will schedule obsolete nodes to be pruned when the given block number becomes obsolete.
 	// This option is only viable when the pruning is enabled on database.
+	LivePruningEnabled bool
 	PruningBlockNumber uint64
 }
 
@@ -74,7 +75,6 @@ type Trie struct {
 	root         node
 	originalRoot common.ExtHash
 
-	pruning           bool // True if the underlying database has pruning enabled.
 	storage           bool // If storage and Pruning are both true, root hash is attached a fresh nonce.
 	pruningMarksCache map[common.ExtHash]uint64
 }
@@ -91,7 +91,7 @@ func (t *Trie) newFlag() nodeFlag {
 // NewTrie will panic if db is nil and returns a MissingNodeError if root does
 // not exist in the database. Accessing the trie loads nodes from db on demand.
 func NewTrie(root common.Hash, db *Database, opts *TrieOpts) (*Trie, error) {
-	return newTrie(root.ExtendLegacy(), db, opts, false)
+	return newTrie(root.ExtendZero(), db, opts, false)
 }
 
 // NewStorageTrie creates a storage trie with an existing root node from db.
@@ -102,7 +102,7 @@ func NewTrie(root common.Hash, db *Database, opts *TrieOpts) (*Trie, error) {
 // not exist in the database. Accessing the trie loads nodes from db on demand.
 //
 // A storage trie is identified with an ExtHash root node. With Live Pruning enabled,
-// its root hash will be extended with a non-legacy nonce.
+// its root hash will be extended with a nonzero nonce.
 func NewStorageTrie(root common.ExtHash, db *Database, opts *TrieOpts) (*Trie, error) {
 	return newTrie(root, db, opts, true)
 }
@@ -119,11 +119,10 @@ func newTrie(root common.ExtHash, db *Database, opts *TrieOpts, storage bool) (*
 		TrieOpts:          *opts,
 		db:                db,
 		originalRoot:      root,
-		pruning:           db.diskDB.ReadPruningEnabled(),
 		storage:           storage,
 		pruningMarksCache: make(map[common.ExtHash]uint64),
 	}
-	if !trie.pruning && trie.PruningBlockNumber != 0 {
+	if !trie.LivePruningEnabled && trie.PruningBlockNumber != 0 {
 		return nil, ErrPruningDisabled
 	}
 	if !common.EmptyExtHash(root) && root.Unextend() != emptyRoot {
@@ -588,13 +587,14 @@ func (t *Trie) CommitExt(onleaf LeafCallback) (root common.ExtHash, err error) {
 
 func (t *Trie) hashRoot(db *Database, onleaf LeafCallback) (common.ExtHash, node) {
 	if t.root == nil {
-		return emptyRoot.ExtendLegacy(), nil
+		return emptyRoot.ExtendZero(), nil
 	}
 	h := newHasher(&hasherOpts{
 		onleaf:      onleaf,
-		pruning:     t.pruning, // If database has pruning enabled, nodes must be stored with ExtHash.
+		pruning:     t.LivePruningEnabled, // If database has pruning enabled, nodes must be stored with ExtHash.
 		storageRoot: t.storage,
 	})
+
 	defer returnHasherToPool(h)
 	hashed, cached := h.hashRoot(t.root, db, true)
 	hash := common.BytesToExtHash(hashed.(hashNode))
@@ -606,7 +606,7 @@ func (t *Trie) markPrunableNode(n node) {
 	// Mark nodes only if both conditions are met:
 	// - t.pruning: database has pruning enabled, i.e. nodes are stored with ExtHash
 	// - t.PruningBlockNumber: requested pruning through state.New -> OpenTrie -> NewTrie.
-	if !t.pruning || t.PruningBlockNumber == 0 {
+	if !t.LivePruningEnabled || t.PruningBlockNumber == 0 {
 		return
 	}
 
@@ -619,7 +619,12 @@ func (t *Trie) markPrunableNode(n node) {
 		// If node.flags.hash is nonempty, it means the node is either:
 		// (1) loaded from databas - subject to pruning,
 		// (2) went through hasher by Hash or Commit - may or may not be in database, add the mark anyway.
-		t.pruningMarksCache[common.BytesToExtHash(hn)] = t.PruningBlockNumber
+		h := common.BytesToExtHash(hn)
+		if !h.IsZeroExtended() || t.originalRoot == h {
+			// (1) Remove a obsolete child node that is unique nonzero-extended)
+			// (2) Remove a obsolete root node that is always zero-extended
+			t.pruningMarksCache[h] = t.PruningBlockNumber
+		}
 	}
 }
 

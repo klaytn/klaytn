@@ -262,6 +262,7 @@ var FlagGroups = []FlagGroup{
 			VMEnableDebugFlag,
 			VMLogTargetFlag,
 			VMTraceInternalTxFlag,
+			VMOpDebugFlag,
 		},
 	},
 	{
@@ -284,6 +285,7 @@ var FlagGroups = []FlagGroup{
 			RPCIdleTimeoutFlag,
 			RPCReadTimeout,
 			RPCWriteTimeoutFlag,
+			RPCUpstreamArchiveENFlag,
 			UnsafeDebugDisableFlag,
 			IPCDisabledFlag,
 			IPCPathFlag,

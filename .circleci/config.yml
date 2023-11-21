@@ -19,66 +19,80 @@ orbs:
   docker: circleci/docker@2.1.1
 
 executors:
-  test-executor:
-    working_directory: /go/src/github.com/klaytn/klaytn
+  linux-executor: # this executor is for general testing and packaging linux binaries
+    working_directory: ~/go/src/github.com/klaytn/klaytn
+    resource_class: medium
     docker:
       - image: klaytn/build_base:1.2-ubuntu18.04-go.1.20.6-solc0.8.13
-  test-others-executor:
+        auth:
+          username: $DOCKER_LOGIN
+          password: $DOCKER_PASSWORD
+  linux-others-executor: # this executor is for test-others job
     working_directory: /go/src/github.com/klaytn/klaytn
+    resource_class: xlarge
     docker:
       - image: klaytn/build_base:1.2-ubuntu18.04-go.1.20.6-solc0.8.13
+        auth:
+          username: $DOCKER_LOGIN
+          password: $DOCKER_PASSWORD
       - image: localstack/localstack:0.13.0
+        auth:
+          username: $DOCKER_LOGIN
+          password: $DOCKER_PASSWORD
       - image: circleci/redis:6.0.8-alpine
+        auth:
+          username: $DOCKER_LOGIN
+          password: $DOCKER_PASSWORD
       - name: zookeeper
         image: wurstmeister/zookeeper
+        auth:
+          username: $DOCKER_LOGIN
+          password: $DOCKER_PASSWORD
       - name: kafka
         image: wurstmeister/kafka
+        auth:
+          username: $DOCKER_LOGIN
+          password: $DOCKER_PASSWORD
         environment:
           KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
           KAFKA_ADVERTISED_LISTENERS: INSIDE://:9092,OUTSIDE://kafka:9094
           KAFKA_LISTENERS: INSIDE://:9092,OUTSIDE://kafka:9094
           KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
           KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
-  rpm-executor:
+  darwin-executor: # this executor is for packaging darwin binaries
+    working_directory: ~/go/src/github.com/klaytn/klaytn
+    macos:
+      xcode: 14.2.0
+    resource_class: macos.x86.medium.gen2
+    parameters:
+      os-network:
+        type: string
+        default: "darwin-amd64"
+  rpm-executor: # this executor is for packaging rpm binaries
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
       - image: klaytn/circleci-rpmbuild:1.20.6
+        auth:
+          username: $DOCKER_LOGIN
+          password: $DOCKER_PASSWORD
   default:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     docker:
       - image: cimg/go:1.20.6
 
 commands:
-  install-netcat:
+  install-darwin-dependencies:
+    description: Install dependencies on darwin machine
     steps:
       - run:
-          name: "Install netcat"
+          name: "install darwin dependencies"
           command: |
-            apt install -y netcat
-  install-golang:
-    parameters:
-      os-network:
-        type: string
-        default: "linux-amd64"
-    steps:
-      - run:
-          name: "Install golang on machine"
-          command: | 
-            curl -O https://dl.google.com/go/go1.20.6.<< parameters.os-network >>.tar.gz
-            mkdir $HOME/go1.20.6
-            tar -C $HOME/go1.20.6 -xzf go1.20.6.<< parameters.os-network >>.tar.gz
-  install-awscli:
-    steps:
-      - run:
-          name: "Install awscli on macos machine"
-          command: |
+            # install awscli
             brew install awscli
-  install-golangci-lint:
-    steps:
-      - run:
-          name: "Install golangci-lint"
-          command: |
-            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.24.0
+            # install golang
+            curl -O https://dl.google.com/go/go1.20.6.darwin-amd64.tar.gz
+            mkdir $HOME/go1.20.6
+            tar -C $HOME/go1.20.6 -xzf go1.20.6.darwin-amd64.tar.gz
   pre-build:
     description: "before build, set version"
     parameters:
@@ -204,39 +218,39 @@ commands:
       - run:
           name: "Verify tag and file version match"
           command: |
-              TAGGER=$(git for-each-ref --format='%(tagger)' refs/tags/$CIRCLE_TAG | sed 's/ .*//')
-              if [ $TAGGER == 'circleci-klaytn' ]; then
-                echo "Pass! Tagger is circleci-klaytn"
-              else
-                echo "only circleci-klaytn can tagging major version"
-                exit 1
-              fi
+            TAGGER=$(git for-each-ref --format='%(tagger)' refs/tags/$CIRCLE_TAG | sed 's/ .*//')
+            if [ $TAGGER == 'circleci-klaytn' ]; then
+              echo "Pass! Tagger is circleci-klaytn"
+            else
+              echo "only circleci-klaytn can tagging major version"
+              exit 1
+            fi
   make-pr:
     steps:
       - run:
           name: "Push to release branch"
           command: |
-              echo "push to release branch: /release/${CIRCLE_TAG%-*}"
-              git checkout -b release/${CIRCLE_TAG%-*}
-              git push origin release/${CIRCLE_TAG%-*}
+            echo "push to release branch: /release/${CIRCLE_TAG%-*}"
+            git checkout -b release/${CIRCLE_TAG%-*}
+            git push origin release/${CIRCLE_TAG%-*}
       - run:
           name: "Install hub"
           command: |
-              curl -sSLf https://github.com/github/hub/releases/download/v2.12.3/hub-linux-amd64-2.12.3.tgz | \
-                tar zxf - --strip-components=1 -C /tmp && \
-                sudo mv /tmp/bin/hub /usr/local/bin/hub
-              type hub
+            curl -sSLf https://github.com/github/hub/releases/download/v2.12.3/hub-linux-amd64-2.12.3.tgz | \
+              tar zxf - --strip-components=1 -C /tmp && \
+              sudo mv /tmp/bin/hub /usr/local/bin/hub
+            type hub
       - run:
           name: "Create pull request"
           command: |
-              version=$(hub pr list -s open -L 10 -f "%H%n")
-              echo $version
-              if [[ $version == *"release/${CIRCLE_TAG%-*}"* ]]; then
-                echo "PR already exist"
-              else
-                echo "hub pull-request -m "[Master] release/$CIRCLE_TAG QA Signoff" -b $CIRCLE_PROJECT_USERNAME:master -h $CIRCLE_PROJECT_USERNAME:${CIRCLE_TAG%-*}"
-                echo -e "[Master] release/${CIRCLE_TAG%-*} QA Sign-off\n\nThis PR is automatically created by CI to release a new official version of $CIRCLE_PROJECT_REPONAME.\n\nWhen this PR is approved by QA team, a new version will be released." | hub pull-request -b $CIRCLE_PROJECT_USERNAME:master -h $CIRCLE_PROJECT_USERNAME:release/${CIRCLE_TAG%-*} -r $GITHUB_reviewer -l circleci -F-
-              fi
+            version=$(hub pr list -s open -L 10 -f "%H%n")
+            echo $version
+            if [[ $version == *"release/${CIRCLE_TAG%-*}"* ]]; then
+              echo "PR already exist"
+            else
+              echo "hub pull-request -m "[Master] release/$CIRCLE_TAG QA Signoff" -b $CIRCLE_PROJECT_USERNAME:master -h $CIRCLE_PROJECT_USERNAME:${CIRCLE_TAG%-*}"
+              echo -e "[Master] release/${CIRCLE_TAG%-*} QA Sign-off\n\nThis PR is automatically created by CI to release a new official version of $CIRCLE_PROJECT_REPONAME.\n\nWhen this PR is approved by QA team, a new version will be released." | hub pull-request -b $CIRCLE_PROJECT_USERNAME:master -h $CIRCLE_PROJECT_USERNAME:release/${CIRCLE_TAG%-*} -r $GITHUB_reviewer -l circleci -F-
+            fi
       - run:
           name: "build announce"
           command: .circleci/scripts/build_announce.sh
@@ -245,25 +259,28 @@ commands:
       - run:
           name: "Generate tag"
           command: |
-              export version=$(go run build/rpm/main.go version) >> $BASH_ENV
-              echo "git tag $version"
-              git config --global user.email "team.devops@groundx.xyz"
-              git config --global user.name "circleci-klaytn"
-              git tag -a $version -m "$CIRCLE_STAGE"
-              git push origin $version
+            export version=$(go run build/rpm/main.go version) >> $BASH_ENV
+            echo "git tag $version"
+            git config --global user.email "team.devops@groundx.xyz"
+            git config --global user.name "circleci-klaytn"
+            git tag -a $version -m "$CIRCLE_STAGE"
+            git push origin $version
       - run:
           name: "Delete release branch"
           command: |
-              export version=$(go run build/rpm/main.go version) >> $BASH_ENV
-              #delete release branch. it trigger by merge title
-              if [[ "release/v" = $(git log --oneline -1 | grep -o "release/v") ]]; then
-                echo "Delete branch release/$version"
-                git push origin --delete release/$version
-              else
-                echo "Need to delete branch manually"
-              fi
+            export version=$(go run build/rpm/main.go version) >> $BASH_ENV
+            #delete release branch. it trigger by merge title
+            if [[ "release/v" = $(git log --oneline -1 | grep -o "release/v") ]]; then
+              echo "Delete branch release/$version"
+              git push origin --delete release/$version
+            else
+              echo "Need to delete branch manually"
+            fi
   wait-other-containers-ready:
     steps:
+      - run:
+          name: "Install net-cat"
+          command: apt install -y netcat
       - run:
           name: "Waiting for Redis to be ready"
           command: |
@@ -338,34 +355,26 @@ commands:
             python3 main.py --protocol rpc
 jobs:
   build:
-    docker:
-      - image: klaytn/build_base:1.2-ubuntu18.04-go.1.20.6-solc0.8.13
-    working_directory: ~/go/src/github.com/klaytn/klaytn
+    executor: linux-executor
     steps:
       - checkout
-      - install-golangci-lint
-      - install-golang
       - pre-build
       - run:
           name: "Build"
-          command: |
-            export PATH=$HOME/go1.20.6/go/bin:$PATH
-            make fmt
-            make all
+          command: make all
 
   test-linter:
-    executor: test-executor
+    executor: linux-executor
     steps:
       - checkout
       - run:
           name: "Run golangci-lint"
           no_output_timeout: 30m
-          command: golangci-lint run --new-from-rev=dev --presets format,performance -v --timeout 10m
+          command: go run build/ci.go lint -v --new-from-rev=dev
 
   test-datasync:
-    executor: test-others-executor
+    executor: linux-others-executor
     steps:
-      - install-netcat
       - checkout
       - wait-other-containers-ready
       - run:
@@ -374,7 +383,7 @@ jobs:
           command: make test-datasync
 
   test-networks:
-    executor: test-executor
+    executor: linux-executor
     steps:
       - checkout
       - run:
@@ -383,7 +392,7 @@ jobs:
           command: make test-networks
 
   test-node:
-    executor: test-executor
+    executor: linux-executor
     steps:
       - checkout
       - run:
@@ -392,7 +401,7 @@ jobs:
           command: make test-node
 
   test-tests:
-    executor: test-executor
+    executor: linux-executor
     steps:
       - checkout
       - run:
@@ -403,9 +412,9 @@ jobs:
             make test-tests
 
   test-others:
-    executor: test-others-executor
+    executor: linux-others-executor
+    resource_class: xlarge
     steps:
-      - install-netcat
       - checkout
       - wait-other-containers-ready
       - run:
@@ -413,13 +422,11 @@ jobs:
           no_output_timeout: 30m
           command: |
             make test-others
-    resource_class: xlarge
 
   test-rpc:
-    executor: test-executor
+    executor: linux-executor
     steps:
       - checkout
-      - install-golang
       - pre-build
       - run-rpc
 
@@ -437,10 +444,9 @@ jobs:
       - tagger-verify
 
   coverage:
-    executor: test-others-executor
+    executor: linux-others-executor
     resource_class: xlarge
     steps:
-      - install-netcat
       - checkout
       - wait-other-containers-ready
       - run:
@@ -462,7 +468,7 @@ jobs:
           file: /tmp/coverage_reports/coverage_*
 
   linters:
-    executor: test-executor
+    executor: linux-executor
     steps:
       - checkout
       - run:
@@ -477,35 +483,28 @@ jobs:
           path: /tmp/linter_reports
 
   rpc-tester-report:
-    executor: test-executor
+    executor: linux-executor
     steps:
       - checkout
-      - install-golang
       - pre-build
       - run-rpc
       - notify-failure
       - notify-success
 
   packaging-linux:
-    docker:
-      - image: klaytn/build_base:1.2-ubuntu18.04-go.1.20.6-solc0.8.13
+    executor: linux-executor
     resource_class: large
-    working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      - install-golang
       - pre-build
       - build-packaging
       - upload-repo
 
   packaging-linux-baobab:
-    docker:
-      - image: klaytn/build_base:1.2-ubuntu18.04-go.1.20.6-solc0.8.13
+    executor: linux-executor
     resource_class: large
-    working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      - install-golang
       - pre-build
       - build-packaging:
           baobab: "-b"
@@ -513,35 +512,21 @@ jobs:
           item: "kcn kpn ken"
 
   packaging-darwin:
-    macos:
-      xcode: 14.2.0
-    resource_class: macos.x86.medium.gen2
-    working_directory: ~/go/src/github.com/klaytn/klaytn
+    executor: darwin-executor
     steps:
       - checkout
-      - install-awscli
-      - install-golang:
-          os-network: "darwin-amd64"
-      - pre-build:
-          os-network: "darwin-amd64"
-      - build-packaging:
-          os-network: "darwin-amd64"
+      - install-darwin-dependencies
+      - pre-build
+      - build-packaging
       - upload-repo
 
   packaging-darwin-baobab:
-    macos:
-      xcode: 14.2.0
-    resource_class: macos.x86.medium.gen2
-    working_directory: ~/go/src/github.com/klaytn/klaytn
+    executor: darwin-executor
     steps:
       - checkout
-      - install-awscli
-      - install-golang:
-          os-network: "darwin-amd64"
-      - pre-build:
-          os-network: "darwin-amd64"
+      - install-darwin-dependencies
+      - pre-build
       - build-packaging:
-          os-network: "darwin-amd64"
           baobab: "-b"
       - upload-repo:
           item: "kcn kpn ken"
@@ -569,7 +554,7 @@ jobs:
       - notify-success
 
   tag-verify:
-    executor: test-executor
+    executor: linux-executor
     steps:
       - checkout
       - tag-verify
@@ -605,17 +590,17 @@ workflows:
       - test-tests:
           filters: *filter-version-not-release
       - test-others:
-         filters: *filter-version-not-release
+          filters: *filter-version-not-release
       - test-linter:
           filters: *filter-version-not-release
       - tagger-verify:
-         filters:
+          filters:
             tags:
               only: /^v[0-9]+\.[0-9]+\.[0-9]+/
             branches:
               ignore: /.*/
       - test-rpc:
-         filters: *filter-only-version-tag
+          filters: *filter-only-version-tag
 
       - pass-tests:
           requires:

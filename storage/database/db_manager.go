@@ -75,7 +75,6 @@ type DBManager interface {
 	WriteCanonicalHash(hash common.Hash, number uint64)
 	DeleteCanonicalHash(number uint64)
 
-	ReadAllHashes(number uint64) []common.Hash
 	ReadHeadHeaderHash() common.Hash
 	WriteHeadHeaderHash(hash common.Hash)
 
@@ -134,6 +133,7 @@ type DBManager interface {
 
 	ReadIstanbulSnapshot(hash common.Hash) ([]byte, error)
 	WriteIstanbulSnapshot(hash common.Hash, blob []byte) error
+	DeleteIstanbulSnapshot(hash common.Hash)
 
 	WriteMerkleProof(key, value []byte)
 
@@ -170,14 +170,12 @@ type DBManager interface {
 	WritePreimages(number uint64, preimages map[common.Hash][]byte)
 
 	// Trie pruning
-	ReadPruningEnabled() bool
-	WritePruningEnabled()
-	DeletePruningEnabled()
-
 	WritePruningMarks(marks []PruningMark)
 	ReadPruningMarks(startNumber, endNumber uint64) []PruningMark
 	DeletePruningMarks(marks []PruningMark)
 	PruneTrieNodes(marks []PruningMark)
+	WriteLastPrunedBlockNumber(blockNumber uint64)
+	ReadLastPrunedBlockNumber() (uint64, error)
 
 	// from accessors_indexes.go
 	ReadTxLookupEntry(hash common.Hash) (common.Hash, uint64, uint64)
@@ -287,12 +285,14 @@ type DBManager interface {
 	ReadGovernanceAtNumber(num uint64, epoch uint64) (uint64, map[string]interface{}, error)
 	WriteGovernanceState(b []byte) error
 	ReadGovernanceState() ([]byte, error)
+	DeleteGovernance(num uint64)
 	// TODO-Klaytn implement governance DB deletion methods.
 
 	// StakingInfo related functions
 	ReadStakingInfo(blockNum uint64) ([]byte, error)
 	WriteStakingInfo(blockNum uint64, stakingInfo []byte) error
 	HasStakingInfo(blockNum uint64) (bool, error)
+	DeleteStakingInfo(blockNum uint64)
 
 	// DB migration related function
 	StartDBMigration(DBManager) error
@@ -300,6 +300,8 @@ type DBManager interface {
 	// ChainDataFetcher checkpoint function
 	WriteChainDataFetcherCheckpoint(checkpoint uint64) error
 	ReadChainDataFetcherCheckpoint() (uint64, error)
+
+	TryCatchUpWithPrimary() error
 }
 
 type DBEntryType uint8
@@ -865,6 +867,17 @@ func (dbm *databaseManager) GetProperty(dt DBEntryType, name string) string {
 	return dbm.getDatabase(dt).GetProperty(name)
 }
 
+func (dbm *databaseManager) TryCatchUpWithPrimary() error {
+	for _, db := range dbm.dbs {
+		if db != nil {
+			if err := db.TryCatchUpWithPrimary(); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func (dbm *databaseManager) GetMemDB() *MemDB {
 	if dbm.config.DBType == MemoryDB {
 		if memDB, ok := dbm.dbs[0].(*MemDB); ok {
@@ -941,24 +954,6 @@ func (dbm *databaseManager) DeleteCanonicalHash(number uint64) {
 		logger.Crit("Failed to delete number to hash mapping", "err", err)
 	}
 	dbm.cm.writeCanonicalHashCache(number, common.Hash{})
-}
-
-// ReadAllHashes retrieves all the hashes assigned to blocks at a certain heights,
-// both canonical and reorged forks included.
-func (dbm *databaseManager) ReadAllHashes(number uint64) []common.Hash {
-	db := dbm.getDatabase(headerDB)
-	prefix := headerKeyPrefix(number)
-
-	hashes := make([]common.Hash, 0, 1)
-	it := db.NewIterator(prefix, nil)
-	defer it.Release()
-
-	for it.Next() {
-		if key := it.Key(); len(key) == len(prefix)+32 {
-			hashes = append(hashes, common.BytesToHash(key[len(key)-32:]))
-		}
-	}
-	return hashes
 }
 
 // Head Header Hash operations.
@@ -1697,6 +1692,13 @@ func (dbm *databaseManager) WriteIstanbulSnapshot(hash common.Hash, blob []byte)
 	return db.Put(snapshotKey(hash), blob)
 }
 
+func (dbm *databaseManager) DeleteIstanbulSnapshot(hash common.Hash) {
+	db := dbm.getDatabase(MiscDB)
+	if err := db.Delete(snapshotKey(hash)); err != nil {
+		logger.Crit("Failed to delete snpahost", "err", err)
+	}
+}
+
 // Merkle Proof operation.
 func (dbm *databaseManager) WriteMerkleProof(key, value []byte) {
 	db := dbm.getDatabase(MiscDB)
@@ -1923,26 +1925,6 @@ func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.H
 	preimageHitCounter.Inc(int64(len(preimages)))
 }
 
-// ReadPruningEnabled reads if the live pruning flag is stored in database.
-func (dbm *databaseManager) ReadPruningEnabled() bool {
-	ok, _ := dbm.getDatabase(MiscDB).Has(pruningEnabledKey)
-	return ok
-}
-
-// WritePruningEnabled writes the live pruning flag to the database.
-func (dbm *databaseManager) WritePruningEnabled() {
-	if err := dbm.getDatabase(MiscDB).Put(pruningEnabledKey, []byte("42")); err != nil {
-		logger.Crit("Failed to store pruning enabled flag", "err", err)
-	}
-}
-
-// DeletePruningEnabled deletes the live pruning flag. It is used only for testing.
-func (dbm *databaseManager) DeletePruningEnabled() {
-	if err := dbm.getDatabase(MiscDB).Delete(pruningEnabledKey); err != nil {
-		logger.Crit("Failed to remove pruning enabled flag", "err", err)
-	}
-}
-
 // WritePruningMarks writes the provided set of pruning marks to the database.
 func (dbm *databaseManager) WritePruningMarks(marks []PruningMark) {
 	batch := dbm.NewBatch(MiscDB)
@@ -2012,6 +1994,24 @@ func (dbm *databaseManager) PruneTrieNodes(marks []PruningMark) {
 	if err := batch.Write(); err != nil {
 		logger.Crit("Failed to batch prune trie node", "err", err)
 	}
+}
+
+// WriteLastPrunedBlockNumber records a block number of the most recent pruning block
+func (dbm *databaseManager) WriteLastPrunedBlockNumber(blockNumber uint64) {
+	db := dbm.getDatabase(MiscDB)
+	if err := db.Put(lastPrunedBlockNumberKey, common.Int64ToByteLittleEndian(blockNumber)); err != nil {
+		logger.Crit("Failed to store the last pruned block number", "err", err)
+	}
+}
+
+// ReadLastPrunedBlockNumber reads a block number of the most recent pruning block
+func (dbm *databaseManager) ReadLastPrunedBlockNumber() (uint64, error) {
+	db := dbm.getDatabase(MiscDB)
+	lastPruned, err := db.Get(lastPrunedBlockNumberKey)
+	if err != nil {
+		return 0, err
+	}
+	return binary.LittleEndian.Uint64(lastPruned), nil
 }
 
 // ReadTxLookupEntry retrieves the positional metadata associated with a transaction
@@ -2659,6 +2659,16 @@ func (dbm *databaseManager) WriteGovernance(data map[string]interface{}, num uin
 	return db.Put(makeKey(governancePrefix, num), b)
 }
 
+func (dbm *databaseManager) DeleteGovernance(num uint64) {
+	db := dbm.getDatabase(MiscDB)
+	if err := dbm.deleteLastGovernance(num); err != nil {
+		logger.Crit("Failed to delete Governance index", "err", err)
+	}
+	if err := db.Delete(makeKey(governancePrefix, num)); err != nil {
+		logger.Crit("Failed to delete Governance", "err", err)
+	}
+}
+
 func (dbm *databaseManager) WriteGovernanceIdx(num uint64) error {
 	db := dbm.getDatabase(MiscDB)
 	newSlice := make([]uint64, 0)
@@ -2678,6 +2688,24 @@ func (dbm *databaseManager) WriteGovernanceIdx(num uint64) error {
 	newSlice = append(newSlice, num)
 
 	data, err := json.Marshal(newSlice)
+	if err != nil {
+		return err
+	}
+	return db.Put(governanceHistoryKey, data)
+}
+
+// deleteLastGovernance deletes the last governanceIdx only if it is equal to `num`
+func (dbm *databaseManager) deleteLastGovernance(num uint64) error {
+	db := dbm.getDatabase(MiscDB)
+	idxHistory, err := dbm.ReadRecentGovernanceIdx(0)
+	if err != nil {
+		return nil // Do nothing and return nil if no recent index found
+	}
+	end := len(idxHistory)
+	if idxHistory[end-1] != num {
+		return nil // Do nothing and return nil if the target number does not match the tip number
+	}
+	data, err := json.Marshal(idxHistory[0 : end-1])
 	if err != nil {
 		return err
 	}

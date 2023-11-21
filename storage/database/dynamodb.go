@@ -448,6 +448,10 @@ func (dynamo *dynamoDB) GetProperty(name string) string {
 	return ""
 }
 
+func (dynamo *dynamoDB) TryCatchUpWithPrimary() error {
+	return nil
+}
+
 func (dynamo *dynamoDB) NewIterator(prefix []byte, start []byte) Iterator {
 	// TODO-Klaytn: implement this later.
 	return nil

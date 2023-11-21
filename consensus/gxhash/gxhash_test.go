@@ -21,7 +21,6 @@
 package gxhash
 
 import (
-	"io/ioutil"
 	"math/big"
 	"math/rand"
 	"os"
@@ -45,7 +44,7 @@ func TestTestMode(t *testing.T) {
 // This test checks that cache lru logic doesn't crash under load.
 // It reproduces https://github.com/ethereum/go-ethereum/issues/14943
 func TestCacheFileEvict(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "gxhash-test")
+	tmpdir, err := os.MkdirTemp("", "gxhash-test")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -119,6 +119,8 @@ type Message interface {
 
 	// Execute performs execution of the transaction according to the transaction type.
 	Execute(vm types.VM, stateDB types.StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) ([]byte, uint64, error)
+
+	AccessList() types.AccessList
 }
 
 // ExecutionResult includes all output after executing given evm
@@ -187,7 +189,7 @@ func getReceiptStatusFromErrTxFailed(errTxFailed error) (status uint) {
 func NewStateTransition(evm *vm.EVM, msg Message) *StateTransition {
 	// before magma hardfork, effectiveGasPrice is GasPrice of tx
 	// after magma hardfork, effectiveGasPrice is BaseFee
-	effectiveGasPrice := evm.Context.GasPrice
+	effectiveGasPrice := evm.GasPrice
 
 	return &StateTransition{
 		evm:       evm,
@@ -321,6 +323,13 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 
 	msg := st.msg
 
+	if st.evm.Config.Debug {
+		st.evm.Config.Tracer.CaptureTxStart(st.initialGas)
+		defer func() {
+			st.evm.Config.Tracer.CaptureTxEnd(st.gas)
+		}()
+	}
+
 	// Check clauses 4-5, subtract intrinsic gas if everything is correct
 	amount := msg.ValidatedIntrinsicGas()
 	if st.gas < amount {
@@ -334,9 +343,11 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	}
 
 	rules := st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber)
-	if rules.IsKore {
-		st.state.PrepareAccessList(rules, msg.ValidatedSender(), msg.ValidatedFeePayer(), st.evm.Coinbase, msg.To(), vm.ActivePrecompiles(rules))
-	}
+
+	// Execute the preparatory steps for state transition which includes:
+	// - prepare accessList(post-berlin)
+	// - reset transient storage(eip 1153)
+	st.state.Prepare(rules, msg.ValidatedSender(), msg.ValidatedFeePayer(), st.evm.Context.Coinbase, msg.To(), vm.ActivePrecompiles(rules), msg.AccessList())
 
 	// Check whether the init code size has been exceeded.
 	if rules.IsShanghai && msg.To() == nil && len(st.data) > params.MaxInitCodeSize {
@@ -347,7 +358,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		ret   []byte
 		vmerr error
 	)
-	ret, st.gas, vmerr = msg.Execute(st.evm, st.state, st.evm.BlockNumber.Uint64(), st.gas, st.value)
+	ret, st.gas, vmerr = msg.Execute(st.evm, st.state, st.evm.Context.BlockNumber.Uint64(), st.gas, st.value)
 
 	// time-limit error is not a vm error. This error is returned when the EVM is still running while the
 	// block proposer's total execution time of txs for a candidate block reached the predefined limit.
@@ -368,10 +379,10 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		if rules.IsMagma {
 			effectiveGasPrice := st.gasPrice
 			txFee := getBurnAmountMagma(new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), effectiveGasPrice))
-			st.state.AddBalance(st.evm.Rewardbase, txFee)
+			st.state.AddBalance(st.evm.Context.Rewardbase, txFee)
 		} else {
 			effectiveGasPrice := msg.EffectiveGasPrice(nil)
-			st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), effectiveGasPrice))
+			st.state.AddBalance(st.evm.Context.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), effectiveGasPrice))
 		}
 	}
 

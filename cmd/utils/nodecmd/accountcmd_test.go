@@ -21,12 +21,15 @@
 package nodecmd
 
 import (
+	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/cespare/cp"
+	"github.com/stretchr/testify/assert"
 )
 
 // These tests are 'smoke tests' for the account related
@@ -271,4 +274,101 @@ Testing your passphrase against all of them...
 Fatal: None of the listed files could be unlocked.
 `)
 	klay.ExpectExit()
+}
+
+func TestBlsInfo(t *testing.T) {
+	// Test datadir/nodekey -> bls-publicinfo.json
+	var (
+		datadir     = tmpdir(t)
+		nodekeyPath = filepath.Join(datadir, "klay", "nodekey")
+		nodekeyHex  = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+
+		outputPath  = "bls-publicinfo-0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266.json"
+		expectPrint = `Successfully wrote 'bls-publicinfo-0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266.json'`
+		expectFile  = `{
+			"address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+			"blsPublicKeyInfo": {
+				"publicKey": "876006073c4ef19d23df948fea3e7e95398d6a7b5acc6a510f24e2d5160bbbd9f636a58cdfe69c8eba42b1cfce0fa60a",
+				"pop": "a76d6d4e1886b86f0d3a711917c0845c99c765a2473543ebbecd5471034a65f9e962f7a78b5eb41d8797988a2d71393308a593bcbf14aaaaca3ae0e43e7430c348d529bf99fcb829e80d87cf1db69675405ec3f32829eec609ebc459c4976ad1"
+			}
+		}`
+	)
+	defer os.RemoveAll(datadir)
+	defer os.Remove(outputPath)
+	t.Logf("datadir: %s", datadir)
+
+	assert.Nil(t, os.MkdirAll(filepath.Join(datadir, "klay"), 0o700))
+	assert.Nil(t, os.WriteFile(nodekeyPath, []byte(nodekeyHex), 0o400))
+
+	os.Remove(outputPath) // delete before test, because otherwise the "already exists" error occurs
+	klay := runKlay(t, "klay-test", "account", "bls-info", "--datadir", datadir)
+	klay.ExpectRegexp(expectPrint)
+
+	content, err := os.ReadFile(outputPath)
+	assert.Nil(t, err)
+	assert.JSONEq(t, expectFile, string(content))
+}
+
+func TestBlsImport(t *testing.T) {
+	// Test keystore + password -> datadir/bls-nodekey
+	var (
+		// Scrypt Test Vector from https://eips.ethereum.org/EIPS/eip-2335
+		keystorePath = "../../../accounts/keystore/testdata/eip2335_scrypt.json"
+		passwordPath = "../../../accounts/keystore/testdata/eip2335_password.txt"
+
+		datadir     = tmpdir(t)
+		outputPath  = filepath.Join(datadir, "klay", "bls-nodekey")
+		expectPrint = fmt.Sprintf(
+			"Importing BLS key: pub=9612d7a727c9d0a22e185a1c768478dfe919cada9266988cb32359c11f2b7b27f4ae4040902382ae2910c15e2b420d07\n"+
+				"Successfully wrote '%s/klay/bls-nodekey'", datadir)
+		expectFile = "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"
+	)
+	defer os.RemoveAll(datadir)
+	t.Logf("datadir: %s", datadir)
+
+	klay := runKlay(t, "klay-test", "account", "bls-import", "--datadir", datadir,
+		"--bls-nodekeystore", keystorePath, "--password", passwordPath)
+	klay.ExpectRegexp(expectPrint)
+
+	content, err := os.ReadFile(outputPath)
+	assert.Nil(t, err)
+	assert.Regexp(t, expectFile, string(content))
+}
+
+func TestBlsExport(t *testing.T) {
+	// Test datadir/bls-nodekey -> bls-keystore.json
+	var (
+		datadir        = tmpdir(t)
+		nodekeyPath    = filepath.Join(datadir, "klay", "nodekey")
+		nodekeyHex     = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+		blsnodekeyPath = filepath.Join(datadir, "klay", "bls-nodekey")
+		blsnodekeyHex  = "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"
+
+		outputPath  = "bls-keystore-0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266.json"
+		expectPrint = `Successfully wrote 'bls-keystore-0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266.json'`
+		expectFile  = []string{
+			`"pubkey":"9612d7a727c9d0a22e185a1c768478dfe919cada9266988cb32359c11f2b7b27f4ae4040902382ae2910c15e2b420d07"`,
+			`"path":""`,
+			`"version":4`,
+		}
+	)
+	defer os.RemoveAll(datadir)
+	defer os.Remove(outputPath)
+	t.Logf("datadir: %s", datadir)
+
+	assert.Nil(t, os.MkdirAll(filepath.Join(datadir, "klay"), 0o700))
+	assert.Nil(t, os.WriteFile(nodekeyPath, []byte(nodekeyHex), 0o400))
+	assert.Nil(t, os.WriteFile(blsnodekeyPath, []byte(blsnodekeyHex), 0o400))
+
+	os.Remove(outputPath) // delete before test, because otherwise the "already exists" error occurs
+	klay := runKlay(t, "klay-test", "account", "bls-export", "--datadir", datadir)
+	klay.InputLine("1234") // Enter password
+	klay.InputLine("1234") // Confirm password
+	klay.ExpectRegexp(expectPrint)
+
+	content, err := os.ReadFile(outputPath)
+	assert.Nil(t, err)
+	for _, expectField := range expectFile {
+		assert.Regexp(t, expectField, string(content))
+	}
 }

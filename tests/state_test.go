@@ -27,6 +27,7 @@ import (
 	"testing"
 
 	"github.com/klaytn/klaytn/blockchain/vm"
+	"github.com/klaytn/klaytn/params"
 )
 
 func TestState(t *testing.T) {
@@ -76,7 +77,8 @@ func TestState(t *testing.T) {
 const traceErrorLimit = 400000
 
 func withTrace(t *testing.T, gasLimit uint64, test func(vm.Config) error) {
-	err := test(vm.Config{})
+	// Set ComputationCostLimit as infinite
+	err := test(vm.Config{ComputationCostLimit: params.OpcodeComputationCostLimitInfinite})
 	if err == nil {
 		return
 	}
@@ -86,7 +88,7 @@ func withTrace(t *testing.T, gasLimit uint64, test func(vm.Config) error) {
 		return
 	}
 	tracer := vm.NewStructLogger(nil)
-	err2 := test(vm.Config{Debug: true, Tracer: tracer})
+	err2 := test(vm.Config{Debug: true, Tracer: tracer, ComputationCostLimit: params.OpcodeComputationCostLimitInfinite})
 	if !reflect.DeepEqual(err, err2) {
 		t.Errorf("different error for second run: %v", err2)
 	}

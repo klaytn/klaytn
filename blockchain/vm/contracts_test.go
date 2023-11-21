@@ -24,8 +24,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math/big"
+	"os"
 	"testing"
 
 	"github.com/klaytn/klaytn/blockchain/state"
@@ -70,6 +70,7 @@ var allPrecompiles = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{8}):    &bn256PairingIstanbul{},
 	common.BytesToAddress([]byte{9}):    &blake2F{},
 	// TODO-klaytn import bls-signature precompiled contracts
+	common.BytesToAddress([]byte{0xa}):    &kzgPointEvaluation{},
 	common.BytesToAddress([]byte{3, 253}): &vmLog{},
 	common.BytesToAddress([]byte{3, 254}): &feePayer{},
 	common.BytesToAddress([]byte{3, 255}): &validateSender{},
@@ -109,8 +110,8 @@ func prepare(reqGas uint64) (*Contract, *EVM, error) {
 	// Generate EVM
 	stateDb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
 	txhash := common.HexToHash("0xc6a37e155d3fa480faea012a68ad35fd53c8cc3cd8263a434c697755985a6577")
-	stateDb.Prepare(txhash, common.Hash{}, 0)
-	evm := NewEVM(Context{BlockNumber: big.NewInt(0)}, stateDb, &params.ChainConfig{IstanbulCompatibleBlock: big.NewInt(0)}, &Config{})
+	stateDb.SetTxContext(txhash, common.Hash{}, 0)
+	evm := NewEVM(BlockContext{BlockNumber: big.NewInt(0)}, TxContext{}, stateDb, &params.ChainConfig{IstanbulCompatibleBlock: big.NewInt(0)}, &Config{})
 
 	// Only stdout logging is tested to avoid file handling. It is used at vmLog test.
 	params.VMLogTarget = params.VMLogToStdout
@@ -253,6 +254,9 @@ func TestPrecompiledBlake2F(t *testing.T)              { testJson("blake2F", "09
 func BenchmarkPrecompiledBlake2F(b *testing.B)         { benchJson("blake2F", "09", b) }
 func TestPrecompileBlake2FMalformedInput(t *testing.T) { testJsonFail("blake2F", "09", t) }
 
+func TestPrecompiledPointEvaluation(t *testing.T)      { testJson("pointEvaluation", "a", t) }
+func BenchmarkPrecompiledPointEvaluation(b *testing.B) { benchJson("pointEvaluation", "a", b) }
+
 // Tests the sample inputs of the vmLog
 func TestPrecompiledVmLog(t *testing.T)      { testJson("vmLog", "3fd", t) }
 func BenchmarkPrecompiledVmLog(b *testing.B) { benchJson("vmLog", "3fd", b) }
@@ -277,7 +281,7 @@ func TestPrecompiledModExpOOG(t *testing.T) {
 }
 
 func loadJson(name string) ([]precompiledTest, error) {
-	data, err := ioutil.ReadFile(fmt.Sprintf("testdata/precompiles/%v.json", name))
+	data, err := os.ReadFile(fmt.Sprintf("testdata/precompiles/%v.json", name))
 	if err != nil {
 		return nil, err
 	}
@@ -287,7 +291,7 @@ func loadJson(name string) ([]precompiledTest, error) {
 }
 
 func loadJsonFail(name string) ([]precompiledFailureTest, error) {
-	data, err := ioutil.ReadFile(fmt.Sprintf("testdata/precompiles/fail-%v.json", name))
+	data, err := os.ReadFile(fmt.Sprintf("testdata/precompiles/fail-%v.json", name))
 	if err != nil {
 		return nil, err
 	}
@@ -388,7 +392,7 @@ func TestEVM_CVE_2021_39137(t *testing.T) {
 
 	gasLimit := uint64(99999999)
 	tracer := NewStructLogger(nil)
-	vmctx := Context{
+	blockCtx := BlockContext{
 		CanTransfer: func(StateDB, common.Address, *big.Int) bool { return true },
 		Transfer:    func(StateDB, common.Address, common.Address, *big.Int) {},
 	}
@@ -397,7 +401,7 @@ func TestEVM_CVE_2021_39137(t *testing.T) {
 	for _, tc := range testCases {
 		stateDb.SetCode(contractAddr, tc.testCode)
 
-		evm := NewEVM(vmctx, stateDb, params.TestChainConfig, &Config{Debug: true, Tracer: tracer})
+		evm := NewEVM(blockCtx, TxContext{}, stateDb, params.TestChainConfig, &Config{Debug: true, Tracer: tracer})
 		ret, _, err := evm.Call(AccountRef(fromAddr), contractAddr, nil, gasLimit, new(big.Int))
 		if err != nil {
 			t.Fatal(err)

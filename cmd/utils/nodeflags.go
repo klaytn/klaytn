@@ -246,9 +246,12 @@ var CommonNodeFlags = []cli.Flag{
 	altsrc.NewStringFlag(NetrestrictFlag),
 	altsrc.NewStringFlag(NodeKeyFileFlag),
 	altsrc.NewStringFlag(NodeKeyHexFlag),
+	altsrc.NewStringFlag(BlsNodeKeyFileFlag),
+	altsrc.NewStringFlag(BlsNodeKeyHexFlag),
 	altsrc.NewBoolFlag(VMEnableDebugFlag),
 	altsrc.NewIntFlag(VMLogTargetFlag),
 	altsrc.NewBoolFlag(VMTraceInternalTxFlag),
+	altsrc.NewBoolFlag(VMOpDebugFlag),
 	altsrc.NewUint64Flag(NetworkIdFlag),
 	altsrc.NewBoolFlag(MetricsEnabledFlag),
 	altsrc.NewBoolFlag(PrometheusExporterFlag),
@@ -301,6 +304,7 @@ var CommonRPCFlags = []cli.Flag{
 	altsrc.NewBoolFlag(UnsafeDebugDisableFlag),
 	altsrc.NewIntFlag(HeavyDebugRequestLimitFlag),
 	altsrc.NewDurationFlag(StateRegenerationTimeLimitFlag),
+	altsrc.NewStringFlag(RPCUpstreamArchiveENFlag),
 }
 
 var BNFlags = []cli.Flag{

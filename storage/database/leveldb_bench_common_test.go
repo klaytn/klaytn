@@ -19,7 +19,6 @@ package database
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -48,7 +47,7 @@ const (
 
 // initTestDB creates the db and inputs the data in db for valSize
 func initTestDB(valueSize int) (string, Database, [][]byte, error) {
-	dir, err := ioutil.TempDir("", "bench-DB")
+	dir, err := os.MkdirTemp("", "bench-DB")
 	if err != nil {
 		return "", nil, nil, errors.New(fmt.Sprintf("can't create temporary directory: %v", err))
 	}

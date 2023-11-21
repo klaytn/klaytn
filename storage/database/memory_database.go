@@ -198,6 +198,10 @@ func (db *MemDB) GetProperty(name string) string {
 	return ""
 }
 
+func (db *MemDB) TryCatchUpWithPrimary() error {
+	return nil
+}
+
 // keyvalue is a key-value tuple tagged with a deletion field to allow creating
 // memory-database write batches.
 type keyvalue struct {

@@ -22,7 +22,6 @@ package utils
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -749,6 +748,13 @@ var (
 		EnvVars:  []string{"KLAYTN_VM_INTERNALTX"},
 		Category: "VIRTUAL MACHINE",
 	}
+	VMOpDebugFlag = &cli.BoolFlag{
+		Name:     "vm.opdebug",
+		Usage:    "Collect and print the execution time of opcodes when node stops",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_VM_OPDEBUG"},
+		Category: "VIRTUAL MACHINE",
+	}
 
 	// Logging and debug settings
 	MetricsEnabledFlag = &cli.BoolFlag{
@@ -888,6 +894,13 @@ var (
 		Value:    int(rpc.DefaultHTTPTimeouts.ExecutionTimeout / time.Second),
 		Aliases:  []string{"http-rpc.execution-timeout"},
 		EnvVars:  []string{"KLAYTN_RPCEXECUTIONTIMEOUT"},
+		Category: "API AND CONSOLE",
+	}
+	RPCUpstreamArchiveENFlag = &cli.StringFlag{
+		Name:     "upstream-en",
+		Usage:    "upstream archive mode EN endpoint",
+		Aliases:  []string{"rpc.upstream-en"},
+		EnvVars:  []string{"KLAYTN_RPC_UPSTREAM_EN"},
 		Category: "API AND CONSOLE",
 	}
 
@@ -1131,6 +1144,27 @@ var (
 		Usage:    "P2P node key as hex (for testing)",
 		Aliases:  []string{"p2p.node-key-hex"},
 		EnvVars:  []string{"KLAYTN_NODEKEYHEX"},
+		Category: "NETWORK",
+	}
+	BlsNodeKeyFileFlag = &cli.StringFlag{
+		Name:     "bls-nodekey",
+		Usage:    "Consensus BLS node key file",
+		Aliases:  []string{"p2p.bls-node-key"},
+		EnvVars:  []string{"KLAYTN_BLS_NODEKEY"},
+		Category: "NETWORK",
+	}
+	BlsNodeKeyHexFlag = &cli.StringFlag{
+		Name:     "bls-nodekeyhex",
+		Usage:    "Consensus BLS node key in hex (for testing)",
+		Aliases:  []string{"p2p.bls-node-key-hex"},
+		EnvVars:  []string{"KLAYTN_BLS_NODEKEYHEX"},
+		Category: "NETWORK",
+	}
+	BlsNodeKeystoreFileFlag = &cli.StringFlag{
+		Name:     "bls-nodekeystore",
+		Usage:    "Consensus BLS node keystore JSON file (to be imported)",
+		Aliases:  []string{"p2p.bls-node-keystore"},
+		EnvVars:  []string{"KLAYTN_BLS_NODEKEYSTORE"},
 		Category: "NETWORK",
 	}
 	NATFlag = &cli.StringFlag{
@@ -1932,7 +1966,6 @@ var (
 		Name: "opcode-computation-cost-limit",
 		Usage: "(experimental option) Set the computation cost limit for a tx. " +
 			"Should set the same value within the network",
-		Value:    params.DefaultOpcodeComputationCostLimit,
 		Aliases:  []string{"experimental.opcode-computation-cost-limit"},
 		EnvVars:  []string{"KLAYTN_OPCODE_COMPUTATION_COST_LIMIT"},
 		Category: "KLAY",
@@ -1972,7 +2005,7 @@ func MakePasswordList(ctx *cli.Context) []string {
 	if path == "" {
 		return nil
 	}
-	text, err := ioutil.ReadFile(path)
+	text, err := os.ReadFile(path)
 	if err != nil {
 		log.Fatalf("Failed to read password file: %v", err)
 	}

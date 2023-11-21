@@ -115,7 +115,7 @@ func TestNodeIteratorCoverage(t *testing.T) {
 	// Cross check the hashes and the database itself
 	// db.Node contains all iterated hashes
 	for itHash := range iterated {
-		if _, err := db.Node(itHash.ExtendLegacy()); err != nil {
+		if _, err := db.Node(itHash.ExtendZero()); err != nil {
 			t.Errorf("failed to retrieve reported node %x: %v", itHash, err)
 		}
 	}
@@ -142,7 +142,6 @@ func TestNodeIteratorCoverage(t *testing.T) {
 // NodeIterator yields exact same result for Trie and StroageTrie
 func TestNodeIteratorStorageTrie(t *testing.T) {
 	dbm := database.NewMemoryDBManager()
-	dbm.WritePruningEnabled()
 	triedb := NewDatabase(dbm)
 
 	trie1, _ := NewTrie(common.Hash{}, triedb, nil)
@@ -437,7 +436,7 @@ func testIteratorContinueAfterSeekError(t *testing.T, memonly bool) {
 		triedb.Commit(root, true, 0)
 	}
 	barNodeHash := common.HexToHash("05041990364eb72fcb1127652ce40d8bab765f2bfe53225b1170d276cc101c2e")
-	nodehash := barNodeHash.ExtendLegacy()
+	nodehash := barNodeHash.ExtendZero()
 	var (
 		barNodeBlob []byte
 		barNodeObj  *cachedNode

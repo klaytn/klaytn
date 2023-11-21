@@ -185,11 +185,7 @@ func (n *cachedNode) rlp() []byte {
 	if node, ok := n.node.(rawNode); ok {
 		return node
 	}
-	blob, err := rlp.EncodeToBytes(n.node)
-	if err != nil {
-		panic(err)
-	}
-	return blob
+	return nodeToBytes(n.node)
 }
 
 // obj returns the decoded and expanded trie node, either directly from the cache,
@@ -491,9 +487,12 @@ func (db *Database) getCachedNode(hash common.ExtHash) []byte {
 func (db *Database) setCachedNode(hash common.ExtHash, enc []byte) {
 	if db.trieNodeCache != nil {
 		db.trieNodeCache.Set(hash[:], enc)
-		memcacheCleanMissMeter.Mark(1)
 		memcacheCleanWriteMeter.Mark(int64(len(enc)))
 	}
+}
+
+func recordTrieCacheMiss() {
+	memcacheCleanMissMeter.Mark(1)
 }
 
 // node retrieves a cached trie node from memory, or returns nil if node can be
@@ -522,6 +521,7 @@ func (db *Database) node(hash common.ExtHash) (n node, fromDB bool) {
 		return nil, true
 	}
 	db.setCachedNode(hash, enc)
+	recordTrieCacheMiss()
 	return mustDecodeNode(hash[:], enc), true
 }
 
@@ -548,6 +548,7 @@ func (db *Database) Node(hash common.ExtHash) ([]byte, error) {
 	enc, err := db.diskDB.ReadTrieNode(hash)
 	if err == nil && enc != nil {
 		db.setCachedNode(hash, enc)
+		recordTrieCacheMiss()
 	}
 	return enc, err
 }
@@ -575,6 +576,7 @@ func (db *Database) NodeFromOld(hash common.ExtHash) ([]byte, error) {
 	enc, err := db.diskDB.ReadTrieNodeFromOld(hash)
 	if err == nil && enc != nil {
 		db.setCachedNode(hash, enc)
+		recordTrieCacheMiss()
 	}
 	return enc, err
 }
@@ -644,7 +646,7 @@ func (db *Database) ReferenceRoot(root common.Hash) {
 	db.lock.Lock()
 	defer db.lock.Unlock()
 
-	db.reference(root.ExtendLegacy(), common.ExtHash{})
+	db.reference(root.ExtendZero(), common.ExtHash{})
 }
 
 // Reference adds a new reference from a parent node to a child node.
@@ -691,7 +693,7 @@ func (db *Database) Dereference(root common.Hash) {
 	defer db.lock.Unlock()
 
 	nodes, storage, start := len(db.nodes), db.nodesSize, time.Now()
-	db.dereference(root.ExtendLegacy(), common.ExtHash{})
+	db.dereference(root.ExtendZero(), common.ExtHash{})
 
 	db.gcnodes += uint64(nodes - len(db.nodes))
 	db.gcsize += storage - db.nodesSize
@@ -902,7 +904,7 @@ func (db *Database) concurrentCommit(hash common.ExtHash, resultCh chan<- commit
 //
 // As a side effect, all pre-images accumulated up to this point are also written.
 func (db *Database) Commit(root common.Hash, report bool, blockNum uint64) error {
-	hash := root.ExtendLegacy()
+	hash := root.ExtendZero()
 	// Create a database batch to flush persistent data out. It is important that
 	// outside code doesn't see an inconsistent state (referenced data removed from
 	// memory cache during commit but not yet in persistent database). This is ensured

@@ -21,15 +21,16 @@ import (
 	"crypto/rand"
 	"crypto/sha512"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
+	"github.com/klaytn/klaytn/blockchain/system"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/crypto/bls"
 	"github.com/klaytn/klaytn/log"
 	uuid "github.com/satori/go.uuid"
 	"github.com/tyler-smith/go-bip32"
@@ -125,6 +126,28 @@ func GenerateKeysFromMnemonic(num int, mnemonic, path string) (keys []*ecdsa.Pri
 	return keys, nodekeys, addrs
 }
 
+func GenerateKip113Init(privKeys []*ecdsa.PrivateKey, owner common.Address) system.AllocKip113Init {
+	init := system.AllocKip113Init{}
+	init.Infos = make(map[common.Address]system.BlsPublicKeyInfo)
+
+	for i, key := range privKeys {
+		blsKey, err := bls.GenerateKey(crypto.FromECDSA(privKeys[i]))
+		if err != nil {
+			logger.Error("Failed to generate bls key", "err", err)
+			continue
+		}
+		addr := crypto.PubkeyToAddress(key.PublicKey)
+		init.Infos[addr] = system.BlsPublicKeyInfo{
+			PublicKey: blsKey.PublicKey().Marshal(),
+			Pop:       bls.PopProve(blsKey).Marshal(),
+		}
+	}
+
+	init.Owner = owner
+
+	return init
+}
+
 func RandomHex() string {
 	b, _ := RandomBytes(32)
 	return common.BytesToHash(b).Hex()
@@ -138,12 +161,12 @@ func RandomBytes(len int) ([]byte, error) {
 }
 
 func copyFile(src string, dst string) {
-	data, err := ioutil.ReadFile(src)
+	data, err := os.ReadFile(src)
 	if err != nil {
 		logger.Error("Failed to read file", "file", src, "err", err)
 		return
 	}
-	err = ioutil.WriteFile(dst, data, 0o644)
+	err = os.WriteFile(dst, data, 0o644)
 	if err != nil {
 		logger.Error("Failed to write file", "file", dst, "err", err)
 		return

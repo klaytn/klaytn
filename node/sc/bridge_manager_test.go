@@ -19,7 +19,6 @@ package sc
 import (
 	"context"
 	"encoding/hex"
-	"io/ioutil"
 	"log"
 	"math/big"
 	"math/rand"
@@ -120,7 +119,7 @@ func handleValueTransfer(t *testing.T, ev IRequestValueTransferEvent, bridgeInfo
 // - consider parent/child chain simulated backend.
 // - separate each test
 func TestBridgeManager(t *testing.T) {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -349,7 +348,7 @@ func TestBridgeManager(t *testing.T) {
 
 // TestBridgeManagerERC721_notSupportURI tests if bridge can handle an ERC721 which does not support URI.
 func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -518,7 +517,7 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 
 // TestBridgeManagerWithFee tests the KLAY/ERC20 transfer with fee.
 func TestBridgeManagerWithFee(t *testing.T) {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -921,7 +920,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 
 // TestBasicJournal tests basic journal functionality.
 func TestBasicJournal(t *testing.T) {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -1002,7 +1001,7 @@ func TestBasicJournal(t *testing.T) {
 
 // TestMethodRestoreBridges tests restoring bridges from the journal.
 func TestMethodRestoreBridges(t *testing.T) {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -1120,7 +1119,7 @@ func TestMethodRestoreBridges(t *testing.T) {
 
 // TestMethodGetAllBridge tests a method GetAllBridge.
 func TestMethodGetAllBridge(t *testing.T) {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -1151,7 +1150,7 @@ func TestMethodGetAllBridge(t *testing.T) {
 
 // TestErrorDuplication tests if duplication of journal insertion is ignored or not.
 func TestErrorDuplication(t *testing.T) {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -1191,7 +1190,7 @@ func TestErrorDuplication(t *testing.T) {
 
 // TestMethodSetJournal tests if duplication of journal insertion is ignored or not.
 func TestMethodSetJournal(t *testing.T) {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -1228,7 +1227,7 @@ func TestMethodSetJournal(t *testing.T) {
 
 // TestErrorDuplicatedSetBridgeInfo tests if duplication of bridge info insertion.
 func TestErrorDuplicatedSetBridgeInfo(t *testing.T) {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -1295,7 +1294,7 @@ func TestErrorDuplicatedSetBridgeInfo(t *testing.T) {
 
 // TestScenarioSubUnsub tests subscription and unsubscription scenario.
 func TestScenarioSubUnsub(t *testing.T) {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -1370,7 +1369,7 @@ func TestScenarioSubUnsub(t *testing.T) {
 
 // TestErrorEmptyAccount tests empty account error in case of journal insertion.
 func TestErrorEmptyAccount(t *testing.T) {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -1401,7 +1400,7 @@ func TestErrorEmptyAccount(t *testing.T) {
 
 // TestErrorDupSubscription tests duplicated subscription error.
 func TestErrorDupSubscription(t *testing.T) {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -1480,7 +1479,7 @@ func TestErrorDupSubscription(t *testing.T) {
 // 3. start anchoring from the current block
 // 4. accumulated tx counts
 func TestAnchoringBasic(t *testing.T) {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "anchoring")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "anchoring")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -1533,7 +1532,7 @@ func TestAnchoringBasic(t *testing.T) {
 // 3. start anchoring from the current block
 // 4. accumulated tx counts
 func TestAnchoringBasicWithFeePayer(t *testing.T) {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "anchoring")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "anchoring")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -1620,7 +1619,7 @@ func TestAnchoringBasicWithFeePayer(t *testing.T) {
 // TestAnchoringBasicWithBridgeTxPoolMock tests the following :
 // - BridgeTxPool addLocal() fail case.
 func TestAnchoringBasicWithBridgeTxPoolMock(t *testing.T) {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "anchoring")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "anchoring")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -1734,7 +1733,7 @@ func compareBlockAndAnchoringTx(t *testing.T, block *types.Block, tx *types.Tran
 // 1. set anchoring period 4
 // 2. check if tx counting started immediately and accumulated correctly
 func TestAnchoringStart(t *testing.T) {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "anchoringPeriod")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "anchoringPeriod")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -1817,7 +1816,7 @@ func TestAnchoringPeriod(t *testing.T) {
 	const (
 		startTxCount = 100
 	)
-	tempDir, err := ioutil.TempDir(os.TempDir(), "anchoringPeriod")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "anchoringPeriod")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -1941,7 +1940,7 @@ func TestDecodingLegacyAnchoringTx(t *testing.T) {
 		startBlkNum  = 10
 		startTxCount = 100
 	)
-	tempDir, err := ioutil.TempDir(os.TempDir(), "anchoring")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "anchoring")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -2000,7 +1999,7 @@ func TestDecodingLegacyAnchoringTx(t *testing.T) {
 }
 
 func TestBridgeAliasAPIs(t *testing.T) {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -2414,7 +2413,7 @@ func TestLegacyBridgeJournalDecode(t *testing.T) {
 	}
 
 	tempJournalPath := "legacy-journal-decoding-test"
-	tempFile, err := ioutil.TempFile(".", tempJournalPath)
+	tempFile, err := os.CreateTemp(".", tempJournalPath)
 	assert.NoError(t, err)
 
 	encodedHex, err := hex.DecodeString(encodedJournalHexStr)
@@ -2470,7 +2469,7 @@ func randomHex(n int) (string, error) {
 }
 
 func TestBridgeAddressType(t *testing.T) {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -2660,7 +2659,7 @@ func isExpectedBalance(t *testing.T, bridgeManager *BridgeManager,
 }
 
 func TestGetBridgeContractBalance(t *testing.T) {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {

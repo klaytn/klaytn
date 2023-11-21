@@ -18,6 +18,7 @@
 package setup
 
 import (
+	"github.com/klaytn/klaytn/blockchain/system"
 	"github.com/klaytn/klaytn/params"
 	"github.com/urfave/cli/v2"
 )
@@ -478,20 +479,62 @@ var (
 		Aliases: []string{"genesis.hardfork.kore-compatible-blocknumber"},
 	}
 
-	kip103CompatibleBlockNumberFlag = &cli.Int64Flag{
-		Name:  "kip103-compatible-blocknumber",
-		Usage: "kip103Compatible blockNumber",
-		Value: 0,
+	shanghaiCompatibleBlockNumberFlag = &cli.Int64Flag{
+		Name:    "shanghai-compatible-blocknumber",
+		Usage:   "shanghaiCompatible blockNumber",
+		Value:   0,
+		Aliases: []string{"genesis.hardfork.shanghai-compatible-blocknumber"},
 	}
 
-	shanghaiCompatibleBlockNumberFlag = &cli.Int64Flag{
-		Name:  "shanghai-compatible-blocknumber",
-		Usage: "shanghaiCompatible blockNumber",
-		Value: 0,
+	cancunCompatibleBlockNumberFlag = &cli.Int64Flag{
+		Name:    "cancun-compatible-blocknumber",
+		Usage:   "cancunCompatible blockNumber",
+		Value:   0,
+		Aliases: []string{"genesis.hardfork.cancun-compatible-blocknumber"},
+	}
+
+	// KIP103 hardfork is optional
+	kip103CompatibleBlockNumberFlag = &cli.Int64Flag{
+		Name:    "kip103-compatible-blocknumber",
+		Usage:   "kip103Compatible blockNumber",
+		Value:   0,
+		Aliases: []string{"genesis.hardfork.kip103-compatible-blocknumber"},
 	}
 
 	kip103ContractAddressFlag = &cli.StringFlag{
-		Name:  "kip103-contract-address",
-		Usage: "kip103 contract address",
+		Name:    "kip103-contract-address",
+		Usage:   "kip103 contract address",
+		Aliases: []string{"genesis.hardfork.kip103-contract-address"},
+	}
+
+	randaoCompatibleBlockNumberFlag = &cli.Int64Flag{
+		Name:    "randao-compatible-blocknumber",
+		Usage:   "randaoCompatible blockNumber",
+		Value:   0,
+		Aliases: []string{"genesis.hardfork.randao-compatible-blocknumber"},
+	}
+
+	kip113ProxyAddressFlag = &cli.StringFlag{
+		Name:    "kip113-proxy-contract-address",
+		Usage:   "kip113 proxy contract address",
+		Value:   system.Kip113ProxyAddrMock.String(),
+		Aliases: []string{"genesis.hardfork.kip113-proxy-contract-address"},
+	}
+
+	kip113LogicAddressFlag = &cli.StringFlag{
+		Name:    "kip113-logic-contract-address",
+		Usage:   "kip113 logic contract address",
+		Value:   system.Kip113LogicAddrMock.String(),
+		Aliases: []string{"genesis.hardfork.kip113-logic-contract-address"},
+	}
+
+	kip113MockFlag = &cli.BoolFlag{
+		Name:  "kip113-mock",
+		Usage: "Allocate an Kip113Mock at the genesis block",
+	}
+
+	registryMockFlag = &cli.BoolFlag{
+		Name:  "registry-mock",
+		Usage: "Allocate an RegistryMock at the genesis block",
 	}
 )

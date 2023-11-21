@@ -87,3 +87,21 @@ func TestMultipleVerify(t *testing.T) {
 	assert.Nil(t, err)
 	assert.True(t, ok)
 }
+
+func TestPop(t *testing.T) {
+	var (
+		sk1, _ = RandKey()
+		sk2, _ = RandKey()
+
+		pk1 = sk1.PublicKey()
+		pk2 = sk2.PublicKey()
+
+		pop1 = PopProve(sk1)
+		pop2 = PopProve(sk2)
+	)
+
+	assert.True(t, PopVerify(pk1, pop1))
+	assert.True(t, PopVerify(pk2, pop2))
+	assert.False(t, PopVerify(pk1, pop2))
+	assert.False(t, PopVerify(pk2, pop1))
+}

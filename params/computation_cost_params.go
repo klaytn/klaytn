@@ -20,6 +20,8 @@
 
 package params
 
+import "github.com/klaytn/klaytn/common/math"
+
 const (
 	// Computation cost for opcodes
 	ExtCodeHashComputationCost    = 1000
@@ -37,7 +39,12 @@ const (
 	SdivComputationCost           = 739
 	ModComputationCost            = 812
 	SmodComputationCost           = 560
+	AddmodComputationCost         = 3349
+	MulmodComputationCost         = 4757
 	ExpComputationCost            = 5000
+	ShlComputationCost            = 1603
+	ShrComputationCost            = 1346
+	SarComputationCost            = 1815
 	SignExtendComputationCost     = 481
 	LtComputationCost             = 201
 	GtComputationCost             = 264
@@ -46,7 +53,9 @@ const (
 	EqComputationCost             = 220
 	IszeroComputationCost         = 165
 	AndComputationCost            = 288
+	XorComputationCost            = 657
 	OrComputationCost             = 160
+	NotComputationCost            = 1289
 	ByteComputationCost           = 589
 	Sha3ComputationCost           = 2465
 	AddressComputationCost        = 284
@@ -80,7 +89,6 @@ const (
 	MsizeComputationCost          = 137
 	GasComputationCost            = 230
 	JumpDestComputationCost       = 10
-	Push0ComputationCost          = 80
 	PushComputationCost           = 120
 	Dup1ComputationCost           = 190
 	Dup2ComputationCost           = 190
@@ -126,50 +134,78 @@ const (
 	SelfDestructComputationCost   = 0
 
 	// Computation cost for precompiled contracts
-	EcrecoverComputationCost            = 113150
-	Sha256PerWordComputationCost        = 100
-	Sha256BaseComputationCost           = 1000
-	Ripemd160PerWordComputationCost     = 10
-	Ripemd160BaseComputationCost        = 100
-	IdentityPerWordComputationCost      = 0
-	IdentityBaseComputationCost         = 0
-	BigModExpPerGasComputationCost      = 10
-	BigModExpBaseComputationCost        = 100
-	Bn256AddComputationCost             = 8000
-	Bn256ScalarMulComputationCost       = 100000
-	Bn256ParingBaseComputationCost      = 2000000
-	Bn256ParingPerPointComputationCost  = 1000000
-	VMLogPerByteComputationCost         = 0
-	VMLogBaseComputationCost            = 10
-	FeePayerComputationCost             = 10
-	ValidateSenderPerSigComputationCost = 180000
-	ValidateSenderBaseComputationCost   = 10000
+	EcrecoverComputationCost                       = 113150
+	Sha256PerWordComputationCost                   = 100
+	Sha256BaseComputationCost                      = 1000
+	Ripemd160PerWordComputationCost                = 10
+	Ripemd160BaseComputationCost                   = 100
+	IdentityPerWordComputationCost                 = 0
+	IdentityBaseComputationCost                    = 0
+	BigModExpPerGasComputationCost                 = 10
+	BigModExpBaseComputationCost                   = 100
+	Bn256AddComputationCost                        = 8000
+	Bn256ScalarMulComputationCost                  = 100000
+	Bn256ParingBaseComputationCost                 = 2000000
+	Bn256ParingPerPointComputationCost             = 1000000
+	BlobTxPointEvaluationPrecompileComputationCost = 2200000
+	VMLogPerByteComputationCost                    = 0
+	VMLogBaseComputationCost                       = 10
+	FeePayerComputationCost                        = 10
+	ValidateSenderPerSigComputationCost            = 180000
+	ValidateSenderBaseComputationCost              = 10000
 
-	// computation costs for opcode added at istanbulCompatible Protocol Upgrade
+	// computation costs added at istanbulCompatible
 	ChainIDComputationCost      = 120
 	SelfBalanceComputationCost  = 374
 	Blake2bBaseComputationCost  = 10000
 	Blake2bScaleComputationCost = 10
 
-	// computation costs for opcode added at londonCompatible Protocol Upgrade
+	// computation cost added at londonCompatible
 	BaseFeeComputationCost = 198
 
-	// Opcode Computation Cost Modification
-	AddmodComputationCost         = 3349
-	AddmodComputationCostIstanbul = 1410
-	MulmodComputationCost         = 4757
-	MulmodComputationCostIstanbul = 1760
-	NotComputationCost            = 1289
-	NotComputationCostIstanbul    = 364
-	ShlComputationCost            = 1603
-	ShlComputationCostIstanbul    = 478
-	ShrComputationCost            = 1346
-	ShrComputationCostIstanbul    = 498
-	SarComputationCost            = 1815
-	SarComputationCostIstanbul    = 834
-	XorComputationCost            = 657
-	XorComputationCostIstanbul    = 454
-
-	// computation costs for opcode added at koreCompatible Protocol Upgrade
+	// computation cost added at KoreCompatible
 	RandomComputationCost = 1498
+
+	// computation cost added at ShanghaiCompatible
+	Push0ComputationCost = 80
+
+	// computation cost added at CancunCompatible
+	McopyComputationCost       = 250
+	TloadComputationCost       = 220
+	TstoreComputationCost      = 280
+	BlobHashComptationCost     = 165
+	BlobBaseFeeComputationCost = 120
+
+	// opcode computation cost modification - istanbul
+	AddmodComputationCostIstanbul = 1410
+	MulmodComputationCostIstanbul = 1760
+	ShlComputationCostIstanbul    = 478
+	ShrComputationCostIstanbul    = 498
+	SarComputationCostIstanbul    = 834
+	XorComputationCostIstanbul    = 454
+	NotComputationCostIstanbul    = 364
+
+	// opcode computation cost codification - cancun
+	SdivComputationCostCancun    = 360
+	ModComputationCostCancun     = 320
+	AddmodComputationCostCancun  = 360
+	MulmodComputationCostCancun  = 700
+	ExpComputationCostCancun     = 720
+	Sha3ComputationCostCancun    = 560
+	Mstore8ComputationCostCancun = 230
+
+	SloadComputationCostCancun  = 2550
+	SstoreComputationCostCancun = 2510
+	Log1ComputationCostCancun   = 500
+	Log2ComputationCostCancun   = 500
+	Log3ComputationCostCancun   = 500
+	Log4ComputationCostCancun   = 500
+
+	OpcodeComputationCostLimit         = 100000000      // 100ms
+	OpcodeComputationCostLimitCancun   = 150000000      // 150ms
+	OpcodeComputationCostLimitInfinite = math.MaxUint64 // pass it to disable computation cost checks
 )
+
+// OpcodeComputationCostLimitOverride set by --opcode-computation-cost-limit.
+// Overrides chain default settings above.
+var OpcodeComputationCostLimitOverride = uint64(0)

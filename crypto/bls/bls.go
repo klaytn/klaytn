@@ -17,6 +17,12 @@
 package bls
 
 import (
+	"crypto/ecdsa"
+	"encoding/hex"
+	"os"
+	"strings"
+
+	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/crypto/bls/blst"
 	"github.com/klaytn/klaytn/crypto/bls/types"
 )
@@ -35,7 +41,10 @@ type (
 // Such naming should provide compatiblity with prysm code snippets,
 // in case prysm code snippets are integrated to klaytn.
 //
+// ikm -> SK:  GenerateKey
 // ()  -> SK:  RandKey
+// ec  -> SK:  DeriveFromECDSA
+// path -> SK: LoadKey
 // b32 -> SK:  SecretKeyFromBytes
 // b48 -> PK:  PublicKeyFromBytes
 // b96 -> Sig: SignatureFromBytes
@@ -51,10 +60,48 @@ type (
 //
 // Sign(SK, msg) -> Sig
 // VerifySignature(b96, msg, PK) -> ok, err
+// PopProve(SK) -> Proof
+// PoPVerify(PK, Proof) -> ok, err
+
+// GenerateKey generates a BLS secret key from the initial key material (IKM).
+// It is deterministic process. Same IKM yields the same secret key.
+func GenerateKey(ikm []byte) (SecretKey, error) {
+	return blst.GenerateKey(ikm)
+}
 
 // RandKey generates a random BLS secret key.
 func RandKey() (SecretKey, error) {
 	return blst.RandKey()
+}
+
+// DeriveFromECDSA generates a BLS secret key from the given EC private key.
+// It is deterministic process. Same EC private key yields the same secret key.
+func DeriveFromECDSA(priv *ecdsa.PrivateKey) (SecretKey, error) {
+	return GenerateKey(crypto.FromECDSA(priv))
+}
+
+// LoadKey loads a BLS secret key from the given file.
+func LoadKey(path string) (SecretKey, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	content := string(b)
+	content = strings.TrimSpace(content)
+	content = strings.TrimPrefix(content, "0x")
+	b, err = hex.DecodeString(content)
+	if err != nil {
+		return nil, err
+	}
+
+	return SecretKeyFromBytes(b)
+}
+
+// SaveKey stores a BLS secret key to the given file.
+func SaveKey(path string, sk SecretKey) error {
+	b := hex.EncodeToString(sk.Marshal())
+	return os.WriteFile(path, []byte(b), 0o600)
 }
 
 // SecretKeyFromBytes unmarshals and validates a BLS secret key from bytes.
@@ -124,4 +171,19 @@ func VerifySignature(sig []byte, msg [32]byte, pk PublicKey) (bool, error) {
 // VerifyMultipleSignatures verifies multiple signatures for distinct messages securely.
 func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []PublicKey) (bool, error) {
 	return blst.VerifyMultipleSignatures(sigs, msgs, pubKeys)
+}
+
+// PopProve calculates the proof-of-possession for the secret key,
+// which is the signature with its public key as message.
+func PopProve(sk SecretKey) Signature {
+	// draft-irtf-cfrg-bls-signature-05 section 3.3.2. PopProve
+	msg := sk.PublicKey().Marshal()
+	return blst.Sign(sk, msg)
+}
+
+// PopVerify verifies the proof-of-possession for the public key.
+func PopVerify(pk PublicKey, proof Signature) bool {
+	// draft-irtf-cfrg-bls-signature-05 section 3.3.3. PopVerify
+	msg := pk.Marshal()
+	return blst.Verify(proof, msg, pk)
 }

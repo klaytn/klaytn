@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/storage/statedb"
 )
 
 // handler handles JSON-RPC messages. There is one handler per connection. Note that
@@ -427,12 +428,54 @@ func (h *handler) handleSubscribe(cp *callProc, msg *jsonrpcMessage) *jsonrpcMes
 func (h *handler) runMethod(ctx context.Context, msg *jsonrpcMessage, callb *callback, args []reflect.Value) *jsonrpcMessage {
 	result, err := callb.call(ctx, msg.Method, args)
 	if err != nil {
+		// TODO-Klaytn:
+		// 1. The single URL may be extended to the list of URL.
+		// 2. The URL (list or single) seems not modifiable at runtime.
+		// 3. Any request can be relayed as well as the state lack.
+		// 4. Make a new rpcErrorResponse struct.
+		if UpstreamArchiveEN != "" && shouldRequestUpstream(err) {
+			return requestUpstream(ctx, msg, args)
+		}
 		rpcErrorResponsesCounter.Inc(1)
 		return msg.errorResponse(err)
 	}
 
 	rpcSuccessResponsesCounter.Inc(1)
 	return msg.response(result)
+}
+
+// shouldRequestUpstream is a function that determines whether must be requested upstream.
+func shouldRequestUpstream(err error) bool {
+	switch err.(type) {
+	case *statedb.MissingNodeError:
+		return true
+	default:
+		return false
+	}
+}
+
+// requestUpstream is the function to request upstream archive en
+func requestUpstream(ctx context.Context, msg *jsonrpcMessage, args []reflect.Value) *jsonrpcMessage {
+	ctx, cancel := context.WithTimeout(ctx, DefaultHTTPTimeouts.ExecutionTimeout)
+	defer cancel()
+
+	var result interface{}
+	c, err := DialContext(ctx, UpstreamArchiveEN)
+	if err == nil {
+		defer c.Close()
+
+		var params []interface{}
+		for _, a := range args {
+			params = append(params, a.Interface())
+		}
+		if err = c.CallContext(ctx, &result, msg.Method, params...); err == nil {
+			rpcSuccessResponsesCounter.Inc(1)
+			return msg.response(result)
+		}
+	}
+
+	rpcErrorResponsesCounter.Inc(1)
+	return msg.errorResponse(err)
 }
 
 // unsubscribe is the callback function for all *_unsubscribe calls.

@@ -108,6 +108,14 @@ web3._extend({
 			inputFormatter: [null, function (val) { return !!val; }]
 		}),
 		new web3._extend.Method({
+			name: 'getBlockReceipts',
+			call: 'eth_getBlockReceipts',
+			params: 1,
+			outputFormatter: function(receipts) {
+				return receipts.map(web3._extend.formatters.outputTransactionReceiptFormatter);
+			}
+		}),
+		new web3._extend.Method({
 			name: 'getRawTransaction',
 			call: 'eth_getRawTransactionByHash',
 			params: 1
@@ -130,7 +138,7 @@ web3._extend({
 			name: 'createAccessList',
 			call: 'eth_createAccessList',
 			params: 2,
-			inputFormatter: [null, web3._extend.formatters.inputBlockNumberFormatter],
+			inputFormatter: [web3._extend.formatters.inputCallFormatter, web3._extend.formatters.inputBlockNumberFormatter],
 		}),
 		new web3._extend.Method({
 			name: 'feeHistory',
@@ -510,6 +518,10 @@ web3._extend({
 			name: 'spamThrottlerConfig',
 			getter: 'admin_spamThrottlerConfig'
 		}),
+		new web3._extend.Property({
+			name: 'nodeConfig',
+			getter: 'admin_nodeConfig',
+		}),
 	]
 });
 `
@@ -570,11 +582,14 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'startWarmUp',
 			call: 'debug_startWarmUp',
+			params: 1,
+			inputFormatter: [null]
 		}),
 		new web3._extend.Method({
 			name: 'startContractWarmUp',
 			call: 'debug_startContractWarmUp',
-			params: 1
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter, null]
 		}),
 		new web3._extend.Method({
 			name: 'stopWarmUp',
@@ -793,6 +808,12 @@ web3._extend({
 			inputFormatter: [null, null]
 		}),
 		new web3._extend.Method({
+			name: 'traceCall',
+			call: 'debug_traceCall',
+			params: 3,
+			inputFormatter: [null, null, null]
+		}),
+		new web3._extend.Method({
 			name: 'preimage',
 			call: 'debug_preimage',
 			params: 1,
@@ -830,11 +851,7 @@ web3._extend({
 			call: 'klay_getBlockReceipts',
 			params: 1,
 			outputFormatter: function(receipts) {
-				var formatted = [];
-				for (var i = 0; i < receipts.length; i++) {
-					formatted.push(web3._extend.formatters.outputTransactionReceiptFormatter(receipts[i]));
-				}
-				return formatted;
+				return receipts.map(web3._extend.formatters.outputTransactionReceiptFormatter);
 			}
 		}),
 		new web3._extend.Method({
@@ -917,13 +934,13 @@ web3._extend({
 		}),
 		new web3._extend.Method({
 			name: 'accountCreated',
-			call: 'klay_accountCreated'
+			call: 'klay_accountCreated',
 			params: 2,
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter],
 		}),
 		new web3._extend.Method({
 			name: 'getAccount',
-			call: 'klay_getAccount'
+			call: 'klay_getAccount',
 			params: 2,
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter],
 		}),
@@ -1045,7 +1062,7 @@ web3._extend({
 			name: 'createAccessList',
 			call: 'klay_createAccessList',
 			params: 2,
-			inputFormatter: [null, web3._extend.formatters.inputBlockNumberFormatter],
+			inputFormatter: [web3._extend.formatters.inputCallFormatter, web3._extend.formatters.inputBlockNumberFormatter],
 		}),
 		new web3._extend.Method({
 			name: 'feeHistory',
@@ -1094,7 +1111,7 @@ web3._extend({
 			name: 'maxPriorityFeePerGas',
 			getter: 'klay_maxPriorityFeePerGas',
 			outputFormatter: web3._extend.utils.toBigNumber
-		})
+		}),
 	]
 });
 `

@@ -24,7 +24,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"math/rand"
 	"os"
@@ -123,7 +122,7 @@ func testMissingNode(t *testing.T, memonly bool) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 
-	hash := common.HexToHash("0xe1d943cc8f061a0c0b98162830b970395ac9315654824bf21b73b891365262f9").ExtendLegacy()
+	hash := common.HexToHash("0xe1d943cc8f061a0c0b98162830b970395ac9315654824bf21b73b891365262f9").ExtendZero()
 	if memonly {
 		delete(triedb.nodes, hash)
 	} else {
@@ -325,11 +324,12 @@ func TestLargeValue(t *testing.T) {
 func TestStorageTrie(t *testing.T) {
 	newStorageTrie := func(pruning bool) *Trie {
 		dbm := database.NewMemoryDBManager()
+		var trieOpts *TrieOpts = nil
 		if pruning {
-			dbm.WritePruningEnabled()
+			trieOpts = &TrieOpts{LivePruningEnabled: true}
 		}
 		db := NewDatabase(dbm)
-		trie, _ := NewStorageTrie(common.ExtHash{}, db, nil)
+		trie, _ := NewStorageTrie(common.ExtHash{}, db, trieOpts)
 		updateString(trie, "doe", "reindeer")
 		return trie
 	}
@@ -337,30 +337,34 @@ func TestStorageTrie(t *testing.T) {
 	// non-pruning storage trie returns Legacy ExtHash for root
 	trie := newStorageTrie(false)
 	root := trie.HashExt()
-	assert.True(t, root.IsLegacy())
+	assert.True(t, root.IsZeroExtended())
 
 	trie = newStorageTrie(false)
 	root, _ = trie.CommitExt(nil)
-	assert.True(t, root.IsLegacy())
+	assert.True(t, root.IsZeroExtended())
 
 	// pruning storage trie returns non-Legacy ExtHash for root
 	trie = newStorageTrie(true)
 	root = trie.HashExt()
-	assert.False(t, root.IsLegacy())
+	assert.False(t, root.IsZeroExtended())
 
 	trie = newStorageTrie(true)
 	root, _ = trie.CommitExt(nil)
-	assert.False(t, root.IsLegacy())
+	assert.False(t, root.IsZeroExtended())
 }
 
 func TestPruningByUpdate(t *testing.T) {
 	dbm := database.NewMemoryDBManager()
-	dbm.WritePruningEnabled()
 	db := NewDatabase(dbm)
 	hasnode := func(hash common.ExtHash) bool { ok, _ := dbm.HasTrieNode(hash); return ok }
 	common.ResetExtHashCounterForTest(0xccccddddeeee00)
 
-	trie, _ := NewTrie(common.Hash{}, db, &TrieOpts{PruningBlockNumber: 1})
+	trieOpts := &TrieOpts{
+		LivePruningEnabled: true,
+		PruningBlockNumber: 1,
+	}
+
+	trie, _ := NewTrie(common.Hash{}, db, trieOpts)
 	nodehash1 := common.HexToExtHash("05ae693aac2107336a79309e0c60b24a7aac6aa3edecaef593921500d33c63c400000000000000")
 	nodehash2 := common.HexToExtHash("f226ef598ed9195f2211546cf5b2860dc27b4da07ff7ab5108ee68107f0c9d00ccccddddeeee01")
 
@@ -382,6 +386,7 @@ func TestPruningByUpdate(t *testing.T) {
 	assert.True(t, hasnode(nodehash2))
 
 	// Trigger pruning
+	trie, _ = NewTrie(nodehash1.Unextend(), db, trieOpts)
 	updateString(trie, "dogglesworth", "cat")
 	trie.Commit(nil)
 	db.Cap(0)
@@ -402,12 +407,16 @@ func TestPruningByUpdate(t *testing.T) {
 
 func TestPruningByDelete(t *testing.T) {
 	dbm := database.NewMemoryDBManager()
-	dbm.WritePruningEnabled()
 	db := NewDatabase(dbm)
 	hasnode := func(hash common.ExtHash) bool { ok, _ := dbm.HasTrieNode(hash); return ok }
 	common.ResetExtHashCounterForTest(0xccccddddeeee00)
 
-	trie, _ := NewTrie(common.Hash{}, db, &TrieOpts{PruningBlockNumber: 1})
+	trieOpts := &TrieOpts{
+		LivePruningEnabled: true,
+		PruningBlockNumber: 1,
+	}
+
+	trie, _ := NewTrie(common.Hash{}, db, trieOpts)
 	nodehash1 := common.HexToExtHash("05ae693aac2107336a79309e0c60b24a7aac6aa3edecaef593921500d33c63c400000000000000")
 	nodehash2 := common.HexToExtHash("f226ef598ed9195f2211546cf5b2860dc27b4da07ff7ab5108ee68107f0c9d00ccccddddeeee01")
 
@@ -429,6 +438,7 @@ func TestPruningByDelete(t *testing.T) {
 	assert.True(t, hasnode(nodehash2))
 
 	// Trigger pruning
+	trie, _ = NewTrie(nodehash1.Unextend(), db, trieOpts)
 	deleteString(trie, "doe")
 	trie.Commit(nil)
 	db.Cap(0)
@@ -677,7 +687,7 @@ func benchmarkCommitAfterHash(b *testing.B) {
 }
 
 func tempDB() (string, *Database) {
-	dir, err := ioutil.TempDir("", "trie-bench")
+	dir, err := os.MkdirTemp("", "trie-bench")
 	if err != nil {
 		panic(fmt.Sprintf("can't create temporary directory: %v", err))
 	}

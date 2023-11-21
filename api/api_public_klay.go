@@ -63,7 +63,8 @@ func (s *PublicKlayAPI) ProtocolVersion() hexutil.Uint {
 
 // MaxPriorityFeePerGas returns a suggestion for a gas tip cap for dynamic fee transactions.
 func (s *PublicKlayAPI) MaxPriorityFeePerGas(ctx context.Context) (*hexutil.Big, error) {
-	return s.GasPrice(ctx)
+	price, err := s.b.SuggestTipCap(ctx)
+	return (*hexutil.Big)(price), err
 }
 
 type FeeHistoryResult struct {

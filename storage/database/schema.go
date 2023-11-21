@@ -93,10 +93,11 @@ var (
 	preimagePrefix = []byte("secure-key-")  // preimagePrefix + hash -> preimage
 	configPrefix   = []byte("klay-config-") // config prefix for the db
 
-	pruningEnabledKey = []byte("PruningEnabled")
-	pruningMarkPrefix = []byte("Pruning-")                                // KIP-111 pruning markings
-	pruningMarkValue  = []byte{0x01}                                      // A nonempty value to store a pruning mark
-	pruningMarkKeyLen = len(pruningMarkPrefix) + 8 + common.ExtHashLength // prefix + num (uint64) + node hash
+	pruningEnabledKey        = []byte("PruningEnabled")
+	pruningMarkPrefix        = []byte("Pruning-")                                // KIP-111 pruning markings
+	pruningMarkValue         = []byte{0x01}                                      // A nonempty value to store a pruning mark
+	pruningMarkKeyLen        = len(pruningMarkPrefix) + 8 + common.ExtHashLength // prefix + num (uint64) + node hash
+	lastPrunedBlockNumberKey = []byte("lastPrunedBlockNumber")
 
 	// Chain index prefixes (use `i` + single byte to avoid mixing data types).
 	BloomBitsIndexPrefix = []byte("iB") // BloomBitsIndexPrefix is the data table of a chain indexer to track its progress
@@ -137,18 +138,6 @@ type TxLookupEntry struct {
 	BlockHash  common.Hash
 	BlockIndex uint64
 	Index      uint64
-}
-
-// encodeBlockNumber encodes a block number as big endian uint64
-func encodeBlockNumber(number uint64) []byte {
-	enc := make([]byte, 8)
-	binary.BigEndian.PutUint64(enc, number)
-	return enc
-}
-
-// headerKeyPrefix = headerPrefix + num (uint64 big endian)
-func headerKeyPrefix(number uint64) []byte {
-	return append(headerPrefix, common.Int64ToByteBigEndian(number)...)
 }
 
 // headerKey = headerPrefix + num (uint64 big endian) + hash
@@ -270,7 +259,7 @@ func databaseDirKey(dbEntryType uint64) []byte {
 
 // TrieNodeKey = if Legacy, hash32. Otherwise, exthash
 func TrieNodeKey(hash common.ExtHash) []byte {
-	if hash.IsLegacy() {
+	if hash.IsZeroExtended() {
 		return hash.Unextend().Bytes()
 	} else {
 		return hash.Bytes()

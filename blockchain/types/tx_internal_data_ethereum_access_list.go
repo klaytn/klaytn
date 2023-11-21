@@ -132,7 +132,7 @@ func newTxInternalDataEthereumAccessListWithValues(nonce uint64, to *common.Addr
 	}
 
 	if accessList != nil {
-		copy(d.AccessList, accessList)
+		d.AccessList = append(d.AccessList, accessList...)
 	}
 
 	return d

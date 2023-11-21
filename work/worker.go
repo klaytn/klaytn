@@ -709,8 +709,7 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByTimeAndNonce, bc Blo
 	}()
 
 	vmConfig := &vm.Config{
-		RunningEVM:               chEVM,
-		UseOpcodeComputationCost: true,
+		RunningEVM: chEVM,
 	}
 
 	var numTxsChecked int64 = 0
@@ -746,7 +745,7 @@ CommitTransactionLoop:
 		//	continue
 		//}
 		// Start executing the transaction
-		env.state.Prepare(tx.Hash(), common.Hash{}, env.tcount)
+		env.state.SetTxContext(tx.Hash(), common.Hash{}, env.tcount)
 
 		err, logs := env.commitTransaction(tx, bc, rewardbase, vmConfig)
 		switch err {

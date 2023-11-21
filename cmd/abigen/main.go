@@ -23,7 +23,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"regexp"
 	"strings"
@@ -163,9 +163,9 @@ func abigen(c *cli.Context) error {
 		)
 		input := c.String(abiFlag.Name)
 		if input == "-" {
-			abi, err = ioutil.ReadAll(os.Stdin)
+			abi, err = io.ReadAll(os.Stdin)
 		} else {
-			abi, err = ioutil.ReadFile(input)
+			abi, err = os.ReadFile(input)
 		}
 		if err != nil {
 			log.Fatalf("Failed to read input ABI: %v", err)
@@ -174,7 +174,7 @@ func abigen(c *cli.Context) error {
 
 		var bin []byte
 		if binFile := c.String(binFlag.Name); binFile != "" {
-			if bin, err = ioutil.ReadFile(binFile); err != nil {
+			if bin, err = os.ReadFile(binFile); err != nil {
 				log.Fatalf("Failed to read input bytecode: %v", err)
 			}
 			if strings.Contains(string(bin), "//") {
@@ -184,7 +184,7 @@ func abigen(c *cli.Context) error {
 		bins = append(bins, string(bin))
 		var binruntime []byte
 		if binruntimeFile := c.String(binruntimeFlag.Name); binruntimeFile != "" {
-			if binruntime, err = ioutil.ReadFile(binruntimeFile); err != nil {
+			if binruntime, err = os.ReadFile(binruntimeFile); err != nil {
 				log.Fatalf("Failed to read input runtime-bytecode: %v", err)
 			}
 			if strings.Contains(string(binruntime), "//") {
@@ -214,7 +214,7 @@ func abigen(c *cli.Context) error {
 				log.Fatalf("Failed to build Solidity contract: %v", err)
 			}
 		case c.IsSet(jsonFlag.Name):
-			jsonOutput, err := ioutil.ReadFile(c.String(jsonFlag.Name))
+			jsonOutput, err := os.ReadFile(c.String(jsonFlag.Name))
 			if err != nil {
 				log.Fatalf("Failed to read combined-json from compiler: %v", err)
 			}
@@ -265,7 +265,7 @@ func abigen(c *cli.Context) error {
 		fmt.Printf("%s\n", code)
 		return nil
 	}
-	if err := ioutil.WriteFile(c.String(outFlag.Name), []byte(code), 0o600); err != nil {
+	if err := os.WriteFile(c.String(outFlag.Name), []byte(code), 0o600); err != nil {
 		log.Fatalf("Failed to write ABI binding: %v", err)
 	}
 	return nil

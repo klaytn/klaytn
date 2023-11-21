@@ -112,6 +112,7 @@ type ValidatorSet interface {
 	Refresh(hash common.Hash, blockNum uint64, config *params.ChainConfig, isSingle bool, governingNode common.Address, minStaking uint64) error
 
 	SetBlockNum(blockNum uint64)
+	SetMixHash(mixHash []byte)
 
 	Proposers() []Validator // TODO-Klaytn-Issue1166 For debugging
 

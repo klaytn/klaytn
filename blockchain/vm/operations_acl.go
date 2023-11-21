@@ -33,8 +33,8 @@ func makeGasSStoreFunc(clearingRefund uint64) gasFunc {
 		}
 		// Gas sentry honoured, do the actual gas calculation based on the stored value
 		var (
-			y, x    = stack.Back(1), stack.Peek()
-			slot    = common.BigToHash(x)
+			y, x    = stack.Back(1), stack.peek()
+			slot    = common.Hash(x.Bytes32())
 			current = evm.StateDB.GetState(contract.Address(), slot)
 			cost    = uint64(0)
 		)
@@ -50,14 +50,14 @@ func makeGasSStoreFunc(clearingRefund uint64) gasFunc {
 				panic("impossible case: address was not present in access list during sstore op")
 			}
 		}
-		value := common.BigToHash(y)
+		value := common.Hash(y.Bytes32())
 
 		if current == value { // noop (1)
 			// EIP 2200 original clause:
 			//		return params.SloadGasEIP2200, nil
 			return cost + params.WarmStorageReadCostEIP2929, nil // SLOAD_GAS
 		}
-		original := evm.StateDB.GetCommittedState(contract.Address(), common.BigToHash(x))
+		original := evm.StateDB.GetCommittedState(contract.Address(), x.Bytes32())
 		if original == current {
 			if original == (common.Hash{}) { // create slot (2.1.1)
 				return cost + params.SstoreSetGasEIP2200, nil
@@ -102,8 +102,8 @@ func makeGasSStoreFunc(clearingRefund uint64) gasFunc {
 // charge 2100 gas and add the pair to accessed_storage_keys.
 // If the pair is already in accessed_storage_keys, charge 100 gas.
 func gasSLoadEIP2929(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
-	loc := stack.Peek()
-	slot := common.BigToHash(loc)
+	loc := stack.peek()
+	slot := common.Hash(loc.Bytes32())
 	// Check slot presence in the access list
 	if _, slotPresent := evm.StateDB.SlotInAccessList(contract.Address(), slot); !slotPresent {
 		// If the caller cannot afford the cost, this change will be rolled back
@@ -125,7 +125,7 @@ func gasExtCodeCopyEIP2929(evm *EVM, contract *Contract, stack *Stack, mem *Memo
 	if err != nil {
 		return 0, err
 	}
-	addr := common.BigToAddress(stack.Peek())
+	addr := common.Address(stack.peek().Bytes20())
 	// Check slot presence in the access list
 	if !evm.StateDB.AddressInAccessList(addr) {
 		evm.StateDB.AddAddressToAccessList(addr)
@@ -147,7 +147,7 @@ func gasExtCodeCopyEIP2929(evm *EVM, contract *Contract, stack *Stack, mem *Memo
 // - extcodesize,
 // - (ext) balance
 func gasEip2929AccountCheck(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
-	addr := common.BigToAddress(stack.Peek())
+	addr := common.Address(stack.peek().Bytes20())
 	// Check slot presence in the access list
 	if !evm.StateDB.AddressInAccessList(addr) {
 		// If the caller cannot afford the cost, this change will be rolled back
@@ -160,7 +160,7 @@ func gasEip2929AccountCheck(evm *EVM, contract *Contract, stack *Stack, mem *Mem
 
 func makeCallVariantGasCallEIP2929(oldCalculator gasFunc) gasFunc {
 	return func(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
-		addr := common.BigToAddress(stack.Back(1))
+		addr := common.Address(stack.Back(1).Bytes20())
 		// Check slot presence in the access list
 		warmAccess := evm.StateDB.AddressInAccessList(addr)
 		// The WarmStorageReadCostEIP2929 (100) is already deducted in the form of a constant cost, so
@@ -225,7 +225,7 @@ func makeSelfdestructGasFn(refundsEnabled bool) gasFunc {
 	gasFunc := func(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 		var (
 			gas     uint64
-			address = common.BigToAddress(stack.Peek())
+			address = common.Address(stack.peek().Bytes20())
 		)
 		if !evm.StateDB.AddressInAccessList(address) {
 			// If the caller cannot afford the cost, this change will be rolled back
@@ -236,7 +236,7 @@ func makeSelfdestructGasFn(refundsEnabled bool) gasFunc {
 		if evm.StateDB.Empty(address) && evm.StateDB.GetBalance(contract.Address()).Sign() != 0 {
 			gas += params.CreateBySelfdestructGas
 		}
-		if refundsEnabled && !evm.StateDB.HasSuicided(contract.Address()) {
+		if refundsEnabled && !evm.StateDB.HasSelfDestructed(contract.Address()) {
 			evm.StateDB.AddRefund(params.SelfdestructRefundGas)
 		}
 		return gas, nil

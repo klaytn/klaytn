@@ -80,6 +80,7 @@ type Database interface {
 	Iteratee
 
 	GetProperty(name string) string
+	TryCatchUpWithPrimary() error
 }
 
 func WriteBatches(batches ...Batch) (int, error) {

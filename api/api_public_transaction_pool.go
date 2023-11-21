@@ -556,6 +556,14 @@ func resend(s *PublicTransactionPoolAPI, ctx context.Context, sendArgs NewTxArgs
 // RecoverFromTransaction recovers the sender address from a signed raw transaction.
 // The signature is validated against the sender account's key configuration at the given block number.
 func (s *PublicTransactionPoolAPI) RecoverFromTransaction(ctx context.Context, encodedTx hexutil.Bytes, blockNumber rpc.BlockNumber) (common.Address, error) {
+	if len(encodedTx) == 0 {
+		return common.Address{}, fmt.Errorf("Empty input")
+	}
+	if 0 < encodedTx[0] && encodedTx[0] < 0x8 { // TODO: Add helper to distinguish eth vs klay txtypes
+		ethEnvelope := []byte{byte(types.EthereumTxTypeEnvelope)}
+		encodedTx = append(ethEnvelope, encodedTx...)
+	}
+
 	tx := new(types.Transaction)
 	if err := rlp.DecodeBytes(encodedTx, tx); err != nil {
 		return common.Address{}, err

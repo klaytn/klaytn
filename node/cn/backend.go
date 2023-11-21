@@ -258,6 +258,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 			CacheSize:            config.TrieCacheSize,
 			BlockInterval:        config.TrieBlockInterval,
 			TriesInMemory:        config.TriesInMemory,
+			LivePruningEnabled:   config.LivePruning,
 			LivePruningRetention: config.LivePruningRetention,
 			TrieNodeCacheConfig:  &config.TrieNodeCacheConfig,
 			SenderTxHashIndexing: config.SenderTxHashIndexing,
@@ -272,23 +273,12 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 	bc.SetCanonicalBlock(config.StartBlockNumber)
 
-	// Write the live pruning flag to database if the node is started for the first time
-	if config.LivePruning && !chainDB.ReadPruningEnabled() {
-		if bc.CurrentBlock().NumberU64() > 0 {
-			return nil, errors.New("cannot enable live pruning after chain has advanced")
-		}
-		logger.Info("Writing live pruning flag to database")
-		chainDB.WritePruningEnabled()
-	}
-	// Live pruning is enabled according to the flag in database
-	// regardless of the command line flag --state.live-pruning
-	// But live pruning is disabled when --state.live-pruning-retention=0
-	if chainDB.ReadPruningEnabled() && config.LivePruningRetention != 0 {
+	if config.LivePruning && config.LivePruningRetention != 0 {
 		logger.Info("Live pruning is enabled", "retention", config.LivePruningRetention)
-	} else if !chainDB.ReadPruningEnabled() {
-		logger.Info("Live pruning is disabled because flag not stored in database")
-	} else if config.LivePruningRetention == 0 {
-		logger.Info("Live pruning is disabled because retention is set to zero")
+	} else {
+		// LivePruning is disabeld by absent `--state.live-pruning` or `--state.live-pruning-retention=0`
+		logger.Info("Live pruning is disabled",
+			"enable", config.LivePruning, "retention", config.LivePruningRetention)
 	}
 
 	cn.blockchain = bc
@@ -345,6 +335,11 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.protocolManager.SetWsEndPoint(config.WsEndpoint)
 
 	if ctx.NodeType() == common.CONSENSUSNODE {
+		logger.Info("Loaded node keys",
+			"nodeAddress", crypto.PubkeyToAddress(ctx.NodeKey().PublicKey),
+			"nodePublicKey", hexutil.Encode(crypto.FromECDSAPub(&ctx.NodeKey().PublicKey)),
+			"blsPublicKey", hexutil.Encode(ctx.BlsNodeKey().PublicKey().Marshal()))
+
 		if _, err := cn.Rewardbase(); err != nil {
 			logger.Error("Cannot determine the rewardbase address", "err", err)
 		}
@@ -500,7 +495,15 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 	if chainConfig.Governance == nil {
 		chainConfig.Governance = params.GetDefaultGovernanceConfig()
 	}
-	return istanbulBackend.New(config.Rewardbase, &config.Istanbul, ctx.NodeKey(), db, gov, nodetype)
+	return istanbulBackend.New(&istanbulBackend.BackendOpts{
+		IstanbulConfig: &config.Istanbul,
+		Rewardbase:     config.Rewardbase,
+		PrivateKey:     ctx.NodeKey(),
+		BlsSecretKey:   ctx.BlsNodeKey(),
+		DB:             db,
+		Governance:     gov,
+		NodeType:       nodetype,
+	})
 }
 
 // APIs returns the collection of RPC services the ethereum package offers.
