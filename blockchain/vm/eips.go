@@ -350,6 +350,16 @@ func enable7516(jt *JumpTable) {
 	}
 }
 
+func enable1052(jt *JumpTable) {
+	jt[EXTCODEHASH] = &operation{
+		execute:         opExtCodeHash1052,
+		constantGas:     params.ExtcodeHashGasConstantinople,
+		minStack:        minStack(1, 1),
+		maxStack:        maxStack(1, 1),
+		computationCost: params.ExtCodeHashComputationCost,
+	}
+}
+
 // As the cpu performance has been improved a lot, and as the storage size has increased a lot
 // recalculated the computation cost of some opcodes
 func enableCancunComputationCostModification(jt *JumpTable) {
