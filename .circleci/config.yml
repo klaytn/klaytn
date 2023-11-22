@@ -71,7 +71,7 @@ executors:
   rpm-executor: # this executor is for packaging rpm binaries
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
-      - image: klaytn/circleci-rpmbuild:1.20.6
+      - image: klaytn/circleci-rpmbuild:1.20.6-gcc7
         auth:
           username: $DOCKER_LOGIN
           password: $DOCKER_PASSWORD
