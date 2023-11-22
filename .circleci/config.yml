@@ -64,10 +64,6 @@ executors:
     macos:
       xcode: 14.2.0
     resource_class: macos.x86.medium.gen2
-    parameters:
-      os-network:
-        type: string
-        default: "darwin-amd64"
   rpm-executor: # this executor is for packaging rpm binaries
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
@@ -95,10 +91,6 @@ commands:
             tar -C $HOME/go1.20.6 -xzf go1.20.6.darwin-amd64.tar.gz
   pre-build:
     description: "before build, set version"
-    parameters:
-      os-network:
-        type: string
-        default: "linux-amd64"
     steps:
       - run:
           name: "set variables"
@@ -110,12 +102,9 @@ commands:
             if [[ $CIRCLE_TAG =~ $pat ]]; then
               echo "this is rc version $CIRCLE_TAG"
               rc_num=$(echo $CIRCLE_TAG | cut -d '-' -f 2)
-              if [[ << parameters.os-network >> =~ .*"darwin".* ]]; then
-                sed -i '' 's/%d.%d.%d/%d.%d.%d~'$rc_num'/' params/version.go
-              else
-                sed -i 's/%d.%d.%d/%d.%d.%d~'$rc_num'/' params/version.go
-              fi
 
+              sed 's/%d.%d.%d/%d.%d.%d~'$rc_num'/' params/version.go > params/version.go.tmp
+              mv params/version.go.tmp params/version.go
               sed -n '/%d.%d.%d/p' params/version.go
             else
               echo "this is not RC version"
@@ -339,7 +328,7 @@ commands:
           name: "Run rpc-tester on 1CN private network"
           no_output_timeout: 30m
           command: |
-            make kcn 
+            make kcn
             git clone https://$TEST_TOKEN@github.com/klaytn/klaytn-rpc-tester.git
             cd klaytn-rpc-tester
             cp ../build/bin/kcn script/cn/bin/
@@ -517,7 +506,8 @@ jobs:
       - checkout
       - install-darwin-dependencies
       - pre-build
-      - build-packaging
+      - build-packaging:
+          os-network: "darwin-amd64"
       - upload-repo
 
   packaging-darwin-baobab:
@@ -527,6 +517,7 @@ jobs:
       - install-darwin-dependencies
       - pre-build
       - build-packaging:
+          os-network: "darwin-amd64"
           baobab: "-b"
       - upload-repo:
           item: "kcn kpn ken"
