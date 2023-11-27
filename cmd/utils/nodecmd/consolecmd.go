@@ -104,19 +104,7 @@ func localConsole(ctx *cli.Context) error {
 // console to it.
 func remoteConsole(ctx *cli.Context) error {
 	// Attach to a remotely running node instance and start the JavaScript console
-	endpoint := ctx.Args().First()
-	if endpoint == "" {
-		path := node.DefaultDataDir()
-		if ctx.IsSet(utils.DataDirFlag.Name) {
-			path = ctx.String(utils.DataDirFlag.Name)
-		}
-		if path != "" {
-			if ctx.Bool(utils.BaobabFlag.Name) {
-				path = filepath.Join(path, "baobab")
-			}
-		}
-		endpoint = fmt.Sprintf("%s/klay.ipc", path)
-	}
+	endpoint := rpcEndpoint(ctx)
 	client, err := dialRPC(endpoint)
 	if err != nil {
 		log.Fatalf("Unable to attach to remote node: %v", err)
@@ -144,6 +132,23 @@ func remoteConsole(ctx *cli.Context) error {
 	console.Interactive()
 
 	return nil
+}
+
+func rpcEndpoint(ctx *cli.Context) string {
+	endpoint := ctx.Args().First()
+	if endpoint == "" {
+		path := node.DefaultDataDir()
+		if ctx.IsSet(utils.DataDirFlag.Name) {
+			path = ctx.String(utils.DataDirFlag.Name)
+		}
+		if path != "" {
+			if ctx.Bool(utils.BaobabFlag.Name) {
+				path = filepath.Join(path, "baobab")
+			}
+		}
+		endpoint = fmt.Sprintf("%s/klay.ipc", path)
+	}
+	return endpoint
 }
 
 // dialRPC returns a RPC client which connects to the given endpoint.
