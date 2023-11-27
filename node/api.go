@@ -22,12 +22,14 @@ package node
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/crypto/bls"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/networks/rpc"
@@ -291,14 +293,49 @@ func (api *PublicAdminAPI) Peers() ([]*p2p.PeerInfo, error) {
 	return server.PeersInfo(), nil
 }
 
+// BlsPublicKeyInfoOutput has string fields unlike system.BlsPublicKeyInfo.
+type BlsPublicKeyInfoOutput struct {
+	PublicKey string `json:"publicKey"`
+	Pop       string `json:"pop"`
+}
+
+// NodeInfoOutput extends p2p.NodeInfo with additional fields.
+type NodeInfoOutput struct {
+	p2p.NodeInfo
+
+	// Node address derived from node key
+	NodeAddress string `json:"nodeAddress"`
+
+	// BLS public key information for consensus
+	BlsPublicKeyInfo BlsPublicKeyInfoOutput `json:"blsPublicKeyInfo"`
+}
+
 // NodeInfo retrieves all the information we know about the host node at the
 // protocol granularity.
-func (api *PublicAdminAPI) NodeInfo() (*p2p.NodeInfo, error) {
+func (api *PublicAdminAPI) NodeInfo() (*NodeInfoOutput, error) {
 	server := api.node.Server()
 	if server == nil {
 		return nil, ErrNodeStopped
 	}
-	return server.NodeInfo(), nil
+
+	var (
+		nodeKey  = api.node.config.NodeKey()
+		nodeAddr = crypto.PubkeyToAddress(nodeKey.PublicKey)
+
+		blsPriv = api.node.config.BlsNodeKey()
+		blsPub  = blsPriv.PublicKey().Marshal()
+		blsPop  = bls.PopProve(blsPriv).Marshal()
+	)
+
+	info := &NodeInfoOutput{
+		NodeInfo:    *server.NodeInfo(),
+		NodeAddress: nodeAddr.Hex(),
+		BlsPublicKeyInfo: BlsPublicKeyInfoOutput{
+			PublicKey: hex.EncodeToString(blsPub),
+			Pop:       hex.EncodeToString(blsPop),
+		},
+	}
+	return info, nil
 }
 
 // Datadir retrieves the current data directory the node is using.
