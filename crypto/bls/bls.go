@@ -176,14 +176,10 @@ func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []PublicKe
 // PopProve calculates the proof-of-possession for the secret key,
 // which is the signature with its public key as message.
 func PopProve(sk SecretKey) Signature {
-	// draft-irtf-cfrg-bls-signature-05 section 3.3.2. PopProve
-	msg := sk.PublicKey().Marshal()
-	return blst.Sign(sk, msg)
+	return blst.PopProve(sk)
 }
 
 // PopVerify verifies the proof-of-possession for the public key.
-func PopVerify(pk PublicKey, proof Signature) bool {
-	// draft-irtf-cfrg-bls-signature-05 section 3.3.3. PopVerify
-	msg := pk.Marshal()
-	return blst.Verify(proof, msg, pk)
+func PopVerify(pk PublicKey, sig Signature) bool {
+	return blst.PopVerify(pk, sig)
 }
