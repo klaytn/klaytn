@@ -138,17 +138,37 @@ func (s *signature) Copy() types.Signature {
 	return &signature{p: &np}
 }
 
-func Sign(sk types.SecretKey, msg []byte) types.Signature {
+func sign(sk types.SecretKey, msg []byte, dst []byte) types.Signature {
 	sig := new(blstSignature).Sign(
-		sk.(*secretKey).p, msg, types.DomainSeparationTag)
+		sk.(*secretKey).p, msg, dst)
 	return &signature{p: sig}
 }
 
-func Verify(sig types.Signature, msg []byte, pk types.PublicKey) bool {
+func Sign(sk types.SecretKey, msg []byte) types.Signature {
+	return sign(sk, msg, types.DomainSeparationTagSig)
+}
+
+// draft-irtf-cfrg-bls-signature-05 section 3.3.2. PopProve
+func PopProve(sk types.SecretKey) types.Signature {
+	msg := sk.PublicKey().Marshal()
+	return sign(sk, msg, types.DomainSeparationTagPop)
+}
+
+func verify(sig types.Signature, msg []byte, pk types.PublicKey, dst []byte) bool {
 	sigGroupCheck := false // alreaay checked in *SignatureFromBytes()
 	pkValidate := false    // alreaay checked in *PublicKeyFromBytes()
 	return sig.(*signature).p.Verify(
-		sigGroupCheck, pk.(*publicKey).p, pkValidate, msg, types.DomainSeparationTag)
+		sigGroupCheck, pk.(*publicKey).p, pkValidate, msg, dst)
+}
+
+func Verify(sig types.Signature, msg []byte, pk types.PublicKey) bool {
+	return verify(sig, msg, pk, types.DomainSeparationTagSig)
+}
+
+// draft-irtf-cfrg-bls-signature-05 section 3.3.3. PopVerify
+func PopVerify(pk types.PublicKey, sig types.Signature) bool {
+	msg := pk.Marshal()
+	return verify(sig, msg, pk, types.DomainSeparationTagPop)
 }
 
 func FastAggregateVerify(sig types.Signature, msg []byte, pks []types.PublicKey) bool {
@@ -159,7 +179,7 @@ func FastAggregateVerify(sig types.Signature, msg []byte, pks []types.PublicKey)
 
 	sigGroupCheck := false // alreaay checked in *SignatureFromBytes()
 	return sig.(*signature).p.FastAggregateVerify(
-		sigGroupCheck, pubPs, msg, types.DomainSeparationTag)
+		sigGroupCheck, pubPs, msg, types.DomainSeparationTagSig)
 }
 
 func VerifySignature(sigb []byte, msg [32]byte, pk types.PublicKey) (bool, error) {
@@ -170,7 +190,7 @@ func VerifySignature(sigb []byte, msg [32]byte, pk types.PublicKey) (bool, error
 	sigGroupCheck := false // alreaay checked in SignatureFromBytes()
 	pkValidate := false    // alreaay checked in *PublicKeyFromBytes()
 	ok := sig.(*signature).p.Verify(
-		sigGroupCheck, pk.(*publicKey).p, pkValidate, msg[:], types.DomainSeparationTag)
+		sigGroupCheck, pk.(*publicKey).p, pkValidate, msg[:], types.DomainSeparationTagSig)
 	return ok, nil
 }
 
@@ -221,7 +241,7 @@ func VerifyMultipleSignatures(sigbs [][]byte, msgs [][32]byte, pks []types.Publi
 	sigGroupCheck := false // alreaay checked in MultipleSignaturesFromBytes()
 	pkValidate := false    // alreaay checked in *PublicKeyFromBytes()
 	ok := dummy.MultipleAggregateVerify(
-		sigPs, sigGroupCheck, pkPs, pkValidate, msgPs, types.DomainSeparationTag, randFunc, blstRandBits)
+		sigPs, sigGroupCheck, pkPs, pkValidate, msgPs, types.DomainSeparationTagSig, randFunc, blstRandBits)
 
 	if randErr != nil {
 		return false, fmt.Errorf("verify aborted: %s", randErr.Error())

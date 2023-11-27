@@ -171,6 +171,28 @@ func TestSignVerify(t *testing.T) {
 	assert.False(t, Verify(Sign(sk, msg), msg, pk2))
 }
 
+func TestPopProveVerify(t *testing.T) {
+	var (
+		// https://github.com/Chia-Network/bls-signatures/blob/2.0.2/src/test.cpp
+		// "Chia test vector 3 (PoP)"
+		// Note: `skb` is the result of PopSchemeMPL().KeyGen(seed1) in the testcase
+		skb  = common.FromHex("0x258787ef728c898e43bc76244d70f468c9c7e1338a107b18b42da0d86b663c26")
+		popb = common.FromHex("0x84f709159435f0dc73b3e8bf6c78d85282d19231555a8ee3b6e2573aaf66872d9203fefa1ef700e34e7c3f3fb28210100558c6871c53f1ef6055b9f06b0d1abe22ad584ad3b957f3018a8f58227c6c716b1e15791459850f2289168fa0cf9115")
+
+		sk, _ = SecretKeyFromBytes(skb)
+		pk    = sk.PublicKey()
+		pop   = PopProve(sk)
+	)
+	assert.Equal(t, popb, pop.Marshal())
+	assert.True(t, PopVerify(pk, pop))
+
+	sk2, _ := RandKey()
+	pk2 := sk2.PublicKey()
+	assert.True(t, PopVerify(pk2, PopProve(sk2)))
+	assert.False(t, PopVerify(pk2, PopProve(sk)))
+	assert.False(t, PopVerify(pk, PopProve(sk2)))
+}
+
 func TestAggregateVerify(t *testing.T) {
 	var (
 		// https://github.com/ethereum/bls12-381-tests
