@@ -27,6 +27,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/cespare/cp"
 	"github.com/stretchr/testify/assert"
@@ -289,7 +290,7 @@ func TestBlsInfo(t *testing.T) {
 			"address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
 			"blsPublicKeyInfo": {
 				"publicKey": "876006073c4ef19d23df948fea3e7e95398d6a7b5acc6a510f24e2d5160bbbd9f636a58cdfe69c8eba42b1cfce0fa60a",
-				"pop": "a76d6d4e1886b86f0d3a711917c0845c99c765a2473543ebbecd5471034a65f9e962f7a78b5eb41d8797988a2d71393308a593bcbf14aaaaca3ae0e43e7430c348d529bf99fcb829e80d87cf1db69675405ec3f32829eec609ebc459c4976ad1"
+				"pop": "ac7886654439a16c53be123d1956bb1bfe4a04b118ac50d9d4a56aef8a8e1e23128a8d720a9290a4dfa411df2384f5dc0bf9ee9861846fe1bd3f0fbd998935deda91cb28ceefe5ff8f307b43c0559dfbc96d7f2b6361980edb0298f28479908e"
 			}
 		}`
 	)
@@ -297,16 +298,23 @@ func TestBlsInfo(t *testing.T) {
 	defer os.Remove(outputPath)
 	t.Logf("datadir: %s", datadir)
 
+	// Save nodekey before node starts
 	assert.Nil(t, os.MkdirAll(filepath.Join(datadir, "klay"), 0o700))
 	assert.Nil(t, os.WriteFile(nodekeyPath, []byte(nodekeyHex), 0o400))
+	server := runKlay(t, "klay-test", "--datadir", datadir,
+		"--netrestrict", "127.0.0.1/32", "--port", "0", "--verbosity", "2")
+	time.Sleep(5 * time.Second) // Simple way to wait for the RPC endpoint to open
 
 	os.Remove(outputPath) // delete before test, because otherwise the "already exists" error occurs
-	klay := runKlay(t, "klay-test", "account", "bls-info", "--datadir", datadir)
-	klay.ExpectRegexp(expectPrint)
+	client := runKlay(t, "klay-test", "account", "bls-info", "--datadir", datadir)
+	client.ExpectRegexp(expectPrint)
 
 	content, err := os.ReadFile(outputPath)
 	assert.Nil(t, err)
 	assert.JSONEq(t, expectFile, string(content))
+
+	server.Interrupt()
+	server.ExpectExit()
 }
 
 func TestBlsImport(t *testing.T) {

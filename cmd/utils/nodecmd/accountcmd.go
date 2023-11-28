@@ -33,7 +33,6 @@ import (
 	"github.com/klaytn/klaytn/accounts/keystore"
 	"github.com/klaytn/klaytn/api/debug"
 	"github.com/klaytn/klaytn/cmd/utils"
-	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/console"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/crypto/bls"
@@ -155,15 +154,12 @@ nodes.
 `,
 		},
 		{
-			Name:   "bls-info",
-			Usage:  "Calculate BLS public key info",
-			Action: accountBlsInfo,
+			Name:      "bls-info",
+			Usage:     "Fetch BLS public key info of the running node",
+			ArgsUsage: "[endpoint]",
+			Action:    accountBlsInfo,
 			Flags: []cli.Flag{
 				utils.DataDirFlag,
-				utils.NodeKeyFileFlag,
-				utils.NodeKeyHexFlag,
-				utils.BlsNodeKeyFileFlag,
-				utils.BlsNodeKeyHexFlag,
 			},
 			Description: `
 Calculate BLS public key info (the public key and proof-of-possession)
@@ -171,12 +167,8 @@ then saves to bls-publicinfo-NODEID.json.
 
 EXAMPLES
 
-# From the bls-nodekey file at the default location (DATADIR/bls-nodekey)
-# (if not exists, will be derived from ECDSA nodekey)
+# From the local node, by attaching to the default IPC endpoint DATADIR/klay.ipc.
 kcn account bls-info
-
-# From the custom BLS key file at a custom location
-kcn account bls-info --bls-nodekey DATADIR/bls-nodekey
 `,
 		},
 		{
@@ -393,22 +385,28 @@ func accountImport(ctx *cli.Context) error {
 }
 
 func accountBlsInfo(ctx *cli.Context) error {
-	// Parse CLI arguments in the same way as running a node.
-	var (
-		_, cfg  = utils.MakeConfigNode(ctx)
-		nodeKey = cfg.Node.NodeKey()
-		blsPriv = cfg.Node.BlsNodeKey()
-	)
+	endpoint := rpcEndpoint(ctx)
+	client, err := dialRPC(endpoint)
+	if err != nil {
+		log.Fatalf("Unable to attach to remote node: %v", err)
+	}
 
-	// Calculate filename from node address.
-	nodeAddr := crypto.PubkeyToAddress(nodeKey.PublicKey)
-	name := fmt.Sprintf("bls-publicinfo-%s.json", nodeAddr.Hex())
+	var nodeInfo node.NodeInfoOutput
+	err = client.Call(&nodeInfo, "admin_nodeInfo", nil)
+	if err != nil {
+		log.Fatalf("Unable to fetch node info: %v", err)
+	}
 
-	// Write bls-publicinfo-*.json
-	infoJson, err := makeBlsPublicinfo(blsPriv, nodeAddr)
+	infoJson, err := json.MarshalIndent(map[string]interface{}{
+		"address":          nodeInfo.NodeAddress,
+		"blsPublicKeyInfo": nodeInfo.BlsPublicKeyInfo,
+	}, "", "  ")
+	infoJson = append(infoJson, '\n')
 	if err != nil {
 		return err
 	}
+
+	name := fmt.Sprintf("bls-publicinfo-%s.json", nodeInfo.NodeAddress)
 	writeFile(name, infoJson, 0o644) // Ordinary non-secret text file permission.
 	return nil
 }
@@ -456,22 +454,6 @@ func accountBlsExport(ctx *cli.Context) error {
 	}
 	writeFile(name, keystoreJson, 0o600) // Secret file permission.
 	return nil
-}
-
-// Returns publicinfo JSON
-func makeBlsPublicinfo(sk bls.SecretKey, nodeAddr common.Address) ([]byte, error) {
-	pub := sk.PublicKey().Marshal()
-	pop := bls.PopProve(sk).Marshal()
-	info := map[string]interface{}{
-		"address": nodeAddr.Hex(),
-		"blsPublicKeyInfo": map[string]interface{}{
-			"publicKey": hex.EncodeToString(pub),
-			"pop":       hex.EncodeToString(pop),
-		},
-	}
-	infoJson, err := json.MarshalIndent(info, "", "  ")
-	infoJson = append(infoJson, '\n')
-	return infoJson, err
 }
 
 func loadBlsKeystore(ctx *cli.Context) (bls.SecretKey, error) {
