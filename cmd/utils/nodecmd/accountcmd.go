@@ -390,7 +390,6 @@ func accountBlsInfo(ctx *cli.Context) error {
 	if err != nil {
 		log.Fatalf("Unable to attach to remote node: %v", err)
 	}
-	_ = client
 
 	var nodeInfo node.NodeInfoOutput
 	err = client.Call(&nodeInfo, "admin_nodeInfo", nil)
