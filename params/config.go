@@ -82,8 +82,8 @@ var (
 		MagmaCompatibleBlock:     big.NewInt(98347376),
 		KoreCompatibleBlock:      big.NewInt(111736800),
 		ShanghaiCompatibleBlock:  big.NewInt(131608000),
-		CancunCompatibleBlock:    nil, // TODO-Klaytn-Cancun: set Baobab CancunCompatibleBlock
-		RandaoCompatibleBlock:    nil, // TODO-Klaytn-Cancun: set Baobab RandaoCompatibleBlock
+		CancunCompatibleBlock:    big.NewInt(141367000),
+		RandaoCompatibleBlock:    big.NewInt(141367000),
 		RandaoRegistry: &RegistryConfig{
 			Records: map[string]common.Address{
 				"KIP113": common.HexToAddress("0x4BEed0651C46aE5a7CB3b7737345d2ee733789e6"),
