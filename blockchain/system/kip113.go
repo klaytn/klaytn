@@ -77,7 +77,7 @@ type AllocKip113Init struct {
 	Owner common.Address
 }
 
-func AllocKip113(init AllocKip113Init) map[common.Hash]common.Hash {
+func AllocKip113Proxy(init AllocKip113Init) map[common.Hash]common.Hash {
 	if init.Infos == nil {
 		return nil
 	}
@@ -139,6 +139,15 @@ func AllocKip113(init AllocKip113Init) map[common.Hash]common.Hash {
 			storage[k] = v
 		}
 	}
+
+	return storage
+}
+
+func AllocKip113Logic() map[common.Hash]common.Hash {
+	storage := make(map[common.Hash]common.Hash)
+
+	// We only need to case about _initialized, which is max(uint8).
+	storage[lpad32(0)] = lpad32([]byte{0xff})
 
 	return storage
 }
