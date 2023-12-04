@@ -82,10 +82,17 @@ var (
 		MagmaCompatibleBlock:     big.NewInt(98347376),
 		KoreCompatibleBlock:      big.NewInt(111736800),
 		ShanghaiCompatibleBlock:  big.NewInt(131608000),
-		CancunCompatibleBlock:    nil, // TODO-Klaytn-Cancun: set Baobab CancunCompatibleBlock
-		Kip103CompatibleBlock:    big.NewInt(119145600),
-		Kip103ContractAddress:    common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
-		DeriveShaImpl:            2,
+		CancunCompatibleBlock:    big.NewInt(141367000),
+		RandaoCompatibleBlock:    big.NewInt(141367000),
+		RandaoRegistry: &RegistryConfig{
+			Records: map[string]common.Address{
+				"KIP113": common.HexToAddress("0x4BEed0651C46aE5a7CB3b7737345d2ee733789e6"),
+			},
+			Owner: common.HexToAddress("0x04992a2B7E7CE809d409adE32185D49A96AAa32d"),
+		},
+		Kip103CompatibleBlock: big.NewInt(119145600),
+		Kip103ContractAddress: common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
+		DeriveShaImpl:         2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x99fb17d324fa0e07f23b49d09028ac0919414db6"),
 			GovernanceMode: "single",
