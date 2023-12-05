@@ -202,18 +202,19 @@ func RegistryMock() Option {
 	}
 }
 
-func AllocateKip113(kip113ProxyAddr, kip113LogicAddr common.Address, storage map[common.Hash]common.Hash) Option {
+func AllocateKip113(kip113ProxyAddr, kip113LogicAddr common.Address, proxyStorage, logicStorage map[common.Hash]common.Hash) Option {
 	return func(genesis *blockchain.Genesis) {
 		proxyCode := system.ERC1967ProxyCode
 		logicCode := system.Kip113Code
 
 		genesis.Alloc[kip113ProxyAddr] = blockchain.GenesisAccount{
 			Code:    proxyCode,
-			Storage: storage,
+			Storage: proxyStorage,
 			Balance: big.NewInt(0),
 		}
 		genesis.Alloc[kip113LogicAddr] = blockchain.GenesisAccount{
 			Code:    logicCode,
+			Storage: logicStorage,
 			Balance: big.NewInt(0),
 		}
 	}

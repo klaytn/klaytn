@@ -190,17 +190,19 @@ func testRandao_allocKip113(numNodes int, ownerAddr, kip113Addr common.Address) 
 		logicAddr = common.HexToAddress("0x0000000000000000000000000000000000000402")
 		owner     = crypto.PubkeyToAddress(deriveTestAccount(5).PublicKey)
 
-		proxyStorage = system.AllocProxy(logicAddr)
-		logicStorage = system.AllocKip113(system.AllocKip113Init{
+		proxyStorage       = system.AllocProxy(logicAddr)
+		kip113ProxyStorage = system.AllocKip113Proxy(system.AllocKip113Init{
 			Infos: infos,
 			Owner: owner,
 		})
-		storage = system.MergeStorage(proxyStorage, logicStorage)
+		kip113LogicStorage = system.AllocKip113Logic()
+		storage            = system.MergeStorage(proxyStorage, kip113ProxyStorage)
 	)
 
 	return blockchain.GenesisAlloc{
 		logicAddr: {
 			Code:    system.Kip113MockCode,
+			Storage: kip113LogicStorage,
 			Balance: common.Big0,
 		},
 		kip113Addr: {

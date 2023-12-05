@@ -75,8 +75,6 @@ func TestAllocKip113(t *testing.T) {
 		senderKey, _ = crypto.GenerateKey()
 		sender       = bind.NewKeyedTransactor(senderKey)
 
-		KIP113MockAddr = Kip113LogicAddrMock
-
 		nodeId1       = common.HexToAddress("0xaaaa")
 		nodeId2       = common.HexToAddress("0xbbbb")
 		_, pub1, pop1 = makeBlsKey()
@@ -85,56 +83,42 @@ func TestAllocKip113(t *testing.T) {
 		abi, _   = contracts.KIP113MockMetaData.GetAbi()
 		input, _ = abi.Pack("initialize")
 
-		allocProxyStorage  = AllocProxy(KIP113MockAddr)
-		allocKip113Storage = AllocKip113(AllocKip113Init{
+		alloc = blockchain.GenesisAlloc{
+			sender.From: {
+				Balance: big.NewInt(params.KLAY),
+			},
+		}
+		backend = backends.NewSimulatedBackend(alloc)
+	)
+	kip113Addr, _, _, _ := contracts.DeployKIP113Mock(sender, backend)
+	backend.Commit()
+	contractAddr, _, _, _ := contracts.DeployERC1967Proxy(sender, backend, kip113Addr, input)
+	backend.Commit()
+	var (
+		allocProxyStorage  = AllocProxy(kip113Addr)
+		allocKip113Storage = AllocKip113Proxy(AllocKip113Init{
 			Infos: BlsPublicKeyInfos{
 				nodeId1: {PublicKey: pub1, Pop: pop1},
 				nodeId2: {PublicKey: pub2, Pop: pop2},
 			},
 			Owner: sender.From,
 		})
+		allocLogicStorage = AllocKip113Logic()
 	)
 
 	// 1. Merge two storage maps
 	allocStorage := MergeStorage(allocProxyStorage, allocKip113Storage)
 
 	// 2. Create storage by calling register()
-	var (
-		alloc = blockchain.GenesisAlloc{
-			sender.From: {
-				Balance: big.NewInt(params.KLAY),
-			},
-			KIP113MockAddr: {
-				Code:    Kip113MockCode,
-				Balance: common.Big0,
-			},
-		}
-		backend               = backends.NewSimulatedBackend(alloc)
-		contractAddr, _, _, _ = contracts.DeployERC1967Proxy(sender, backend, KIP113MockAddr, input)
-	)
-	backend.Commit()
-
 	contract, _ := contracts.NewKIP113MockTransactor(contractAddr, backend)
 
 	contract.Register(sender, nodeId1, pub1, pop1)
 	contract.Register(sender, nodeId2, pub2, pop2)
 	backend.Commit()
 
-	execStorage := make(map[common.Hash]common.Hash)
-	stateDB, _ := backend.BlockChain().State()
-	stateDB.ForEachStorage(contractAddr, func(key common.Hash, value common.Hash) bool {
-		execStorage[key] = value
-		return true
-	})
-
 	// 3. Compare the two states
-	for k, v := range allocStorage {
-		assert.Equal(t, v.Hex(), execStorage[k].Hex(), k.Hex())
-		t.Logf("%x %x\n", k, v)
-	}
-	for k, v := range execStorage {
-		assert.Equal(t, v.Hex(), allocStorage[k].Hex(), k.Hex())
-	}
+	compareStorage(t, backend, contractAddr, allocStorage)
+	compareStorage(t, backend, kip113Addr, allocLogicStorage)
 }
 
 func deployKip113Mock(t *testing.T, sender *bind.TransactOpts, backend *backends.SimulatedBackend, params ...interface{}) (*contracts.KIP113MockTransactor, common.Address) {
@@ -161,6 +145,23 @@ func deployKip113Mock(t *testing.T, sender *bind.TransactOpts, backend *backends
 	transactor, _ := contracts.NewKIP113MockTransactor(contractAddr, backend)
 
 	return transactor, contractAddr
+}
+
+func compareStorage(t *testing.T, backend *backends.SimulatedBackend, contractAddr common.Address, allocStorage map[common.Hash]common.Hash) {
+	execStorage := make(map[common.Hash]common.Hash)
+	stateDB, _ := backend.BlockChain().State()
+	stateDB.ForEachStorage(contractAddr, func(key common.Hash, value common.Hash) bool {
+		execStorage[key] = value
+		return true
+	})
+
+	for k, v := range allocStorage {
+		assert.Equal(t, v.Hex(), execStorage[k].Hex(), k.Hex())
+		t.Logf("%x %x\n", k, v)
+	}
+	for k, v := range execStorage {
+		assert.Equal(t, v.Hex(), allocStorage[k].Hex(), k.Hex())
+	}
 }
 
 func makeBlsKey() (priv, pub, pop []byte) {
