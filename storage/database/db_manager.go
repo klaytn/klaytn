@@ -170,6 +170,10 @@ type DBManager interface {
 	WritePreimages(number uint64, preimages map[common.Hash][]byte)
 
 	// Trie pruning
+	ReadPruningEnabled() bool
+	WritePruningEnabled()
+	DeletePruningEnabled()
+
 	WritePruningMarks(marks []PruningMark)
 	ReadPruningMarks(startNumber, endNumber uint64) []PruningMark
 	DeletePruningMarks(marks []PruningMark)
@@ -1923,6 +1927,26 @@ func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.H
 	}
 	preimageCounter.Inc(int64(len(preimages)))
 	preimageHitCounter.Inc(int64(len(preimages)))
+}
+
+// ReadPruningEnabled reads if the live pruning flag is stored in database.
+func (dbm *databaseManager) ReadPruningEnabled() bool {
+	ok, _ := dbm.getDatabase(MiscDB).Has(pruningEnabledKey)
+	return ok
+}
+
+// WritePruningEnabled writes the live pruning flag to the database.
+func (dbm *databaseManager) WritePruningEnabled() {
+	if err := dbm.getDatabase(MiscDB).Put(pruningEnabledKey, []byte("42")); err != nil {
+		logger.Crit("Failed to store pruning enabled flag", "err", err)
+	}
+}
+
+// DeletePruningEnabled deletes the live pruning flag. It is used only for testing.
+func (dbm *databaseManager) DeletePruningEnabled() {
+	if err := dbm.getDatabase(MiscDB).Delete(pruningEnabledKey); err != nil {
+		logger.Crit("Failed to remove pruning enabled flag", "err", err)
+	}
 }
 
 // WritePruningMarks writes the provided set of pruning marks to the database.

@@ -1289,12 +1289,12 @@ func TestStatePruning(t *testing.T) {
 		pruneNum  = uint64(numBlocks) - retention
 	)
 
+	db.WritePruningEnabled()
 	cacheConfig := &CacheConfig{
 		ArchiveMode:          false,
 		CacheSize:            512,
 		BlockInterval:        2, // Write frequently to test pruning
 		TriesInMemory:        DefaultTriesInMemory,
-		LivePruningEnabled:   true, // Enable pruning
 		LivePruningRetention: retention,
 		TrieNodeCacheConfig:  statedb.GetEmptyTrieNodeCacheConfig(),
 	}

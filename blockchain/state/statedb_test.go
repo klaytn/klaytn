@@ -215,7 +215,7 @@ func TestPruningOptions(t *testing.T) {
 		dbm := database.NewMemoryDBManager()
 		opts := &statedb.TrieOpts{}
 		if pruning {
-			opts.LivePruningEnabled = true
+			dbm.WritePruningEnabled()
 		}
 		if pruningNum {
 			opts.PruningBlockNumber = 1
@@ -242,8 +242,8 @@ func TestPruningOptions(t *testing.T) {
 func TestPruningRoot(t *testing.T) {
 	addr := common.HexToAddress("0xaaaa")
 
-	makeState := func(db Database, opts *statedb.TrieOpts) common.Hash {
-		stateDB, _ := New(common.Hash{}, db, nil, opts)
+	makeState := func(db Database) common.Hash {
+		stateDB, _ := New(common.Hash{}, db, nil, nil)
 		stateDB.CreateSmartContractAccount(addr, params.CodeFormatEVM, params.Rules{})
 		stateDB.SetState(addr, common.HexToHash("1"), common.HexToHash("2"))
 		root, _ := stateDB.Commit(false)
@@ -254,18 +254,18 @@ func TestPruningRoot(t *testing.T) {
 	dbm := database.NewMemoryDBManager()
 
 	db := NewDatabase(dbm)
-	root := makeState(db, nil)
+	root := makeState(db)
 	stateDB, _ := New(root, db, nil, nil)
 	storageRoot, _ := stateDB.GetContractStorageRoot(addr)
 	assert.True(t, storageRoot.IsZeroExtended())
 
 	// When pruning is enabled, storage root is nonzero-extended.
 	dbm = database.NewMemoryDBManager()
-	opts := &statedb.TrieOpts{LivePruningEnabled: true}
+	dbm.WritePruningEnabled()
 
 	db = NewDatabase(dbm)
-	root = makeState(db, opts)
-	stateDB, _ = New(root, db, nil, opts) // Reopen trie to check the account stored in disk.
+	root = makeState(db)
+	stateDB, _ = New(root, db, nil, nil) // Reopen trie to check the account stored in disk.
 	storageRoot, _ = stateDB.GetContractStorageRoot(addr)
 	assert.False(t, storageRoot.IsZeroExtended())
 }
