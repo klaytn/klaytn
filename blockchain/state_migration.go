@@ -312,7 +312,7 @@ func (bc *BlockChain) restartStateMigration() {
 
 // PrepareStateMigration sets prepareStateMigration to be called in checkStartStateMigration.
 func (bc *BlockChain) PrepareStateMigration() error {
-	if bc.cacheConfig.LivePruningEnabled {
+	if bc.db.ReadPruningEnabled() {
 		return errors.New("state migration not supported with live pruning enabled")
 	}
 

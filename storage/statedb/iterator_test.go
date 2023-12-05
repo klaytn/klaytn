@@ -142,6 +142,7 @@ func TestNodeIteratorCoverage(t *testing.T) {
 // NodeIterator yields exact same result for Trie and StroageTrie
 func TestNodeIteratorStorageTrie(t *testing.T) {
 	dbm := database.NewMemoryDBManager()
+	dbm.WritePruningEnabled()
 	triedb := NewDatabase(dbm)
 
 	trie1, _ := NewTrie(common.Hash{}, triedb, nil)
