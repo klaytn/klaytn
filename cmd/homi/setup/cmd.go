@@ -129,6 +129,7 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewInt64Flag(cancunCompatibleBlockNumberFlag),
 	altsrc.NewInt64Flag(kip103CompatibleBlockNumberFlag),
 	altsrc.NewStringFlag(kip103ContractAddressFlag),
+	altsrc.NewInt64Flag(serviceChainRewardFixCompatibleBlockNumberFlag),
 	altsrc.NewInt64Flag(randaoCompatibleBlockNumberFlag),
 	altsrc.NewStringFlag(kip113ProxyAddressFlag),
 	altsrc.NewStringFlag(kip113LogicAddressFlag),
@@ -771,6 +772,9 @@ func Gen(ctx *cli.Context) error {
 	// KIP103 hardfork is optional
 	genesisJson.Config.Kip103CompatibleBlock = big.NewInt(ctx.Int64(kip103CompatibleBlockNumberFlag.Name))
 	genesisJson.Config.Kip103ContractAddress = common.HexToAddress(ctx.String(kip103ContractAddressFlag.Name))
+
+	// ServiceChainRewardFix hardfork is optional
+	genesisJson.Config.ServiceChainRewardFixCompatibleBlock = big.NewInt(ctx.Int64(serviceChainRewardFixCompatibleBlockNumberFlag.Name))
 
 	genesisJson.Config.RandaoCompatibleBlock = big.NewInt(ctx.Int64(randaoCompatibleBlockNumberFlag.Name))
 

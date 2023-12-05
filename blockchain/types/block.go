@@ -68,7 +68,7 @@ type Header struct {
 
 	// Added with Randao hardfork for KIP-114 RANDAO.
 	RandomReveal []byte `json:"randomReveal,omitempty" rlp:"optional"` // 96 byte BLS signature
-	MixHash      []byte `json:"mixHash,omitempty" rlp:"optional"`      // 32 byte RANDAO mix
+	MixHash      []byte `json:"mixHash,omitempty"      rlp:"optional"` // 32 byte RANDAO mix
 
 	// New header fields must be added at tail for backward compatibility.
 }
