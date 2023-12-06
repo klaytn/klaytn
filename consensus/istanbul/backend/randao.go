@@ -61,9 +61,15 @@ func (p *ChainBlsPubkeyProvider) getAllCached(chain consensus.ChainReader, num *
 	}
 
 	backend := backends.NewBlockchainContractBackend(chain, nil, nil)
+	if common.Big0.Cmp(num) == 0 {
+		return nil, errors.New("num cannot be zero")
+	}
 	parentNum := new(big.Int).Sub(num, common.Big1)
 
 	var kip113Addr common.Address
+	// Because the system contract Registry is installed at Finalize() of RandaoForkBlock,
+	// it is not possible to read KIP113 address from the Registry at RandaoForkBlock.
+	// Hence the ChainConfig fallback.
 	if chain.Config().IsRandaoForkBlock(num) {
 		var ok bool
 		kip113Addr, ok = chain.Config().RandaoRegistry.Records[system.Kip113Name]
