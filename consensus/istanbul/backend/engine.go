@@ -547,7 +547,10 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 	// The Registry contract must be immediately available from the fork block.
 	// So it is installed at block (RandaoCompatibleBlock - 1) which is before the fork block.
 	if chain.Config().IsRandaoForkBlock(header.Number) {
-		system.InstallRegistry(state, chain.Config().RandaoRegistry)
+		err := system.InstallRegistry(state, chain.Config().RandaoRegistry)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	header.Root = state.IntermediateRoot(true)
