@@ -277,8 +277,8 @@ func testRandao_checkRegistry(t *testing.T, ctx *blockchainTestContext, ownerAdd
 	if forkNum == 0 {
 		after = common.Big0
 	} else {
-		before = big.NewInt(forkNum - 2)
-		after = big.NewInt(forkNum - 1)
+		before = big.NewInt(forkNum - 1)
+		after = big.NewInt(forkNum)
 	}
 
 	// Registry code is installed exactly at forkParentNum
