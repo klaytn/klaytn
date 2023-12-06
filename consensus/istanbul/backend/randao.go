@@ -77,8 +77,7 @@ func (p *ChainBlsPubkeyProvider) getAllCached(chain consensus.ChainReader, num *
 			return nil, err
 		}
 	} else {
-		logger.Crit("num", num.Uint64())
-		return nil, errors.New("Not a Randao fork block")
+		return nil, errors.New("Cannot read KIP113 address from registry before Randao fork")
 	}
 
 	infos, err := system.ReadKip113All(backend, kip113Addr, parentNum)
