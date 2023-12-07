@@ -409,6 +409,14 @@ func (c *ChainConfig) IsRandaoForkBlockParent(num *big.Int) bool {
 	return c.RandaoCompatibleBlock.Cmp(nextNum) == 0 // randao == num + 1
 }
 
+// IsRandaoForkBlock returns whether num is equal to the randao block.
+func (c *ChainConfig) IsRandaoForkBlock(num *big.Int) bool {
+	if c.RandaoCompatibleBlock == nil || num == nil {
+		return false
+	}
+	return c.RandaoCompatibleBlock.Cmp(num) == 0
+}
+
 // CheckCompatible checks whether scheduled fork transitions have been imported
 // with a mismatching chain configuration.
 func (c *ChainConfig) CheckCompatible(newcfg *ChainConfig, height uint64) *ConfigCompatError {

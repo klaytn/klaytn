@@ -2,6 +2,7 @@ package backend
 
 import (
 	"bytes"
+	"errors"
 	"math/big"
 
 	lru "github.com/hashicorp/golang-lru"
@@ -18,6 +19,8 @@ import (
 
 // For testing without KIP-113 contract setup
 type BlsPubkeyProvider interface {
+	// num should be the header number of the block to be verified.
+	// Thus, since the state of num does not exist, the state of num-1 must be used.
 	GetBlsPubkey(chain consensus.ChainReader, proposer common.Address, num *big.Int) (bls.PublicKey, error)
 	ResetBlsCache()
 }
@@ -58,12 +61,32 @@ func (p *ChainBlsPubkeyProvider) getAllCached(chain consensus.ChainReader, num *
 	}
 
 	backend := backends.NewBlockchainContractBackend(chain, nil, nil)
-	kip113Addr, err := system.ReadRegistryActiveAddr(backend, system.Kip113Name, num)
-	if err != nil {
-		return nil, err
+	if common.Big0.Cmp(num) == 0 {
+		return nil, errors.New("num cannot be zero")
+	}
+	parentNum := new(big.Int).Sub(num, common.Big1)
+
+	var kip113Addr common.Address
+	// Because the system contract Registry is installed at Finalize() of RandaoForkBlock,
+	// it is not possible to read KIP113 address from the Registry at RandaoForkBlock.
+	// Hence the ChainConfig fallback.
+	if chain.Config().IsRandaoForkBlock(num) {
+		var ok bool
+		kip113Addr, ok = chain.Config().RandaoRegistry.Records[system.Kip113Name]
+		if !ok {
+			return nil, errors.New("KIP113 address not set in ChainConfig")
+		}
+	} else if chain.Config().IsRandaoForkEnabled(num) {
+		var err error
+		kip113Addr, err = system.ReadRegistryActiveAddr(backend, system.Kip113Name, parentNum)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		return nil, errors.New("Cannot read KIP113 address from registry before Randao fork")
 	}
 
-	infos, err := system.ReadKip113All(backend, kip113Addr, num)
+	infos, err := system.ReadKip113All(backend, kip113Addr, parentNum)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +127,6 @@ func (sb *backend) VerifyRandao(chain consensus.ChainReader, header *types.Heade
 	if header.Number.Sign() == 0 {
 		return nil // Do not verify genesis block
 	}
-	parentNum := new(big.Int).Sub(header.Number, common.Big1)
 
 	proposer, err := sb.Author(header)
 	if err != nil {
@@ -113,7 +135,7 @@ func (sb *backend) VerifyRandao(chain consensus.ChainReader, header *types.Heade
 
 	// [proposerPubkey, proposerPop] = get_proposer_pubkey_pop()
 	// if not pop_verify(proposerPubkey, proposerPop): return False
-	proposerPub, err := sb.blsPubkeyProvider.GetBlsPubkey(chain, proposer, parentNum)
+	proposerPub, err := sb.blsPubkeyProvider.GetBlsPubkey(chain, proposer, header.Number)
 	if err != nil {
 		return err
 	}
