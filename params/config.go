@@ -200,7 +200,11 @@ type ChainConfig struct {
 	Kip103ContractAddress common.Address `json:"kip103ContractAddress,omitempty"` // Kip103 contract address already deployed on the network
 
 	// Randao is an optional hardfork
-	// RandaoCompatibleBlock, RandaoRegistryRecords and RandaoRegistryOwner all must be specified to enable Randao
+	// RandaoCompatibleBlock, RandaoRegistryRecords and RandaoRegistryOwner all must be specified to enable Randao.
+	// Since Rando also enables KIP113 (BLS registry) simultaneously, the followings should be done before the hardfork.
+	//   - BLS contract (KIP113) should be deployed
+	//   - Validators information should be registered on the BLS contract
+	//   - Randao registry should be specified with the KIP113 contract address
 	RandaoCompatibleBlock *big.Int        `json:"randaoCompatibleBlock,omitempty"` // RandaoCompatible activate block (nil = no fork)
 	RandaoRegistry        *RegistryConfig `json:"randaoRegistry,omitempty"`        // Registry initial states
 
