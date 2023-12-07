@@ -225,7 +225,10 @@ func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, addr co
 
 	snap.ValSet.SetBlockNum(snap.Number)
 	snap.ValSet.SetSubGroupSize(snap.CommitteeSize)
-	snap.ValSet.SetMixHash(lastHeader.MixHash)
+
+	if chain.Config().IsRandaoForkEnabled(lastHeader.Number) {
+		snap.ValSet.SetMixHash(lastHeader.MixHash)
+	}
 
 	if writable {
 		gov.SetTotalVotingPower(snap.ValSet.TotalVotingPower())

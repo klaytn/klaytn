@@ -108,11 +108,12 @@ func (sb *backend) CalcRandao(number *big.Int, prevMixHash []byte) ([]byte, []by
 	if sb.blsSecretKey == nil {
 		return nil, nil, errNoBlsKey
 	}
-	if prevMixHash == nil {
-		prevMixHash = params.ZeroMixHash
+	parentMixHash := prevMixHash
+	if parentMixHash == nil {
+		parentMixHash = params.ZeroMixHash
 	}
-	if len(prevMixHash) != 32 {
-		logger.Error("invalid prevMixHash", "number", number.Uint64(), "prevMixHash", hexutil.Encode(prevMixHash))
+	if len(parentMixHash) != 32 {
+		logger.Error("invalid prevMixHash", "number", number.Uint64(), "prevMixHash", hexutil.Encode(parentMixHash))
 		return nil, nil, errInvalidRandaoFields
 	}
 
@@ -123,7 +124,7 @@ func (sb *backend) CalcRandao(number *big.Int, prevMixHash []byte) ([]byte, []by
 	randomReveal := bls.Sign(sb.blsSecretKey, msg[:]).Marshal()
 
 	// calc_mix_hash() = xor(prevMixHash, keccak256(randomReveal))
-	mixHash := calcMixHash(randomReveal, prevMixHash)
+	mixHash := calcMixHash(randomReveal, parentMixHash)
 
 	return randomReveal, mixHash, nil
 }
@@ -136,10 +137,11 @@ func (sb *backend) VerifyRandao(chain consensus.ChainReader, header *types.Heade
 	if header.RandomReveal == nil || header.MixHash == nil {
 		return errInvalidRandaoFields
 	}
-	// The following condition is only true when header's block number is the Randao hardfork block number.
+	// The following if condition is only true when header's block number is the Randao hardfork block number.
 	// Because of the above condition, prevMixHash cannot be nil after Randao hardfork block.
-	if prevMixHash == nil {
-		prevMixHash = params.ZeroMixHash
+	parentMixHash := prevMixHash
+	if parentMixHash == nil {
+		parentMixHash = params.ZeroMixHash
 	}
 
 	proposer, err := sb.Author(header)
@@ -165,7 +167,7 @@ func (sb *backend) VerifyRandao(chain consensus.ChainReader, header *types.Heade
 	}
 
 	// if not newHeader.mixHash == calc_mix_hash(prevMixHash, newHeader.randomReveal): return False
-	mixHash := calcMixHash(header.RandomReveal, prevMixHash)
+	mixHash := calcMixHash(header.RandomReveal, parentMixHash)
 	if !bytes.Equal(header.MixHash, mixHash) {
 		return errInvalidRandaoFields
 	}
