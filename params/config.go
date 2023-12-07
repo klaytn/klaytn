@@ -400,15 +400,6 @@ func (c *ChainConfig) IsKIP103ForkBlock(num *big.Int) bool {
 	return c.Kip103CompatibleBlock.Cmp(num) == 0
 }
 
-// IsRandaoForkBlockParent returns whethere num is one block before the randao block.
-func (c *ChainConfig) IsRandaoForkBlockParent(num *big.Int) bool {
-	if c.RandaoCompatibleBlock == nil || num == nil {
-		return false
-	}
-	nextNum := new(big.Int).Add(num, common.Big1)
-	return c.RandaoCompatibleBlock.Cmp(nextNum) == 0 // randao == num + 1
-}
-
 // IsRandaoForkBlock returns whether num is equal to the randao block.
 func (c *ChainConfig) IsRandaoForkBlock(num *big.Int) bool {
 	if c.RandaoCompatibleBlock == nil || num == nil {
