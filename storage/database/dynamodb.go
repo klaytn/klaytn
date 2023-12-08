@@ -69,8 +69,10 @@ const (
 )
 
 // batch write
-const WorkerNum = 10
-const itemChanSize = WorkerNum * 2
+const (
+	WorkerNum    = 10
+	itemChanSize = WorkerNum * 2
+)
 
 var (
 	dynamoDBClient    *dynamodb.DynamoDB          // handles dynamoDB connections
@@ -627,5 +629,13 @@ func (batch *dynamoBatch) Release() {
 
 func (batch *dynamoBatch) Replay(w KeyValueWriter) error {
 	logger.CritWithStack("Replay should not be called when using dynamodb batch")
+	return nil
+}
+
+func (dynamo *dynamoDB) Stat(property string) (string, error) {
+	return "", errors.New("unknown property")
+}
+
+func (dynamo *dynamoDB) Compact(start []byte, limit []byte) error {
 	return nil
 }

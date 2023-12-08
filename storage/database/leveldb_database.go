@@ -22,6 +22,7 @@ package database
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -340,8 +341,17 @@ func (db *levelDB) Close() {
 	}
 }
 
-func (db *levelDB) LDB() *leveldb.DB {
-	return db.db
+func (db *levelDB) Stat(property string) (string, error) {
+	if property == "" {
+		property = "leveldb.stats"
+	} else if !strings.HasPrefix(property, "leveldb.") {
+		property = "leveldb." + property
+	}
+	return db.db.GetProperty(property)
+}
+
+func (db *levelDB) Compact(start []byte, limit []byte) error {
+	return db.db.CompactRange(util.Range{Start: start, Limit: limit})
 }
 
 // Meter configures the database metrics collectors and

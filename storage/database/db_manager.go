@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -306,6 +307,9 @@ type DBManager interface {
 	ReadChainDataFetcherCheckpoint() (uint64, error)
 
 	TryCatchUpWithPrimary() error
+
+	Stat(string) (string, error)
+	Compact([]byte, []byte) error
 }
 
 type DBEntryType uint8
@@ -880,6 +884,41 @@ func (dbm *databaseManager) TryCatchUpWithPrimary() error {
 		}
 	}
 	return nil
+}
+
+func (dbm *databaseManager) Stat(property string) (string, error) {
+	stats := ""
+	errs := ""
+	for idx, db := range dbm.dbs {
+		if db != nil {
+			stat, err := db.Stat(property)
+			headInfo := fmt.Sprintf(" [%s:%s]\n", DBEntryType(idx), db.Type())
+			if err == nil {
+				stats += headInfo + stat
+			} else {
+				errs += headInfo + err.Error()
+			}
+		}
+	}
+	if errs == "" {
+		return stats, nil
+	} else {
+		return stats, errors.New(errs)
+	}
+}
+
+func (dbm *databaseManager) Compact(start []byte, limit []byte) error {
+	errs := ""
+	for _, db := range dbm.dbs {
+		if db != nil {
+			db.Compact(start, limit)
+		}
+	}
+	if errs == "" {
+		return nil
+	} else {
+		return errors.New(errs)
+	}
 }
 
 func (dbm *databaseManager) GetMemDB() *MemDB {
