@@ -1253,9 +1253,11 @@ func (api *EthereumAPI) rpcMarshalHeader(head *types.Header, inclMiner bool) (ma
 			result["baseFeePerGas"] = (*hexutil.Big)(head.BaseFee)
 		}
 	}
-	if b.ChainConfig().IsRandaoForkEnabled(head.Number) {
+	if len(head.RandomReveal) > 0 {
 		result["randomReveal"] = hexutil.Bytes(head.RandomReveal)
-		result["mixHash"] = hexutil.Bytes(head.MixHash)
+	}
+	if len(head.MixHash) > 0 {
+		result["mixhash"] = hexutil.Bytes(head.MixHash)
 	}
 	return result, nil
 }

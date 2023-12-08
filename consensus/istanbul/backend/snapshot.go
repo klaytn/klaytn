@@ -359,7 +359,9 @@ func (s *Snapshot) UnmarshalJSON(b []byte) error {
 	if j.Policy == istanbul.WeightedRandom {
 		s.ValSet = validator.NewWeightedCouncil(j.Validators, j.DemotedValidators, j.RewardAddrs, j.VotingPowers, j.Weights, j.Policy, j.SubGroupSize, j.Number, j.ProposersBlockNum, nil)
 		validator.RecoverWeightedCouncilProposer(s.ValSet, j.Proposers)
-		s.ValSet.SetMixHash(j.MixHash)
+		if len(j.MixHash) != 0 {
+			s.ValSet.SetMixHash(j.MixHash)
+		}
 	} else {
 		s.ValSet = validator.NewSubSet(j.Validators, j.Policy, j.SubGroupSize)
 	}

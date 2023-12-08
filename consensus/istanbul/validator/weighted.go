@@ -259,7 +259,9 @@ func GetWeightedCouncilData(valSet istanbul.ValidatorSet) (validators []common.A
 			proposers[i] = proposer.Address()
 		}
 		proposersBlockNum = weightedCouncil.proposersBlockNum
-		mixHash = weightedCouncil.mixHash
+		if len(mixHash) != 0 {
+			mixHash = weightedCouncil.mixHash
+		}
 	} else {
 		logger.Error("invalid proposer policy for weightedCouncil")
 	}
@@ -628,8 +630,10 @@ func (valSet *weightedCouncil) Copy() istanbul.ValidatorSet {
 	newWeightedCouncil.proposers = make([]istanbul.Validator, len(valSet.proposers))
 	copy(newWeightedCouncil.proposers, valSet.proposers)
 
-	newWeightedCouncil.mixHash = make([]byte, len(valSet.mixHash))
-	copy(newWeightedCouncil.mixHash, valSet.mixHash)
+	if valSet.mixHash != nil { // mixHash is nil before Randao HF
+		newWeightedCouncil.mixHash = make([]byte, len(valSet.mixHash))
+		copy(newWeightedCouncil.mixHash, valSet.mixHash)
+	}
 
 	return &newWeightedCouncil
 }
