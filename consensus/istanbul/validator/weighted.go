@@ -379,14 +379,14 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 	if fork.Rules(view.Sequence).IsRandao {
 		// This committee must include proposers for all rounds because
 		// the proposer is picked from the this committee. See weightedRandomProposer().
-		if valSet.mixHash == nil {
-			logger.Error("no mixHash", "number", valSet.blockNum)
-			return nil
+		mixHash := valSet.mixHash
+		if mixHash == nil {
+			mixHash = params.ZeroMixHash
 		}
 		// def select_committee_KIP146(validators, committee_size, seed):
 		// shuffled = shuffle_validators_KIP146(validators, seed)
 		// return shuffled[:min(committee_size, len(validators))]
-		return SelectRandaoCommittee(validators, committeeSize, valSet.mixHash)
+		return SelectRandaoCommittee(validators, committeeSize, mixHash)
 	}
 
 	// Before Randao: SelectRandomCommittee, but the first two members are proposer and next proposer
