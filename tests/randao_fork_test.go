@@ -287,7 +287,7 @@ func testRandao_checkRegistry(t *testing.T, ctx *blockchainTestContext, ownerAdd
 		assert.Nil(t, err)
 		assert.Empty(t, code)
 
-		addr, err := system.ReadRegistryActiveAddr(backend, system.Kip113Name, before)
+		addr, err := system.ReadActiveAddressFromRegistry(backend, system.Kip113Name, before)
 		assert.ErrorIs(t, err, system.ErrRegistryNotInstalled)
 		assert.Empty(t, addr)
 	}
@@ -314,7 +314,7 @@ func testRandao_checkRegistry(t *testing.T, ctx *blockchainTestContext, ownerAdd
 	assert.Equal(t, ownerAddr, addr)
 
 	// Inspect via system contract accessors
-	addr, err = system.ReadRegistryActiveAddr(backend, system.Kip113Name, after)
+	addr, err = system.ReadActiveAddressFromRegistry(backend, system.Kip113Name, after)
 	assert.Nil(t, err)
 	assert.Equal(t, kip113Addr, addr)
 }
@@ -327,7 +327,7 @@ func testRandao_checkKip113(t *testing.T, ctx *blockchainTestContext) {
 		backend = backends.NewBlockchainContractBackend(chain, nil, nil)
 	)
 
-	kip113Addr, err := system.ReadRegistryActiveAddr(backend, system.Kip113Name, forkNum)
+	kip113Addr, err := system.ReadActiveAddressFromRegistry(backend, system.Kip113Name, forkNum)
 	assert.Nil(t, err)
 
 	// Inspect via system contract accessors

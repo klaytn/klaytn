@@ -37,7 +37,7 @@ func TestReadRegistry(t *testing.T) {
 	)
 
 	// Without a record
-	addr, err := ReadRegistryActiveAddr(backend, recordName, common.Big0)
+	addr, err := ReadActiveAddressFromRegistry(backend, recordName, common.Big0)
 	assert.Nil(t, err)
 	assert.Equal(t, common.Address{}, addr)
 
@@ -48,7 +48,7 @@ func TestReadRegistry(t *testing.T) {
 	backend.Commit()
 
 	// With the record
-	addr, err = ReadRegistryActiveAddr(backend, recordName, common.Big1)
+	addr, err = ReadActiveAddressFromRegistry(backend, recordName, common.Big1)
 	assert.Nil(t, err)
 	assert.Equal(t, recordAddr, addr)
 }
