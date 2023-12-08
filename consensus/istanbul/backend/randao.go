@@ -136,16 +136,16 @@ func (sb *backend) VerifyRandao(chain consensus.ChainReader, header *types.Heade
 		return nil // Do not verify genesis block
 	}
 
+	if len(header.RandomReveal) != 96 || len(header.MixHash) != 32 {
+		return errInvalidRandaoFields
+	}
+
 	// The VerifyRandao is invoked only since Randao hardfork block number.
 	// Since Randao hardfork, the header fields are cannot be nil because of the check above (header.RandomReveal == nil || header.MixHash == nil).
 	// Therefore it's safe to assume that if prevMixHash == nil, then the given header is exactly Randao hardfork block number.
 	parentMixHash := prevMixHash
 	if len(parentMixHash) == 0 {
 		parentMixHash = params.ZeroMixHash
-	}
-
-	if len(header.RandomReveal) != 96 || len(header.MixHash) != 32 {
-		return errInvalidRandaoFields
 	}
 
 	proposer, err := sb.Author(header)
