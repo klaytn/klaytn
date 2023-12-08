@@ -226,7 +226,7 @@ func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, addr co
 	snap.ValSet.SetBlockNum(snap.Number)
 	snap.ValSet.SetSubGroupSize(snap.CommitteeSize)
 
-	if chain.Config().IsRandaoForkEnabled(lastHeader.Number) {
+	if len(lastHeader.MixHash) != 0 { // After Rando HF
 		snap.ValSet.SetMixHash(lastHeader.MixHash)
 	}
 
