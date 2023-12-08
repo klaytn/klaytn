@@ -277,7 +277,7 @@ func weightedRandomProposer(valSet istanbul.ValidatorSet, lastProposer common.Ad
 	// After Randao: Select one from ValidatorSet using MixHash as a seed.
 	if rules.IsRandao {
 		mixHash := weightedCouncil.mixHash
-		if mixHash == nil {
+		if len(mixHash) == 0 {
 			mixHash = params.ZeroMixHash
 		}
 		// def proposer_selector(validators, committee_size, round, seed):
@@ -380,7 +380,7 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 		// This committee must include proposers for all rounds because
 		// the proposer is picked from the this committee. See weightedRandomProposer().
 		mixHash := valSet.mixHash
-		if mixHash == nil {
+		if len(mixHash) == 0 {
 			mixHash = params.ZeroMixHash
 		}
 		// def select_committee_KIP146(validators, committee_size, seed):

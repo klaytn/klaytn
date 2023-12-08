@@ -69,7 +69,7 @@ func NewEVMBlockContext(header *types.Header, chain ChainContext, author *common
 		baseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
 	}
 
-	if header.MixHash != nil {
+	if len(header.MixHash) != 0 {
 		random = common.BytesToHash(header.MixHash)
 	} else { // Before Randao hardfork, RANDOM (44) returns last block hash
 		random = header.ParentHash

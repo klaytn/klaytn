@@ -110,7 +110,7 @@ func (sb *backend) CalcRandao(number *big.Int, prevMixHash []byte) ([]byte, []by
 		return nil, nil, errNoBlsKey
 	}
 	parentMixHash := prevMixHash
-	if parentMixHash == nil {
+	if len(parentMixHash) == 0 {
 		parentMixHash = params.ZeroMixHash
 	}
 	if len(parentMixHash) != 32 {
@@ -135,15 +135,17 @@ func (sb *backend) VerifyRandao(chain consensus.ChainReader, header *types.Heade
 	if header.Number.Sign() == 0 {
 		return nil // Do not verify genesis block
 	}
-	if header.RandomReveal == nil || header.MixHash == nil {
-		return errInvalidRandaoFields
-	}
+
 	// The VerifyRandao is invoked only since Randao hardfork block number.
 	// Since Randao hardfork, the header fields are cannot be nil because of the check above (header.RandomReveal == nil || header.MixHash == nil).
 	// Therefore it's safe to assume that if prevMixHash == nil, then the given header is exactly Randao hardfork block number.
 	parentMixHash := prevMixHash
-	if parentMixHash == nil {
+	if len(parentMixHash) == 0 {
 		parentMixHash = params.ZeroMixHash
+	}
+
+	if len(header.RandomReveal) != 96 || len(header.MixHash) != 32 {
+		return errInvalidRandaoFields
 	}
 
 	proposer, err := sb.Author(header)
