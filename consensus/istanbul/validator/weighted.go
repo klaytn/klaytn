@@ -276,13 +276,13 @@ func weightedRandomProposer(valSet istanbul.ValidatorSet, lastProposer common.Ad
 	rules := fork.Rules(new(big.Int).SetUint64(weightedCouncil.blockNum + 1))
 	// After Randao: Select one from ValidatorSet using MixHash as a seed.
 	if rules.IsRandao {
-		if weightedCouncil.mixHash == nil {
-			logger.Error("no mixHash", "number", weightedCouncil.blockNum)
-			return nil
+		mixHash := weightedCouncil.mixHash
+		if mixHash == nil {
+			mixHash = params.ZeroMixHash
 		}
 		// def proposer_selector(validators, committee_size, round, seed):
 		// select_committee_KIP146(validators, committee_size, seed)[round % len(validators)]
-		committee := SelectRandaoCommittee(weightedCouncil.List(), weightedCouncil.subSize, weightedCouncil.mixHash)
+		committee := SelectRandaoCommittee(weightedCouncil.List(), weightedCouncil.subSize, mixHash)
 		return committee[round%uint64(len(committee))]
 	}
 
@@ -783,8 +783,8 @@ func filterValidators(isSingleMode bool, govNodeAddr common.Address, weightedVal
 
 // getStakingAmountsOfValidators calculates stakingAmounts of validators.
 // If validators have multiple staking contracts, stakingAmounts will be a sum of stakingAmounts with the same rewardAddress.
-//  - []*weightedValidator : a list of validators which type is converted to weightedValidator
-//  - []float64 : a list of stakingAmounts.
+//   - []*weightedValidator : a list of validators which type is converted to weightedValidator
+//   - []float64 : a list of stakingAmounts.
 func getStakingAmountsOfValidators(validators istanbul.Validators, stakingInfo *reward.StakingInfo) ([]*weightedValidator, []float64, error) {
 	nVals := len(validators)
 	weightedVals := make([]*weightedValidator, nVals)

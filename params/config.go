@@ -201,7 +201,7 @@ type ChainConfig struct {
 
 	// Randao is an optional hardfork
 	// RandaoCompatibleBlock, RandaoRegistryRecords and RandaoRegistryOwner all must be specified to enable Randao.
-	// Since Rando also enables KIP113 (BLS registry) simultaneously, the followings should be done before the hardfork.
+	// Since Randao also enables KIP113 (BLS registry) simultaneously, the followings should be done before the hardfork.
 	//   - BLS contract (KIP113) should be deployed
 	//   - Validators information should be registered on the BLS contract
 	//   - Randao registry should be specified with the KIP113 contract address
