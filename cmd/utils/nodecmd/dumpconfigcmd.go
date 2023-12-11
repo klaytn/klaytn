@@ -49,6 +49,10 @@ func dumpConfig(ctx *cli.Context) error {
 		cfg.CN.Genesis = nil
 		comment += "# Note: this config doesn't contain the genesis block.\n\n"
 	}
+	if cfg.ChainDataFetcher.KafkaConfig != nil {
+		cfg.ChainDataFetcher.KafkaConfig = nil
+		comment += "# Note: this config doesn't contain the Kafka configuration.\n\n"
+	}
 
 	out, err := utils.TomlSettings.Marshal(&cfg)
 	if err != nil {

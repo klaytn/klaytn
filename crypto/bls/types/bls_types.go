@@ -29,7 +29,8 @@ var (
 	// draft-irtf-cfrg-pairing-friendly-curves-11#4.2.1 BLS12_381
 	CurveOrderHex = "0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001"
 	// draft-irtf-cfrg-bls-signature-05#4.2.3
-	DomainSeparationTag = []byte("BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_")
+	DomainSeparationTagSig = []byte("BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_")
+	DomainSeparationTagPop = []byte("BLS_POP_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_")
 )
 
 var (

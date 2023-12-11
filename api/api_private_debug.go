@@ -22,6 +22,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -85,12 +86,13 @@ func (api *PrivateDebugAPI) ChaindbCompact() error {
 }
 
 // SetHead rewinds the head of the blockchain to a previous block.
-func (api *PrivateDebugAPI) SetHead(number rpc.BlockNumber) {
-	if number == rpc.PendingBlockNumber || number == rpc.LatestBlockNumber {
-		logger.Error("Cannot rewind to future")
-		return
+func (api *PrivateDebugAPI) SetHead(number rpc.BlockNumber) error {
+	if number == rpc.PendingBlockNumber ||
+		number == rpc.LatestBlockNumber ||
+		number.Uint64() > api.b.CurrentBlock().NumberU64() {
+		return errors.New("Cannot rewind to future")
 	}
-	api.b.SetHead(uint64(number))
+	return api.b.SetHead(uint64(number))
 }
 
 // PrintBlock retrieves a block and returns its pretty printed form.

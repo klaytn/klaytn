@@ -17,7 +17,6 @@
 package sc
 
 import (
-	"io/ioutil"
 	"math"
 	"math/big"
 	"os"
@@ -32,7 +31,7 @@ import (
 
 // TestBridgeAccountLockUnlock checks the lock/unlock functionality.
 func TestBridgeAccountLockUnlock(t *testing.T) {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -49,12 +48,12 @@ func TestBridgeAccountLockUnlock(t *testing.T) {
 	assert.Equal(t, true, bAcc.pAccount.IsUnlockedAccount())
 
 	pPwdFilePath := path.Join(tempDir, "parent_bridge_account", bAcc.pAccount.address.String())
-	pPwd, err := ioutil.ReadFile(pPwdFilePath)
+	pPwd, err := os.ReadFile(pPwdFilePath)
 	pPwdStr := string(pPwd)
 	assert.NoError(t, err)
 
 	cPwdFilePath := path.Join(tempDir, "child_bridge_account", bAcc.cAccount.address.String())
-	cPwd, err := ioutil.ReadFile(cPwdFilePath)
+	cPwd, err := os.ReadFile(cPwdFilePath)
 	cPwdStr := string(cPwd)
 	assert.NoError(t, err)
 
@@ -153,7 +152,7 @@ func TestBridgeAccountLockUnlock(t *testing.T) {
 
 // TestBridgeAccountInformation checks if the information result is right or not.
 func TestBridgeAccountInformation(t *testing.T) {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {

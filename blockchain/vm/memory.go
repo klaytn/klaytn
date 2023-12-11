@@ -22,9 +22,8 @@ package vm
 
 import (
 	"fmt"
-	"math/big"
 
-	"github.com/klaytn/klaytn/common/math"
+	"github.com/holiman/uint256"
 )
 
 // Memory implements a simple memory model for the Klaytn virtual machine.
@@ -54,16 +53,15 @@ func (m *Memory) Set(offset, size uint64, value []byte) {
 
 // Set32 sets the 32 bytes starting at offset to the value of val, left-padded with zeroes to
 // 32 bytes.
-func (m *Memory) Set32(offset uint64, val *big.Int) {
+func (m *Memory) Set32(offset uint64, val *uint256.Int) {
 	// length of store may never be less than offset + size.
 	// The store should be resized PRIOR to setting the memory
 	if offset+32 > uint64(len(m.store)) {
 		panic("invalid memory: store empty")
 	}
-	// Zero the memory area
-	copy(m.store[offset:offset+32], []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 	// Fill in relevant bits
-	math.ReadBits(val, m.store[offset:offset+32])
+	b32 := val.Bytes32()
+	copy(m.store[offset:], b32[:])
 }
 
 // Increase increases the memory with size bytes
@@ -115,6 +113,17 @@ func (m *Memory) Len() int {
 // Data returns the backing slice
 func (m *Memory) Data() []byte {
 	return m.store
+}
+
+// Copy copies data from the src position slice into the dst position.
+// The source and destination may overlap.
+// OBS: This operation assumes that any necessary memory expansion has already been performed,
+// and this method may panic otherwise.
+func (m *Memory) Copy(dst, src, len uint64) {
+	if len == 0 {
+		return
+	}
+	copy(m.store[dst:], m.store[src:src+len])
 }
 
 // Print dumps the content of the memory.

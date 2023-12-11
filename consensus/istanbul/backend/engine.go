@@ -30,9 +30,9 @@ import (
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain/state"
+	"github.com/klaytn/klaytn/blockchain/system"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	istanbulCore "github.com/klaytn/klaytn/consensus/istanbul/core"
@@ -40,20 +40,20 @@ import (
 	"github.com/klaytn/klaytn/consensus/misc"
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/networks/rpc"
+	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/rlp"
 )
 
 const (
-	// checkpointInterval = 1024 // Number of blocks after which to save the vote snapshot to the database
+	// CheckpointInterval = 1024 // Number of blocks after which to save the vote snapshot to the database
 	// inmemorySnapshots  = 128  // Number of recent vote snapshots to keep in memory
 	// inmemoryPeers      = 40
 	// inmemoryMessages   = 1024
 
-	checkpointInterval = 1024 // Number of blocks after which to save the vote snapshot to the database
-	inmemorySnapshots  = 496  // Number of recent vote snapshots to keep in memory
-	inmemoryPeers      = 200
-	inmemoryMessages   = 4096
+	inmemorySnapshots = 496 // Number of recent vote snapshots to keep in memory
+	inmemoryPeers     = 200
+	inmemoryMessages  = 4096
 
 	allowedFutureBlockTime = 1 * time.Second // Max time from current time allowed for blocks, before they're considered future blocks
 )
@@ -78,23 +78,25 @@ var (
 	// errInvalidVotingChain is returned if an authorization list is attempted to
 	// be modified via out-of-range or non-contiguous headers.
 	errInvalidVotingChain = errors.New("invalid voting chain")
-	// errInvalidVote is returned if a nonce value is something else that the two
-	// allowed constants of 0x00..0 or 0xff..f.
-	errInvalidVote = errors.New("vote nonce not 0x00..0 or 0xff..f")
 	// errInvalidCommittedSeals is returned if the committed seal is not signed by any of parent validators.
 	errInvalidCommittedSeals = errors.New("invalid committed seals")
 	// errEmptyCommittedSeals is returned if the field of committed seals is zero.
 	errEmptyCommittedSeals = errors.New("zero committed seals")
 	// errMismatchTxhashes is returned if the TxHash in header is mismatch.
 	errMismatchTxhashes = errors.New("mismatch transactions hashes")
+	// errNoBlsKey is returned if the BLS secret key is not configured.
+	errNoBlsKey = errors.New("bls key not configured")
+	// errNoBlsPub is returned if the BLS public key is not found for the proposer.
+	errNoBlsPub = errors.New("bls pubkey not found for the proposer")
+	// errInvalidRandaoFields is returned if the Randao fields randomReveal or mixHash are invalid.
+	errInvalidRandaoFields = errors.New("invalid randao fields")
+	// errUnexpectedRandao is returned if the Randao fields randomReveal or mixHash are present when must not.
+	errUnexpectedRandao = errors.New("unexpected randao fields")
 )
 
 var (
 	defaultBlockScore = big.NewInt(1)
 	now               = time.Now
-
-	nonceAuthVote = hexutil.MustDecode("0xffffffffffffffff") // Magic nonce number to vote on adding a new validator
-	nonceDropVote = hexutil.MustDecode("0x0000000000000000") // Magic nonce number to vote on removing a validator.
 
 	inmemoryBlocks             = 2048 // Number of blocks to precompute validators' addresses
 	inmemoryValidatorsPerBlock = 30   // Approximate number of validators' addresses from ecrecover
@@ -248,6 +250,16 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 	}
 	if err := sb.verifySigner(chain, header, parents); err != nil {
 		return err
+	}
+
+	// VerifyRandao must be after verifySigner because it needs the signer (proposer) address
+	if chain.Config().IsRandaoForkEnabled(header.Number) {
+		prevMixHash := headerMixHash(chain, parent)
+		if err := sb.VerifyRandao(chain, header, prevMixHash); err != nil {
+			return err
+		}
+	} else if header.RandomReveal != nil || header.MixHash != nil {
+		return errUnexpectedRandao
 	}
 
 	// At every epoch governance data will come in block header. Verify it.
@@ -425,6 +437,16 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 		logger.Info("Put voteData", "num", number, "data", hex.EncodeToString(header.Vote))
 	}
 
+	if chain.Config().IsRandaoForkEnabled(header.Number) {
+		prevMixHash := headerMixHash(chain, parent)
+		randomReveal, mixHash, err := sb.CalcRandao(header.Number, prevMixHash)
+		if err != nil {
+			return err
+		}
+		header.RandomReveal = randomReveal
+		header.MixHash = mixHash
+	}
+
 	// add validators (council list) in snapshot to extraData's validators section
 	extra, err := prepareExtra(header, snap.validators())
 	if err != nil {
@@ -521,6 +543,16 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 			logger.Info("successfully executed treasury rebalancing (KIP-103)", "memo", string(memo))
 		}
 	}
+
+	// The Registry contract must be immediately available from the fork block.
+	// So it is installed at block (RandaoCompatibleBlock - 1) which is before the fork block.
+	if chain.Config().IsRandaoForkBlock(header.Number) {
+		err := system.InstallRegistry(state, chain.Config().RandaoRegistry)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	header.Root = state.IntermediateRoot(true)
 
 	// Assemble and return the final block for sealing
@@ -702,6 +734,7 @@ func (sb *backend) initSnapshot(chain consensus.ChainReader) (*Snapshot, error) 
 	valSet := validator.NewValidatorSet(istanbulExtra.Validators, nil,
 		istanbul.ProposerPolicy(pset.Policy()),
 		pset.CommitteeSize(), chain)
+	valSet.SetMixHash(genesis.MixHash)
 	snap := newSnapshot(sb.governance, 0, genesis.Hash(), valSet, chain.Config())
 
 	if err := snap.store(sb.db); err != nil {
@@ -819,6 +852,11 @@ func (sb *backend) GetConsensusInfo(block *types.Block) (consensus.ConsensusInfo
 	return cInfo, nil
 }
 
+func (sb *backend) InitSnapshot() {
+	sb.recents.Purge()
+	sb.blsPubkeyProvider.ResetBlsCache()
+}
+
 // snapshot retrieves the state of the authorization voting at a given point in time.
 // There's in-memory snapshot and on-disk snapshot. On-disk snapshot is stored every checkpointInterval blocks.
 // Moreover, if the block has no in-memory or on-disk snapshot, before generating snapshot, it gathers the header and apply the vote in it.
@@ -836,7 +874,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 			break
 		}
 		// If an on-disk checkpoint snapshot can be found, use that
-		if number%checkpointInterval == 0 {
+		if params.IsCheckpointInterval(number) {
 			if s, err := loadSnapshot(sb.db, hash); err == nil {
 				logger.Trace("Loaded voting snapshot form disk", "number", number, "hash", hash)
 				snap = s
@@ -873,7 +911,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 	}
 
 	// If we've generated a new checkpoint snapshot, save to disk
-	if writable && snap.Number%checkpointInterval == 0 && len(headers) > 0 {
+	if writable && params.IsCheckpointInterval(snap.Number) && len(headers) > 0 {
 		if sb.governance.CanWriteGovernanceState(snap.Number) {
 			sb.governance.WriteGovernanceState(snap.Number, true)
 		}

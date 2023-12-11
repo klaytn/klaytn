@@ -25,6 +25,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"math/big"
 	"strconv"
 
@@ -36,6 +37,7 @@ import (
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/crypto/blake2b"
 	"github.com/klaytn/klaytn/crypto/bn256"
+	"github.com/klaytn/klaytn/crypto/kzg4844"
 	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
@@ -64,9 +66,9 @@ type PrecompiledContract interface {
 	Run(input []byte, contract *Contract, evm *EVM) ([]byte, error)
 }
 
-// PrecompiledContractsByzantiumCompatible contains the default set of pre-compiled Klaytn
+// PrecompiledContractsByzantium contains the default set of pre-compiled Klaytn
 // contracts based on Ethereum Byzantium.
-var PrecompiledContractsByzantiumCompatible = map[common.Address]PrecompiledContract{
+var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{1}):  &ecrecover{},
 	common.BytesToAddress([]byte{2}):  &sha256hash{},
 	common.BytesToAddress([]byte{3}):  &ripemd160hash{},
@@ -82,9 +84,9 @@ var PrecompiledContractsByzantiumCompatible = map[common.Address]PrecompiledCont
 
 // DO NOT USE 0x3FD, 0x3FE, 0x3FF ADDRESSES BEFORE ISTANBUL CHANGE ACTIVATED.
 
-// PrecompiledContractsIstanbulCompatible contains the default set of pre-compiled Klaytn
+// PrecompiledContractsIstanbul contains the default set of pre-compiled Klaytn
 // contracts based on Ethereum Istanbul.
-var PrecompiledContractsIstanbulCompatible = map[common.Address]PrecompiledContract{
+var PrecompiledContractsIstanbul = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{1}):      &ecrecover{},
 	common.BytesToAddress([]byte{2}):      &sha256hash{},
 	common.BytesToAddress([]byte{3}):      &ripemd160hash{},
@@ -116,33 +118,62 @@ var PrecompiledContractsKore = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{3, 255}): &validateSender{},
 }
 
+// PrecompiledContractsCancun contains the default set of pre-compiled Klaytn
+// contracts based on Ethereum Cancun.
+var PrecompiledContractsCancun = map[common.Address]PrecompiledContract{
+	common.BytesToAddress([]byte{1}):      &ecrecover{},
+	common.BytesToAddress([]byte{2}):      &sha256hash{},
+	common.BytesToAddress([]byte{3}):      &ripemd160hash{},
+	common.BytesToAddress([]byte{4}):      &dataCopy{},
+	common.BytesToAddress([]byte{5}):      &bigModExp{eip2565: true},
+	common.BytesToAddress([]byte{6}):      &bn256AddIstanbul{},
+	common.BytesToAddress([]byte{7}):      &bn256ScalarMulIstanbul{},
+	common.BytesToAddress([]byte{8}):      &bn256PairingIstanbul{},
+	common.BytesToAddress([]byte{9}):      &blake2F{},
+	common.BytesToAddress([]byte{0x0a}):   &kzgPointEvaluation{},
+	common.BytesToAddress([]byte{3, 253}): &vmLog{},
+	common.BytesToAddress([]byte{3, 254}): &feePayer{},
+	common.BytesToAddress([]byte{3, 255}): &validateSender{},
+}
+
 var (
-	PrecompiledAddressesIstanbulCompatible  []common.Address
-	PrecompiledAddressesByzantiumCompatible []common.Address
+	PrecompiledAddressCancun      []common.Address
+	PrecompiledAddressIstanbul    []common.Address
+	PrecompiledAddressesByzantium []common.Address
 )
 
 func init() {
-	for k := range PrecompiledContractsByzantiumCompatible {
-		PrecompiledAddressesByzantiumCompatible = append(PrecompiledAddressesByzantiumCompatible, k)
+	for k := range PrecompiledContractsByzantium {
+		PrecompiledAddressesByzantium = append(PrecompiledAddressesByzantium, k)
+	}
+	for k := range PrecompiledContractsIstanbul {
+		PrecompiledAddressIstanbul = append(PrecompiledAddressIstanbul, k)
+	}
+	for k := range PrecompiledContractsCancun {
+		PrecompiledAddressCancun = append(PrecompiledAddressCancun, k)
+	}
+}
+
+// ActivePrecompiles returns the precompiles enabled with the current configuration.
+func ActivePrecompiles(rules params.Rules) []common.Address {
+	var precompiledContractAddrs []common.Address
+	switch {
+	case rules.IsCancun:
+		precompiledContractAddrs = PrecompiledAddressCancun
+	case rules.IsIstanbul:
+		precompiledContractAddrs = PrecompiledAddressIstanbul
+	default:
+		precompiledContractAddrs = PrecompiledAddressesByzantium
 	}
 
 	// After istanbulCompatible hf, need to support for vmversion0 contracts, too.
 	// VmVersion0 contracts are deployed before istanbulCompatible and they use byzantiumCompatible precompiled contracts.
 	// VmVersion0 contracts are the contracts deployed before istanbulCompatible hf.
-	for k := range PrecompiledContractsIstanbulCompatible {
-		PrecompiledAddressesIstanbulCompatible = append(PrecompiledAddressesIstanbulCompatible, k)
-	}
-	PrecompiledAddressesIstanbulCompatible = append(PrecompiledAddressesIstanbulCompatible,
-		[]common.Address{common.BytesToAddress([]byte{10}), common.BytesToAddress([]byte{11})}...)
-}
-
-// ActivePrecompiles returns the precompiles enabled with the current configuration.
-func ActivePrecompiles(rules params.Rules) []common.Address {
-	switch {
-	case rules.IsIstanbul:
-		return PrecompiledAddressesIstanbulCompatible
-	default:
-		return PrecompiledAddressesByzantiumCompatible
+	if rules.IsIstanbul {
+		return append(precompiledContractAddrs,
+			[]common.Address{common.BytesToAddress([]byte{10}), common.BytesToAddress([]byte{11})}...)
+	} else {
+		return precompiledContractAddrs
 	}
 }
 
@@ -278,9 +309,10 @@ var (
 // modexpMultComplexity implements bigModexp multComplexity formula, as defined in EIP-198
 //
 // def mult_complexity(x):
-//    if x <= 64: return x ** 2
-//    elif x <= 1024: return x ** 2 // 4 + 96 * x - 3072
-//    else: return x ** 2 // 16 + 480 * x - 199680
+//
+//	if x <= 64: return x ** 2
+//	elif x <= 1024: return x ** 2 // 4 + 96 * x - 3072
+//	else: return x ** 2 // 16 + 480 * x - 199680
 //
 // where is x is max(length_of_MODULUS, length_of_BASE)
 func modexpMultComplexity(x *big.Int) *big.Int {
@@ -632,6 +664,70 @@ func (c *blake2F) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error
 	return output, nil
 }
 
+// kzgPointEvaluation implements the EIP-4844 point evaluation precompile.
+type kzgPointEvaluation struct{}
+
+// GetRequiredGasAndComputationCost estimates the gas required for running the point evaluation precompile and computation cost.
+func (b *kzgPointEvaluation) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+	return params.BlobTxPointEvaluationPrecompileGas, params.BlobTxPointEvaluationPrecompileComputationCost
+}
+
+const (
+	blobVerifyInputLength           = 192  // Max input length for the point evaluation precompile.
+	blobCommitmentVersionKZG  uint8 = 0x01 // Version byte for the point evaluation precompile.
+	blobPrecompileReturnValue       = "000000000000000000000000000000000000000000000000000000000000100073eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001"
+)
+
+var (
+	errBlobVerifyInvalidInputLength = errors.New("invalid input length")
+	errBlobVerifyMismatchedVersion  = errors.New("mismatched versioned hash")
+	errBlobVerifyKZGProof           = errors.New("error verifying kzg proof")
+)
+
+// Run executes the point evaluation precompile.
+func (b *kzgPointEvaluation) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	if len(input) != blobVerifyInputLength {
+		return nil, errBlobVerifyInvalidInputLength
+	}
+	// versioned hash: first 32 bytes
+	var versionedHash common.Hash
+	copy(versionedHash[:], input[:])
+
+	var (
+		point kzg4844.Point
+		claim kzg4844.Claim
+	)
+	// Evaluation point: next 32 bytes
+	copy(point[:], input[32:])
+	// Expected output: next 32 bytes
+	copy(claim[:], input[64:])
+
+	// input kzg point: next 48 bytes
+	var commitment kzg4844.Commitment
+	copy(commitment[:], input[96:])
+	if kZGToVersionedHash(commitment) != versionedHash {
+		return nil, errBlobVerifyMismatchedVersion
+	}
+
+	// Proof: next 48 bytes
+	var proof kzg4844.Proof
+	copy(proof[:], input[144:])
+
+	if err := kzg4844.VerifyProof(commitment, point, claim, proof); err != nil {
+		return nil, fmt.Errorf("%w: %v", errBlobVerifyKZGProof, err)
+	}
+
+	return common.Hex2Bytes(blobPrecompileReturnValue), nil
+}
+
+// kZGToVersionedHash implements kzg_to_versioned_hash from EIP-4844
+func kZGToVersionedHash(kzg kzg4844.Commitment) common.Hash {
+	h := sha256.Sum256(kzg[:])
+	h[0] = blobCommitmentVersionKZG
+
+	return h
+}
+
 // vmLog implemented as a native contract.
 type vmLog struct{}
 
@@ -675,7 +771,7 @@ func (c *validateSender) GetRequiredGasAndComputationCost(input []byte) (uint64,
 }
 
 func (c *validateSender) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
-	if err := c.validateSender(input, evm.StateDB, evm.BlockNumber.Uint64()); err != nil {
+	if err := c.validateSender(input, evm.StateDB, evm.Context.BlockNumber.Uint64()); err != nil {
 		// If return error makes contract execution failed, do not return the error.
 		// Instead, print log.
 		logger.Trace("validateSender failed", "err", err)

@@ -446,6 +446,15 @@ func (db *shardedDB) GetProperty(name string) string {
 	return buf.String()
 }
 
+func (db *shardedDB) TryCatchUpWithPrimary() error {
+	for _, shard := range db.shards {
+		if err := shard.TryCatchUpWithPrimary(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 type shardedDBBatch struct {
 	batches    []Batch
 	numBatches uint

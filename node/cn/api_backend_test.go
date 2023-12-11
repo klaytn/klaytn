@@ -17,6 +17,7 @@
 package cn
 
 import (
+	"encoding/json"
 	"math/big"
 	"testing"
 
@@ -24,11 +25,18 @@ import (
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/klaytn/klaytn/consensus"
+	"github.com/klaytn/klaytn/consensus/gxhash"
+	"github.com/klaytn/klaytn/consensus/istanbul/backend"
 	mocks3 "github.com/klaytn/klaytn/event/mocks"
+	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/networks/rpc"
 	mocks2 "github.com/klaytn/klaytn/node/cn/mocks"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/work/mocks"
 	"github.com/stretchr/testify/assert"
@@ -147,6 +155,21 @@ func TestCNAPIBackend_CurrentBlock(t *testing.T) {
 	assert.Equal(t, block, api.CurrentBlock())
 }
 
+func getTestConfig() *params.ChainConfig {
+	config := params.TestChainConfig.Copy()
+	config.Governance = params.GetDefaultGovernanceConfig()
+	config.Istanbul = params.GetDefaultIstanbulConfig()
+	return config
+}
+
+func testGov() *governance.MixedEngine {
+	db := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
+	config := params.TestChainConfig.Copy()
+	config.Governance = params.GetDefaultGovernanceConfig()
+	config.Istanbul = params.GetDefaultIstanbulConfig()
+	return governance.NewMixedEngine(config, db)
+}
+
 func TestCNAPIBackend_SetHead(t *testing.T) {
 	mockCtrl, mockBlockChain, _, api := newCNAPIBackend(t)
 	defer mockCtrl.Finish()
@@ -155,6 +178,9 @@ func TestCNAPIBackend_SetHead(t *testing.T) {
 	mockDownloader.EXPECT().Cancel().Times(1)
 	pm := &ProtocolManager{downloader: mockDownloader}
 	api.cn.protocolManager = pm
+	api.cn.engine = gxhash.NewFullFaker()
+	api.cn.governance = testGov()
+
 	number := uint64(123)
 	mockBlockChain.EXPECT().SetHead(number).Times(1)
 
@@ -657,4 +683,167 @@ func TestCNAPIBackend_IsSenderTxHashIndexingEnabled(t *testing.T) {
 
 	mockBlockChain.EXPECT().IsSenderTxHashIndexingEnabled().Return(true).Times(1)
 	assert.True(t, api.IsSenderTxHashIndexingEnabled())
+}
+
+type rewindTest struct {
+	canonicalBlocks int // Number of blocks to generate for the canonical chain (heavier)
+
+	setheadBlock       uint64 // Block number to set head back to
+	expCanonicalBlocks int    // Number of canonical blocks expected to remain in the database (excl. genesis)
+	expHeadHeader      uint64 // Block number of the expected head header
+	expHeadFastBlock   uint64 // Block number of the expected head fast sync block
+	expHeadBlock       uint64 // Block number of the expected head full block
+}
+
+func newCanonical(engine consensus.Engine, n int, full bool) (database.DBManager, *blockchain.BlockChain, error) {
+	var (
+		canonicalSeed = 1
+		db            = database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
+		// TODO: Remove me
+		// db      = database.NewMemoryDBManager()
+		genesis = new(blockchain.Genesis).MustCommit(db)
+	)
+
+	// Initialize a fresh chain with only a genesis block
+	bc, _ := blockchain.NewBlockChain(db, nil, params.AllGxhashProtocolChanges, engine, vm.Config{})
+	// Create and inject the requested chain
+	if n == 0 {
+		return db, bc, nil
+	}
+	if full {
+		// Full block-chain requested
+		blocks := blockchain.MakeBlockChain(genesis, n, engine, db, canonicalSeed)
+		_, err := bc.InsertChain(blocks)
+		return db, bc, err
+	}
+	// Header-only chain requested
+	headers := blockchain.MakeHeaderChain(genesis.Header(), n, engine, db, canonicalSeed)
+	_, err := bc.InsertHeaderChain(headers, 1)
+	return db, bc, err
+}
+
+func expectedGovMap(t *testing.T, gov *governance.MixedEngine, num uint64, item string, value interface{}, expectedCacheSize int) {
+	_, govMap, err := gov.ReadGovernance(num)
+	assert.Nil(t, err)
+	assert.Equal(t, govMap[item], value)
+	assert.Equal(t, len(gov.IdxCache())-1, expectedCacheSize)
+}
+
+func TestSetHead(t *testing.T) {
+	headerGovTest(t, &rewindTest{
+		// `params.CheckpointInterval` is constant value of 1024.
+		// Make it longer to include its working coverage
+		canonicalBlocks:    1500,
+		setheadBlock:       6,
+		expCanonicalBlocks: 6,
+		expHeadHeader:      6,
+		expHeadFastBlock:   6,
+		expHeadBlock:       6,
+	})
+}
+
+func testCfg(epoch uint64) *params.ChainConfig {
+	config := params.TestChainConfig.Copy()
+	config.Governance = params.GetDefaultGovernanceConfig()
+	config.Istanbul = params.GetDefaultIstanbulConfig()
+	config.Istanbul.Epoch = epoch
+	return config
+}
+
+func headerGovTest(t *testing.T, tt *rewindTest) {
+	db, chain, err := newCanonical(gxhash.NewFullFaker(), 0, true)
+	if err != nil {
+		t.Fatalf("failed to create pristine chain: %v", err)
+	}
+	defer chain.Stop()
+
+	var (
+		epoch                 uint64 = 5
+		govBlockNum                  = 10
+		appliedGovBlockNum    uint64 = 20
+		stakingUpdateInterval uint64 = 1
+		stakingUpdateBlockNum uint64 = 15
+		gov                          = governance.NewMixedEngine(testCfg(epoch), db)
+	)
+	chain.Config().Istanbul = &params.IstanbulConfig{Epoch: epoch, ProposerPolicy: params.WeightedRandom}
+
+	canonblocks, _ := blockchain.GenerateChain(params.TestChainConfig, chain.CurrentBlock(), gxhash.NewFaker(), db, tt.canonicalBlocks, func(i int, b *blockchain.BlockGen) {
+		if i == govBlockNum-1 { // Subtract 1, because the callback starts to enumerate from zero
+			// "reward.mintingamount" = 123
+			govData := hexutil.MustDecode("0x9e7b227265776172642e6d696e74696e67616d6f756e74223a22313233227d")
+			b.SetGovData(govData)
+			gov.WriteGovernanceForNextEpoch(uint64(govBlockNum), govData)
+		}
+	})
+
+	if _, err := chain.InsertChain(canonblocks[:tt.canonicalBlocks]); err != nil {
+		t.Fatalf("Failed to import canonical chain start: %v", err)
+	}
+
+	// Store snapshot
+	snap := backend.Snapshot{Number: params.CheckpointInterval, Hash: chain.GetHeaderByNumber(params.CheckpointInterval).Hash()}
+	blob, err := json.Marshal(snap)
+	assert.Nil(t, err)
+	err = db.WriteIstanbulSnapshot(snap.Hash, blob)
+	assert.Nil(t, err)
+	_, err = db.ReadIstanbulSnapshot(snap.Hash)
+	assert.Nil(t, err)
+
+	// Initiailize staking info manager
+	dummy := reward.StakingInfo{BlockNum: stakingUpdateInterval}
+	blob, err = json.Marshal(dummy)
+	assert.Nil(t, err)
+	reward.SetTestStakingManagerWithStakingInfoCache(&dummy)
+	assert.NotNil(t, reward.GetStakingManager())
+	params.SetStakingUpdateInterval(stakingUpdateInterval)
+	// Write a value to DB
+	err = db.WriteStakingInfo(stakingUpdateBlockNum, blob)
+	assert.Nil(t, err)
+	_, err = db.ReadStakingInfo(stakingUpdateBlockNum)
+	assert.Nil(t, err)
+	assert.Equal(t, reward.TestGetStakingCacheSize(), 1)
+
+	// Before setHead
+	expectedGovMap(t, gov, appliedGovBlockNum, "reward.mintingamount", "123", 1)
+
+	// Set the head of the chain back to the requested number
+	err = doSetHead(chain, chain.Engine(), gov, tt.setheadBlock)
+	assert.Nil(t, err)
+
+	if head := chain.CurrentHeader(); head.Number.Uint64() != tt.expHeadHeader {
+		t.Errorf("Head header mismatch!: have %d, want %d", head.Number, tt.expHeadHeader)
+	}
+	if head := chain.CurrentFastBlock(); head.NumberU64() != tt.expHeadFastBlock {
+		t.Errorf("Head fast block mismatch: have %d, want %d", head.NumberU64(), tt.expHeadFastBlock)
+	}
+	if head := chain.CurrentBlock(); head.NumberU64() != tt.expHeadBlock {
+		t.Errorf("Head block mismatch!!: have %d, want %d", head.NumberU64(), tt.expHeadBlock)
+	}
+	// After setHead
+	// governance db and cachelookup
+	expectedGovMap(t, gov, appliedGovBlockNum, "reward.mintingamount", "0", 0)
+
+	// staking db and cache lookup
+	assert.Equal(t, reward.TestGetStakingCacheSize(), 0)
+	_, err = db.ReadStakingInfo(stakingUpdateBlockNum)
+	assert.Equal(t, err.Error(), "data is not found with the given key")
+
+	// snapshot db lookup
+	_, err = db.ReadIstanbulSnapshot(snap.Hash)
+	assert.Equal(t, err.Error(), "data is not found with the given key")
+
+	for _, b := range canonblocks[tt.expCanonicalBlocks:] {
+		if _, err := chain.InsertChain(types.Blocks{b}); err != nil {
+			t.Fatalf("Failed to import canonical chain start: %v", err)
+		}
+		if len(b.Header().Governance) > 0 {
+			assert.Equal(t, b.Header().Number.Uint64()%uint64(epoch), uint64(0))
+			gov.WriteGovernanceForNextEpoch(uint64(govBlockNum), b.Header().Governance)
+		}
+	}
+	if head := chain.CurrentBlock(); head.NumberU64() != uint64(tt.canonicalBlocks) {
+		t.Errorf("Head block mismatch!!: have %d, want %d", head.NumberU64(), tt.expHeadBlock)
+	}
+	// After setHead and sync
+	expectedGovMap(t, gov, appliedGovBlockNum, "reward.mintingamount", "123", 1)
 }

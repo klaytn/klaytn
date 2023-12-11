@@ -22,7 +22,6 @@ package node
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -37,7 +36,7 @@ import (
 // the configured service context.
 func TestContextDatabases(t *testing.T) {
 	// Create a temporary folder and ensure no database is contained within
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	if err != nil {
 		t.Fatalf("failed to create temporary data directory: %v", err)
 	}

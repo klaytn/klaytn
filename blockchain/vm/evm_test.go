@@ -40,12 +40,12 @@ func runPrecompiledContractTestWithHFCondition(t *testing.T, config *params.Chai
 		statedb.CreateSmartContractAccount(callerAddr, params.CodeFormatEVM, params.Rules{IsIstanbul: tc.isDeployedAfterIstanbulHF})
 
 		// Make EVM environment
-		vmctx := Context{
+		blockCtx := BlockContext{
 			CanTransfer: func(StateDB, common.Address, *big.Int) bool { return true },
 			Transfer:    func(StateDB, common.Address, common.Address, *big.Int) {},
 			BlockNumber: tc.block,
 		}
-		vmenv := NewEVM(vmctx, statedb, config, &Config{})
+		vmenv := NewEVM(blockCtx, TxContext{}, statedb, config, &Config{})
 
 		// run
 		ret, gas, err := vmenv.Call(AccountRef(callerAddr), common.HexToAddress(tc.addr), tc.input, math.MaxUint64, new(big.Int))

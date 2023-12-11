@@ -47,6 +47,7 @@ type Backend interface {
 	Progress() klaytn.SyncProgress
 	ProtocolVersion() int
 	SuggestPrice(ctx context.Context) (*big.Int, error)
+	SuggestTipCap(ctx context.Context) (*big.Int, error)
 	UpperBoundGasPrice(ctx context.Context) *big.Int
 	LowerBoundGasPrice(ctx context.Context) *big.Int
 	ChainDB() database.DBManager
@@ -59,7 +60,7 @@ type Backend interface {
 	FeeHistory(ctx context.Context, blockCount int, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error)
 
 	// BlockChain API
-	SetHead(number uint64)
+	SetHead(number uint64) error
 	HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error)
 	HeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error)
 	HeaderByNumberOrHash(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*types.Header, error)

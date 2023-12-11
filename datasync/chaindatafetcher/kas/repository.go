@@ -19,7 +19,7 @@ package kas
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -172,7 +172,7 @@ func (r *repository) InvalidateCacheEOAList(eoaList map[common.Address]struct{})
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		body, err := ioutil.ReadAll(res.Body)
+		body, err := io.ReadAll(res.Body)
 		if err != nil {
 			logger.Error("Reading response body is failed", "err", err, "body", res.Body)
 			return

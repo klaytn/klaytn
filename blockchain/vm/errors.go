@@ -22,9 +22,6 @@ package vm
 
 import (
 	"errors"
-	"fmt"
-
-	"github.com/klaytn/klaytn/params"
 )
 
 // List execution errors
@@ -35,7 +32,7 @@ var (
 	ErrInsufficientBalance               = errors.New("insufficient balance for transfer")
 	ErrContractAddressCollision          = errors.New("contract address collision")
 	ErrTotalTimeLimitReached             = errors.New("reached the total execution time limit for txs in a block")
-	ErrOpcodeComputationCostLimitReached = errors.New(fmt.Sprintf("reached the opcode computation cost limit (%d) for tx", params.OpcodeComputationCostLimit))
+	ErrOpcodeComputationCostLimitReached = errors.New("reached the opcode computation cost limit")
 	ErrFailedOnSetCode                   = errors.New("failed on setting code to an account")
 
 	// EVM internal errors
@@ -45,4 +42,8 @@ var (
 	ErrMaxCodeSizeExceeded   = errors.New("evm: max code size exceeded")
 	ErrInvalidJump           = errors.New("evm: invalid jump destination")
 	ErrInvalidCode           = errors.New("invalid code: must not begin with 0xef")
+
+	// errStopToken is an internal token indicating interpreter loop termination,
+	// never returned to outside callers.
+	errStopToken = errors.New("stop token")
 )

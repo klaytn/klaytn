@@ -45,14 +45,14 @@ type ChainContext interface {
 	GetHeader(common.Hash, uint64) *types.Header
 }
 
-// NewEVMContext creates a new context for use in the EVM.
-func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author *common.Address) vm.Context {
+// NewEVMBlockContext creates a new context for use in the EVM.
+func NewEVMBlockContext(header *types.Header, chain ChainContext, author *common.Address) vm.BlockContext {
 	// If we don't have an explicit author (i.e. not mining), extract from the header
 	var (
-		beneficiary       common.Address
-		rewardBase        common.Address
-		baseFee           *big.Int
-		effectiveGasPrice *big.Int
+		beneficiary common.Address
+		rewardBase  common.Address
+		baseFee     *big.Int
+		random      common.Hash
 	)
 
 	if author == nil {
@@ -65,25 +65,40 @@ func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author
 
 	if header.BaseFee != nil {
 		baseFee = header.BaseFee
-		effectiveGasPrice = header.BaseFee
-	} else {
-		// before magma hardfork, base fee is 0, effectiveGasPrice is unitPrice
+	} else { // Before Magma hardfork, BASEFEE (48) returns 0
 		baseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
-		effectiveGasPrice = msg.GasPrice()
 	}
 
-	return vm.Context{
+	if header.MixHash != nil {
+		random = common.BytesToHash(header.MixHash)
+	} else { // Before Randao hardfork, RANDOM (44) returns last block hash
+		random = header.ParentHash
+	}
+
+	return vm.BlockContext{
 		CanTransfer: CanTransfer,
 		Transfer:    Transfer,
 		GetHash:     GetHashFn(header, chain),
-		Origin:      msg.ValidatedSender(),
 		Coinbase:    beneficiary,
 		Rewardbase:  rewardBase,
 		BlockNumber: new(big.Int).Set(header.Number),
 		Time:        new(big.Int).Set(header.Time),
 		BlockScore:  new(big.Int).Set(header.BlockScore),
-		GasPrice:    new(big.Int).Set(effectiveGasPrice),
 		BaseFee:     baseFee,
+		Random:      random,
+	}
+}
+
+// NewEVMTxContext creates a new transaction context for a single transaction.
+func NewEVMTxContext(msg Message, header *types.Header) vm.TxContext {
+	effectiveGasPrice := msg.GasPrice()
+	if header.BaseFee != nil {
+		effectiveGasPrice = header.BaseFee
+	}
+
+	return vm.TxContext{
+		Origin:   msg.ValidatedSender(),
+		GasPrice: new(big.Int).Set(effectiveGasPrice),
 	}
 }
 

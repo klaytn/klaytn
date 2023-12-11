@@ -17,6 +17,7 @@
 package reward
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math/big"
@@ -224,7 +225,17 @@ func getStakingInfoFromAddressBook(blockNum uint64) (*StakingInfo, error) {
 		return nil, fmt.Errorf("not staking block number. blockNum: %d", blockNum)
 	}
 
-	caller := backends.NewBlockchainContractCaller(stakingManager.blockchain)
+	caller := backends.NewBlockchainContractBackend(stakingManager.blockchain, nil, nil)
+	code, err := caller.CodeAt(context.Background(), addressBookContractAddress, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve code of AddressBook contract. root err: %s", err)
+	}
+	if code == nil {
+		// This is an expected behavior when the addressBook contract is not installed.
+		logger.Info("The addressBook is not installed. Use empty stakingInfo")
+		return newEmptyStakingInfo(blockNum), nil
+	}
+
 	contract, err := contract.NewAddressBookCaller(addressBookContractAddress, caller)
 	if err != nil {
 		return nil, fmt.Errorf("failed to call AddressBook contract. root err: %s", err)
@@ -393,6 +404,10 @@ func StakingManagerUnsubscribe() {
 	stakingManager.chainHeadSub.Unsubscribe()
 }
 
+func PurgeStakingInfoCache() {
+	stakingManager.stakingInfoCache.purge()
+}
+
 // TODO-Klaytn-Reward the following methods are used for testing purpose, it needs to be moved into test files.
 // Unlike NewStakingManager(), SetTestStakingManager*() do not trigger once.Do().
 // This way you can avoid irreversible side effects during tests.
@@ -436,4 +451,8 @@ func SetTestStakingManager(sm *StakingManager) {
 // SetTestAddressBookAddress is only for testing purpose.
 func SetTestAddressBookAddress(addr common.Address) {
 	addressBookContractAddress = common.HexToAddress(addr.Hex())
+}
+
+func TestGetStakingCacheSize() int {
+	return len(GetStakingManager().stakingInfoCache.cells)
 }

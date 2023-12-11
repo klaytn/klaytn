@@ -128,7 +128,7 @@ func (cn *CN) stateAtBlock(block *types.Block, reexec uint64, base *state.StateD
 		if current = cn.blockchain.GetBlockByNumber(next); current == nil {
 			return nil, fmt.Errorf("block #%d not found", next)
 		}
-		_, _, _, _, _, err := cn.blockchain.Processor().Process(current, statedb, vm.Config{UseOpcodeComputationCost: true})
+		_, _, _, _, _, err := cn.blockchain.Processor().Process(current, statedb, vm.Config{})
 		if err != nil {
 			return nil, fmt.Errorf("processing block %d failed: %v", current.NumberU64(), err)
 		}
@@ -155,24 +155,24 @@ func (cn *CN) stateAtBlock(block *types.Block, reexec uint64, base *state.StateD
 }
 
 // stateAtTransaction returns the execution environment of a certain transaction.
-func (cn *CN) stateAtTransaction(block *types.Block, txIndex int, reexec uint64) (blockchain.Message, vm.Context, *state.StateDB, error) {
+func (cn *CN) stateAtTransaction(block *types.Block, txIndex int, reexec uint64) (blockchain.Message, vm.BlockContext, vm.TxContext, *state.StateDB, error) {
 	// Short circuit if it's genesis block.
 	if block.NumberU64() == 0 {
-		return nil, vm.Context{}, nil, errors.New("no transaction in genesis")
+		return nil, vm.BlockContext{}, vm.TxContext{}, nil, errors.New("no transaction in genesis")
 	}
 	// Create the parent state database
 	parent := cn.blockchain.GetBlock(block.ParentHash(), block.NumberU64()-1)
 	if parent == nil {
-		return nil, vm.Context{}, nil, fmt.Errorf("parent %#x not found", block.ParentHash())
+		return nil, vm.BlockContext{}, vm.TxContext{}, nil, fmt.Errorf("parent %#x not found", block.ParentHash())
 	}
 	// Lookup the statedb of parent block from the live database,
 	// otherwise regenerate it on the flight.
 	statedb, err := cn.stateAtBlock(parent, reexec, nil, true, false)
 	if err != nil {
-		return nil, vm.Context{}, nil, err
+		return nil, vm.BlockContext{}, vm.TxContext{}, nil, err
 	}
 	if txIndex == 0 && len(block.Transactions()) == 0 {
-		return nil, vm.Context{}, statedb, nil
+		return nil, vm.BlockContext{}, vm.TxContext{}, statedb, nil
 	}
 	// Recompute transactions up to the target index.
 	signer := types.MakeSigner(cn.blockchain.Config(), block.Number())
@@ -181,21 +181,22 @@ func (cn *CN) stateAtTransaction(block *types.Block, txIndex int, reexec uint64)
 		msg, err := tx.AsMessageWithAccountKeyPicker(signer, statedb, block.NumberU64())
 		if err != nil {
 			logger.Warn("stateAtTransition failed", "hash", tx.Hash(), "block", block.NumberU64(), "err", err)
-			return nil, vm.Context{}, nil, fmt.Errorf("transaction %#x failed: %v", tx.Hash(), err)
+			return nil, vm.BlockContext{}, vm.TxContext{}, nil, fmt.Errorf("transaction %#x failed: %v", tx.Hash(), err)
 		}
 
-		context := blockchain.NewEVMContext(msg, block.Header(), cn.blockchain, nil)
+		txContext := blockchain.NewEVMTxContext(msg, block.Header())
+		blockContext := blockchain.NewEVMBlockContext(block.Header(), cn.blockchain, nil)
 		if idx == txIndex {
-			return msg, context, statedb, nil
+			return msg, blockContext, txContext, statedb, nil
 		}
 		// Not yet the searched for transaction, execute on top of the current state
-		vmenv := vm.NewEVM(context, statedb, cn.blockchain.Config(), &vm.Config{UseOpcodeComputationCost: true})
+		vmenv := vm.NewEVM(blockContext, txContext, statedb, cn.blockchain.Config(), &vm.Config{})
 		if _, err := blockchain.ApplyMessage(vmenv, msg); err != nil {
-			return nil, vm.Context{}, nil, fmt.Errorf("transaction %#x failed: %v", tx.Hash(), err)
+			return nil, vm.BlockContext{}, vm.TxContext{}, nil, fmt.Errorf("transaction %#x failed: %v", tx.Hash(), err)
 		}
 		// Ensure any modifications are committed to the state
 		// Since klaytn is forked after EIP158/161 (a.k.a Spurious Dragon), deleting empty object is always effective
 		statedb.Finalise(true, true)
 	}
-	return nil, vm.Context{}, nil, fmt.Errorf("transaction index %d out of range for block %#x", txIndex, block.Hash())
+	return nil, vm.BlockContext{}, vm.TxContext{}, nil, fmt.Errorf("transaction index %d out of range for block %#x", txIndex, block.Hash())
 }

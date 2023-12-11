@@ -59,14 +59,14 @@ func init() {
 		val36 = valueNode("data_definitely_longer_than_32_bytes")
 
 		// dummy ref values
-		hash32    = hexToHashNode("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff")
-		extlegacy = hexToExtHashNode("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00000000000000")
-		exthash   = hexToExtHashNode("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff11112222333344")
+		hash32  = hexToHashNode("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff")
+		extzero = hexToExtHashNode("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00000000000000")
+		exthash = hexToExtHashNode("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff11112222333344")
 
 		// computed ref from hasher
-		hLegacy = "00000000000000"
-		hExt    = "ccccddddeeee01"
-		hExt2   = "ccccddddeeee02"
+		hZero = "00000000000000"
+		hExt  = "ccccddddeeee01"
+		hExt2 = "ccccddddeeee02"
 	)
 
 	// To create testcases,
@@ -79,38 +79,38 @@ func init() {
 	// TC names:
 	// - collapsed/*: single-depth node as stored in databased. decodeNode() can handle it.
 	// - resolved/*: multi-depth node exists in memory. decodeNode() cannot handle it.
-	// - */legacy: only contains hash32
+	// - */unext: only contains hash32
 	// - */extroot: contains exthash, and the node is state root
 	// - */exthash: contains exthash, and the node is not state root
 
 	nodeEncodingTCs = map[string]testNodeEncodingTC{
 		// Leaf nodes
-		"collapsed/leaf_short/legacy": {
+		"collapsed/leaf_short/unext": {
 			// leaf node with len(data) < 32 but lenEncoded > 32. ["0x20de", "data_little_less_than_32_bytes"]
-			hash:     common.FromHex("b39ab6f7fe5f3fffa2f24c1ef22a70965186732c72bc7417ac24e7ed0e3afa38" + hLegacy),
+			hash:     common.FromHex("b39ab6f7fe5f3fffa2f24c1ef22a70965186732c72bc7417ac24e7ed0e3afa38" + hZero),
 			encoded:  common.FromHex("0xe28220de9e646174615f6c6974746c655f6c6573735f7468616e5f33325f6279746573"),
 			expanded: &shortNode{Key: hex_de, Val: val31},
 			inserted: &rawShortNode{Key: com_de, Val: val31},
 		},
-		"collapsed/leaf_long/legacy": {
+		"collapsed/leaf_long/unext": {
 			// leaf node with len(data) >= 32. ["0x20de", "data_definitely_longer_than_32_bytes"]
-			hash:     common.FromHex("916d1af8295fc9ad621dc43ecfa4c9f25286a619715b270929d0425cd37c80eb" + hLegacy),
+			hash:     common.FromHex("916d1af8295fc9ad621dc43ecfa4c9f25286a619715b270929d0425cd37c80eb" + hZero),
 			encoded:  common.FromHex("0xe88220dea4646174615f646566696e6974656c795f6c6f6e6765725f7468616e5f33325f6279746573"),
 			expanded: &shortNode{Key: hex_de, Val: val36},
 			inserted: &rawShortNode{Key: com_de, Val: val36},
 		},
 
 		// Extension nodes without ref
-		"collapsed/extension_embedded_leaf/legacy": {
+		"collapsed/extension_embedded_leaf/unext": {
 			// extension node with an embedded leaf. ["0x1abc", ["0x20de", "data_little_less_than_32"]]
-			hash:     common.FromHex("7604c7ac8fc0e0ac99c455cd2f05e5b4ac6929f40b937e6fc164b1d032d65173" + hLegacy),
+			hash:     common.FromHex("7604c7ac8fc0e0ac99c455cd2f05e5b4ac6929f40b937e6fc164b1d032d65173" + hZero),
 			encoded:  common.FromHex("0xe0821abcdc8220de98646174615f6c6974746c655f6c6573735f7468616e5f3332"),
 			expanded: &shortNode{Key: hex_abc, Val: &shortNode{Key: hex_de, Val: val24}},
 			inserted: &rawShortNode{Key: com_abc, Val: &rawShortNode{Key: com_de, Val: val24}},
 		},
-		"collapsed/extension_embedded_branch/legacy": {
+		"collapsed/extension_embedded_branch/unext": {
 			// extension node with an embedded branch. ["0x1abc", [["0x20de", "tiny"], ["0x3f", "hi"], "","","","","","","","","","","","","","",""]]
-			hash:    common.FromHex("e5eb732b1c680825db277638d7c055020de26823a6d1cc16fe7b12c6cbc83620" + hLegacy),
+			hash:    common.FromHex("e5eb732b1c680825db277638d7c055020de26823a6d1cc16fe7b12c6cbc83620" + hZero),
 			encoded: common.FromHex("0xe1821abcddc88220de8474696e79c43f826869808080808080808080808080808080"),
 			expanded: &shortNode{
 				Key: hex_abc,
@@ -129,9 +129,9 @@ func init() {
 		},
 
 		// Branch nodes without ref
-		"collapsed/branch_embedded_leaf/legacy": {
+		"collapsed/branch_embedded_leaf/unext": {
 			// full node with an embedded leaf. [["0x20de","tiny"],"","","","","","","","","","","","","","","","data_little_less_than_32"]
-			hash:    common.FromHex("9b112f76f00fd35094375d08864e936fd9a00bb92509006fb020aeb0f2e10714" + hLegacy),
+			hash:    common.FromHex("9b112f76f00fd35094375d08864e936fd9a00bb92509006fb020aeb0f2e10714" + hZero),
 			encoded: common.FromHex("0xf1c88220de8474696e7980808080808080808080808080808098646174615f6c6974746c655f6c6573735f7468616e5f3332"),
 			expanded: &fullNode{Children: [17]node{
 				0:  &shortNode{Key: hex_de, Val: val4},
@@ -144,18 +144,18 @@ func init() {
 		},
 
 		// Extension nodes with ref
-		"collapsed/extension_ref/legacy": {
+		"collapsed/extension_ref/unext": {
 			// extension node with a hash. ["0x1abc", "0x00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"]
-			hash:     common.FromHex("07eb19f1985a7e529b62bd44decd98a18b26faa10370a8b5f08bdf88cfce573e" + hLegacy),
+			hash:     common.FromHex("07eb19f1985a7e529b62bd44decd98a18b26faa10370a8b5f08bdf88cfce573e" + hZero),
 			encoded:  common.FromHex("0xe4821abca000112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"),
-			expanded: &shortNode{Key: hex_abc, Val: extlegacy}, // decodeNode will hash32.ExtendLegacy()
+			expanded: &shortNode{Key: hex_abc, Val: extzero},   // decodeNode will hash32.ExtendZero()
 			inserted: &rawShortNode{Key: com_abc, Val: hash32}, // hasher will canonicalRef() to hash32
 		},
 		"collapsed/extension_ref/extroot": {
 			// extension node with a hash.
 			// hashing ["0x1abc", "0x00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"]
 			// storing ["0x1abc", "0x00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff11112222333344"]
-			hash:     common.FromHex("07eb19f1985a7e529b62bd44decd98a18b26faa10370a8b5f08bdf88cfce573e" + hLegacy),
+			hash:     common.FromHex("07eb19f1985a7e529b62bd44decd98a18b26faa10370a8b5f08bdf88cfce573e" + hZero),
 			encoded:  common.FromHex("0xeb821abca700112233445566778899aabbccddeeff00112233445566778899aabbccddeeff11112222333344"),
 			expanded: &shortNode{Key: hex_abc, Val: exthash},    // decodeNode will leave exthash as-is
 			inserted: &rawShortNode{Key: com_abc, Val: exthash}, // hasher will leave exthash as-is
@@ -171,17 +171,17 @@ func init() {
 		},
 
 		// Branch nodes with ref
-		"collapsed/branch_ref/legacy": {
+		"collapsed/branch_ref/unext": {
 			// branch node with a hash and a value. ["0x00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff","","","","","","","","","","","","","","","","data_little_less_than_32_bytes"]
-			hash:     common.FromHex("16cf3239c032f06e83a71ee519f4c58a41e5e3e609f641841d65bb49c09d59d2" + hLegacy),
+			hash:     common.FromHex("16cf3239c032f06e83a71ee519f4c58a41e5e3e609f641841d65bb49c09d59d2" + hZero),
 			encoded:  common.FromHex("0xf84fa000112233445566778899aabbccddeeff00112233445566778899aabbccddeeff8080808080808080808080808080809e646174615f6c6974746c655f6c6573735f7468616e5f33325f6279746573"),
-			expanded: &fullNode{Children: [17]node{0: extlegacy, 16: val31}}, // decodeNode will hash32.ExtendLegacy()
-			inserted: rawFullNode([17]node{0: hash32, 16: val31}),            // hasher will canonicalRef() to hash32
+			expanded: &fullNode{Children: [17]node{0: extzero, 16: val31}}, // decodeNode will hash32.ExtendZero()
+			inserted: rawFullNode([17]node{0: hash32, 16: val31}),          // hasher will canonicalRef() to hash32
 		},
 		"collapsed/branch_ref/extroot": {
 			// hashing ["0x00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff","","","","","","","","","","","","","","","","data_little_less_than_32_bytes"]
 			// storing ["0x00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff11112222333344","","","","","","","","","","","","","","","","data_little_less_than_32_bytes"]
-			hash:     common.FromHex("16cf3239c032f06e83a71ee519f4c58a41e5e3e609f641841d65bb49c09d59d2" + hLegacy),
+			hash:     common.FromHex("16cf3239c032f06e83a71ee519f4c58a41e5e3e609f641841d65bb49c09d59d2" + hZero),
 			encoded:  common.FromHex("0xf856a700112233445566778899aabbccddeeff00112233445566778899aabbccddeeff111122223333448080808080808080808080808080809e646174615f6c6974746c655f6c6573735f7468616e5f33325f6279746573"),
 			expanded: &fullNode{Children: [17]node{0: exthash, 16: val31}}, // decodeNode will leave exthash as-is
 			inserted: rawFullNode([17]node{0: exthash, 16: val31}),         // hasher will leave exthash as-is
@@ -196,10 +196,10 @@ func init() {
 		},
 
 		// Branch and extension nodes with a resovled child node
-		"resolved/branch_leaf/legacy": {
+		"resolved/branch_leaf/unext": {
 			// parent = ["0x916d1af8295fc9ad621dc43ecfa4c9f25286a619715b270929d0425cd37c80eb","","","","","","","","","","","","","","","",""]
 			// child  = ["0x20de", "data_definitely_longer_than_32_bytes"]
-			hash:    common.FromHex("f240b93556d06a01f7220537a11bcf4c02c690e7ff5a97fa6c98157e7298b0f1" + hLegacy),
+			hash:    common.FromHex("f240b93556d06a01f7220537a11bcf4c02c690e7ff5a97fa6c98157e7298b0f1" + hZero),
 			encoded: common.FromHex("0xf1a0916d1af8295fc9ad621dc43ecfa4c9f25286a619715b270929d0425cd37c80eb80808080808080808080808080808080"),
 			expanded: &fullNode{Children: [17]node{
 				0: &shortNode{Key: hex_de, Val: val36},
@@ -212,7 +212,7 @@ func init() {
 			// parent hashing = ["0x916d1af8295fc9ad621dc43ecfa4c9f25286a619715b270929d0425cd37c80eb","","","","","","","","","","","","","","","",""]
 			// parent storing = ["0x916d1af8295fc9ad621dc43ecfa4c9f25286a619715b270929d0425cd37c80ebccccddddeeee01","","","","","","","","","","","","","","","",""]
 			// child          = ["0x20de", "data_definitely_longer_than_32_bytes"]
-			hash:    common.FromHex("f240b93556d06a01f7220537a11bcf4c02c690e7ff5a97fa6c98157e7298b0f1" + hLegacy),
+			hash:    common.FromHex("f240b93556d06a01f7220537a11bcf4c02c690e7ff5a97fa6c98157e7298b0f1" + hZero),
 			encoded: common.FromHex("0xf838a7916d1af8295fc9ad621dc43ecfa4c9f25286a619715b270929d0425cd37c80ebccccddddeeee0180808080808080808080808080808080"),
 			expanded: &fullNode{Children: [17]node{
 				0: &shortNode{Key: hex_de, Val: val36},
@@ -235,10 +235,10 @@ func init() {
 			}),
 		},
 
-		"resolved/extension_branch/legacy": {
+		"resolved/extension_branch/unext": {
 			// parent = ["0x1abc", "0xdf5551a5661b69abe1ad76df12ceb6471f01b2639a24dbd2f8fe72d26e0dffb7"]
 			// child  = ["0x00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff","","","","","","","","","","","","","","","",""]
-			hash:    common.FromHex("3cd041acf721fcf611e8a06c39e347cb7daed5e6e9e9e9951473f8f920082659" + hLegacy),
+			hash:    common.FromHex("3cd041acf721fcf611e8a06c39e347cb7daed5e6e9e9e9951473f8f920082659" + hZero),
 			encoded: common.FromHex("0xe4821abca0df5551a5661b69abe1ad76df12ceb6471f01b2639a24dbd2f8fe72d26e0dffb7"),
 			expanded: &shortNode{
 				Key: hex_abc,
@@ -253,7 +253,7 @@ func init() {
 			// parent hashing = ["0x1abc", "0xdf5551a5661b69abe1ad76df12ceb6471f01b2639a24dbd2f8fe72d26e0dffb7"]
 			// parent storing = ["0x1abc", "0xdf5551a5661b69abe1ad76df12ceb6471f01b2639a24dbd2f8fe72d26e0dffb7ccccddddeeee01"]
 			// child          = ["0x00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff11112222333344","","","","","","","","","","","","","","","",""]
-			hash:    common.FromHex("3cd041acf721fcf611e8a06c39e347cb7daed5e6e9e9e9951473f8f920082659" + hLegacy),
+			hash:    common.FromHex("3cd041acf721fcf611e8a06c39e347cb7daed5e6e9e9e9951473f8f920082659" + hZero),
 			encoded: common.FromHex("0xeb821abca7df5551a5661b69abe1ad76df12ceb6471f01b2639a24dbd2f8fe72d26e0dffb7ccccddddeeee01"),
 			expanded: &shortNode{
 				Key: hex_abc,
@@ -280,10 +280,10 @@ func init() {
 			},
 		},
 
-		"resolved/branch_branch/legacy": {
+		"resolved/branch_branch/unext": {
 			// parent = ["","0xdf5551a5661b69abe1ad76df12ceb6471f01b2639a24dbd2f8fe72d26e0dffb7","","","","","","","","","","","","","","",""]
 			// child  = ["0x00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff","","","","","","","","","","","","","","","",""]
-			hash:    common.FromHex("e03dce39399489a1bf77c4d766668fddb2fff56f52090c71e16689e75ac97a25" + hLegacy),
+			hash:    common.FromHex("e03dce39399489a1bf77c4d766668fddb2fff56f52090c71e16689e75ac97a25" + hZero),
 			encoded: common.FromHex("0xf180a0df5551a5661b69abe1ad76df12ceb6471f01b2639a24dbd2f8fe72d26e0dffb7808080808080808080808080808080"),
 			expanded: &fullNode{Children: [17]node{
 				1: &fullNode{Children: [17]node{0: hash32}},
@@ -296,7 +296,7 @@ func init() {
 			// parent hashing = ["","0xdf5551a5661b69abe1ad76df12ceb6471f01b2639a24dbd2f8fe72d26e0dffb7","","","","","","","","","","","","","","",""]
 			// parent storing = ["","0xdf5551a5661b69abe1ad76df12ceb6471f01b2639a24dbd2f8fe72d26e0dffb7ccccddddeeee01","","","","","","","","","","","","","","",""]
 			// child          = ["0x00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff11112222333344","","","","","","","","","","","","","","","",""]
-			hash:    common.FromHex("e03dce39399489a1bf77c4d766668fddb2fff56f52090c71e16689e75ac97a25" + hLegacy),
+			hash:    common.FromHex("e03dce39399489a1bf77c4d766668fddb2fff56f52090c71e16689e75ac97a25" + hZero),
 			encoded: common.FromHex("0xf83880a7df5551a5661b69abe1ad76df12ceb6471f01b2639a24dbd2f8fe72d26e0dffb7ccccddddeeee01808080808080808080808080808080"),
 			expanded: &fullNode{Children: [17]node{
 				1: &fullNode{Children: [17]node{0: exthash}},
@@ -329,15 +329,15 @@ func selectNodeEncodingTCs(names []string) map[string]testNodeEncodingTC {
 	return testcases
 }
 
-func collapsedNodeTCs_legacy() map[string]testNodeEncodingTC {
+func collapsedNodeTCs_unext() map[string]testNodeEncodingTC {
 	return selectNodeEncodingTCs([]string{
-		"collapsed/leaf_short/legacy",
-		"collapsed/leaf_long/legacy",
-		"collapsed/extension_embedded_leaf/legacy",
-		"collapsed/extension_embedded_branch/legacy",
-		"collapsed/branch_embedded_leaf/legacy",
-		"collapsed/extension_ref/legacy",
-		"collapsed/branch_ref/legacy",
+		"collapsed/leaf_short/unext",
+		"collapsed/leaf_long/unext",
+		"collapsed/extension_embedded_leaf/unext",
+		"collapsed/extension_embedded_branch/unext",
+		"collapsed/branch_embedded_leaf/unext",
+		"collapsed/extension_ref/unext",
+		"collapsed/branch_ref/unext",
 	})
 }
 
@@ -355,11 +355,11 @@ func collapsedNodeTCs_exthash() map[string]testNodeEncodingTC {
 	})
 }
 
-func resolvedNodeTCs_legacy() map[string]testNodeEncodingTC {
+func resolvedNodeTCs_unext() map[string]testNodeEncodingTC {
 	return selectNodeEncodingTCs([]string{
-		"resolved/branch_leaf/legacy",
-		"resolved/extension_branch/legacy",
-		"resolved/branch_branch/legacy",
+		"resolved/branch_leaf/unext",
+		"resolved/extension_branch/unext",
+		"resolved/branch_branch/unext",
 	})
 }
 
@@ -397,7 +397,7 @@ func checkDecodeNode(t *testing.T, name string, tc testNodeEncodingTC) {
 }
 
 func TestDecodeNodeTC(t *testing.T) {
-	for name, tc := range collapsedNodeTCs_legacy() {
+	for name, tc := range collapsedNodeTCs_unext() {
 		checkDecodeNode(t, name, tc)
 	}
 	for name, tc := range collapsedNodeTCs_exthash() {

@@ -27,7 +27,6 @@ import (
 	"fmt"
 	"go/parser"
 	"go/token"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -96,8 +95,6 @@ func main() {
 		doTest(os.Args[2:])
 	case "cover":
 		doCover(os.Args[2:])
-	case "fmt":
-		doFmt(os.Args[2:])
 	case "lint":
 		doLint(os.Args[2:], true)
 	case "lint-try":
@@ -177,7 +174,7 @@ func doInstall(cmdline []string) {
 	goinstall.Args = append(goinstall.Args, packages...)
 	build.MustRun(goinstall)
 
-	if cmds, err := ioutil.ReadDir("cmd"); err == nil {
+	if cmds, err := os.ReadDir("cmd"); err == nil {
 		for _, cmd := range cmds {
 			pkgs, err := parser.ParseDir(token.NewFileSet(), filepath.Join(".", "cmd", cmd.Name()), nil, parser.PackageClauseOnly)
 			if err != nil {
@@ -340,30 +337,15 @@ func doCover(cmdline []string) {
 	build.MustRun(gotest)
 }
 
-func doFmt(cmdline []string) {
-	// runs gometalinter on requested packages
-	flag.CommandLine.Parse(cmdline)
-
-	packages := []string{"./..."}
-	if len(flag.CommandLine.Args()) > 0 {
-		packages = flag.CommandLine.Args()
-	}
-
-	lintBin := installLinter()
-
-	// Run fast linters batched together
-	configs := []string{
-		"run",
-		"--tests",
-		"--disable-all",
-		"--enable=gofmt",
-		"--timeout=2m",
-	}
-	build.MustRunCommand(lintBin, append(configs, packages...)...)
-}
-
 // runs gometalinter on requested packages and exits immediately when linter warning observed if exitOnError is true
+// if exitOnError is false, prepare a report file for linters and run additional linters without stopping
 func doLint(cmdline []string, exitOnError bool) {
+	var (
+		vFlag      = flag.Bool("v", false, "verbose output")
+		newFromRev = flag.String("new-from-rev", "", "Show only new issues created after git revision REV")
+
+		fname = "linter_report.txt"
+	)
 	flag.CommandLine.Parse(cmdline)
 
 	packages := []string{"./..."}
@@ -373,73 +355,75 @@ func doLint(cmdline []string, exitOnError bool) {
 
 	lintBin := installLinter()
 
-	// Prepare a report file for linters
-	fname := "linter_report.txt"
-	fileOut, err := os.Create(fname)
-	defer fileOut.Close()
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("Generating a linter report %s using above linters.\n", fname)
-
-	oldStdout := os.Stdout
-	os.Stdout = fileOut
-
-	// Run fast linters batched together
-	configs := []string{
-		"run",
-		"--tests",
-		"--disable-all",
-		"--enable=varcheck",
-		"--enable=misspell",
-		"--enable=goconst",
-	}
-	args := append(configs, packages...)
-	if exitOnError {
-		build.MustRunCommand(lintBin, args...)
-	} else {
-		build.TryRunCommand(lintBin, args...)
+	// linters for "lint" command
+	lintersSet := [][]string{
+		{
+			"--presets=format",
+			"--presets=performance",
+		},
 	}
 
-	// Run fast linters batched together
-	configs = []string{
-		"run",
-		"--tests",
-		"--disable-all",
-		"--enable=deadcode",
-		"--enable=dupl",
-		"--enable=errcheck",
-		"--enable=ineffassign",
-		"--enable=interfacer",
-		"--enable=unparam",
-		"--enable=unused",
-	}
-	args = append(configs, packages...)
-	if exitOnError {
-		build.MustRunCommand(lintBin, args...)
-	} else {
-		build.TryRunCommand(lintBin, args...)
+	if !exitOnError {
+		// Prepare a report file for linters
+		fileOut, err := os.Create(fname)
+		defer fileOut.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("Generating a linter report %s using above linters.\n", fname)
+
+		oldStdout := os.Stdout
+		os.Stdout = fileOut
+		defer func() {
+			// Restore stdout
+			os.Stdout = oldStdout
+			fmt.Printf("Successfully generating %s.\n", fname)
+		}()
+
+		// linters for "lint-try" command
+		lintersSet = [][]string{
+			{
+				"--enable=misspell",
+				"--enable=goconst",
+			},
+			{
+				"--enable=dupl",
+				"--enable=errcheck",
+				"--enable=ineffassign",
+				"--enable=unparam",
+				"--enable=unused",
+			},
+			{"--enable=unconvert"},
+			{"--enable=gosimple"},
+			{"--enable=staticcheck"},
+			{"--enable=gocyclo"},
+		}
 	}
 
-	// Run slow linters one by one
-	for _, linter := range []string{"unconvert", "gosimple", "staticcheck", "gocyclo"} {
-		configs = []string{"run", "--tests", "--deadline=10m", "--disable-all", "--enable=" + linter}
-		args = append(configs, packages...)
+	for _, linters := range lintersSet {
+		configs := []string{
+			"run",
+			"--tests",
+			"--disable-all",
+			"--timeout=10m",
+		}
+		if *vFlag {
+			configs = append(configs, "-v")
+		}
+		if *newFromRev != "" {
+			configs = append(configs, "--new-from-rev="+*newFromRev)
+		}
+		configs = append(configs, linters...)
+		args := append(configs, packages...)
 		if exitOnError {
 			build.MustRunCommand(lintBin, args...)
 		} else {
 			build.TryRunCommand(lintBin, args...)
 		}
 	}
-
-	// Restore stdout
-	os.Stdout = oldStdout
-
-	fmt.Printf("Succefully generating %s.\n", fname)
 }
 
 // Release Packaging
-
 func doArchive(cmdline []string) {
 	var (
 		arch   = flag.String("arch", runtime.GOARCH, "Architecture cross packaging")
@@ -582,7 +566,7 @@ func makeWorkdir(wdflag string) string {
 	if wdflag != "" {
 		err = os.MkdirAll(wdflag, 0o744)
 	} else {
-		wdflag, err = ioutil.TempDir("", "klay-build-")
+		wdflag, err = os.MkdirTemp("", "klay-build-")
 	}
 	if err != nil {
 		log.Fatal(err)
@@ -1015,7 +999,7 @@ func installLinter() string {
 		fmt.Println("Installing golangci-lint.")
 
 		cmdCurl := exec.Command("curl", "-sSfL", "https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh")
-		cmdSh := exec.Command("sh", "-s", "--", "-b", filepath.Join(build.GOPATH(), "bin"), "v1.24.0")
+		cmdSh := exec.Command("sh", "-s", "--", "-b", filepath.Join(build.GOPATH(), "bin"), "v1.52.0")
 		cmdSh.Stdin, err = cmdCurl.StdoutPipe()
 		if err != nil {
 			log.Fatal(err)

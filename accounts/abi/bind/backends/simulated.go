@@ -461,12 +461,18 @@ func (b *SimulatedBackend) callContract(_ context.Context, call klaytn.CallMsg, 
 	// Execute the call.
 	nonce := from.Nonce()
 	intrinsicGas, _ := types.IntrinsicGas(call.Data, nil, call.To == nil, b.config.Rules(block.Number()))
-	msg := types.NewMessage(call.From, call.To, nonce, call.Value, call.Gas, call.GasPrice, call.Data, true, intrinsicGas)
 
-	evmContext := blockchain.NewEVMContext(msg, block.Header(), b.blockchain, nil)
+	var accessList types.AccessList
+	if call.AccessList != nil {
+		accessList = *call.AccessList
+	}
+	msg := types.NewMessage(call.From, call.To, nonce, call.Value, call.Gas, call.GasPrice, call.Data, true, intrinsicGas, accessList)
+
+	txContext := blockchain.NewEVMTxContext(msg, block.Header())
+	blockContext := blockchain.NewEVMBlockContext(block.Header(), b.blockchain, nil)
 	// Create a new environment which holds all relevant information
 	// about the transaction and calling mechanisms.
-	vmenv := vm.NewEVM(evmContext, stateDB, b.config, &vm.Config{})
+	vmenv := vm.NewEVM(blockContext, txContext, stateDB, b.config, &vm.Config{})
 
 	return blockchain.NewStateTransition(vmenv, msg).TransitionDb()
 }

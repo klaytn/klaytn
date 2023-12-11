@@ -6,7 +6,7 @@
 # @global-owner1 and @global-owner2 will be requested for
 # review when someone opens a pull request.
 #*       @global-owner1 @global-owner2
-*       @aidan-kwon @blukat29 @kjeom
+*       @aidan-kwon @blukat29 @yoomee1313
 
 # Order is important; the last matching pattern takes the most
 # precedence. When someone opens a pull request that only
@@ -36,23 +36,26 @@
 # In this example, @doctocat owns any file in the `/docs`
 # directory in the root of your repository.
 #/docs/ @doctocat
-/api/           @kjeom @nohkwak @toniya-klaytn
-/blockchain/    @blukat29 @kjeom @ian0371
-/build/	        @blukat29 @hyunsooda @2dvorak
-/client/        @hyunsooda @kjeom @nohkwak
-/cmd/           @kjeom @ian0371
-/consensus/     @aidan-kwon @jiseongnoh @yoomee1313
-/console/       @kjeom @nohkwak @JayChoi1736
-/contracts/     @ian0371 @hyunsooda @2dvorak
-/crypto/        @blukat29 @aidan-kwon @jiseongnoh
-/datasync/      @aidan-kwon @ethan-kr @jeongkyun-oh
-/db_migration/  @ethan-kr @jeongkyun-oh @yoomee1313
-/event/	        @kjeom @JayChoi1736 @nohkwak
-/governance/    @blukat29 @ian0371 @yoomee1313
-/networks/      @kjeom @JayChoi1736 @yoomee1313
-/node/	        @blukat29 @hyunsooda @2dvorak
-/reward/        @blukat29 @ian0371
-/rlp/	        @kjeom @JayChoi1736 @nohkwak
-/snapshot/      @ethan-kr @jeongkyun-oh @yoomee1313
-/storage/       @aidan-kwon @ethan-kr @jeongkyun-oh
-/work/	        @blukat29 @yoomee1313
+
+/.circleci/    @yoomee1313 @JayChoi1736 @2dvorak @sjnam
+/.github/      @yoomee1313 @JayChoi1736 @2dvorak @sjnam
+/accounts/     @blukat29 @hyunsooda @2dvorak @kjeom @JayChoi1736
+/api/          @blukat29 @hyunsooda @2dvorak @kjeom @JayChoi1736
+/blockchain/   @yoomee1313 @sjnam @ian0371 @hyeonLewis
+/build/        @yoomee1313 @JayChoi1736 @2dvorak @sjnam
+/client/       @blukat29 @hyunsooda @2dvorak @kjeom @JayChoi1736
+/cmd/          @blukat29 @hyunsooda @2dvorak @kjeom @JayChoi1736
+/consensus/    @blukat29 @ian0371 @hyeonLewis
+/console/      @blukat29 @hyunsooda @2dvorak @kjeom @JayChoi1736
+/contracts/    @blukat29 @ian0371 @hyeonLewis
+/crypto/       @blukat29 @ian0371 @hyeonLewis
+/datasync/     @aidan-kwon @blukat29 @jeongkyun-oh
+/db_migration/ @aidan-kwon @blukat29 @jeongkyun-oh
+/governance/   @blukat29 @ian0371 @hyeonLewis
+/networks/     @yoomee1313 @JayChoi1736 @2dvorak @sjnam
+/node/         @blukat29 @hyunsooda @2dvorak @kjeom @JayChoi1736
+/params/       @yoomee1313 @sjnam @ian0371 @hyeonLewis
+/reward/       @blukat29 @ian0371 @hyeonLewis
+/snapshot/     @aidan-kwon @blukat29 @jeongkyun-oh
+/storage/      @aidan-kwon @blukat29 @jeongkyun-oh
+/work/         @yoomee1313 @sjnam @ian0371 @hyeonLewis

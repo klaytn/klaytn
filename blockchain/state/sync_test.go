@@ -147,7 +147,7 @@ func checkStateAccounts(t *testing.T, newDB database.DBManager, root common.Hash
 
 // checkTrieConsistency checks that all nodes in a (sub-)trie are indeed present.
 func checkTrieConsistency(db database.DBManager, root common.Hash) error {
-	if v, _ := db.ReadTrieNode(root.ExtendLegacy()); v == nil { // only works with hash32
+	if v, _ := db.ReadTrieNode(root.ExtendZero()); v == nil { // only works with hash32
 		return nil // Consider a non existent state consistent.
 	}
 	trie, err := statedb.NewTrie(root, statedb.NewDatabase(db), nil)
@@ -163,7 +163,7 @@ func checkTrieConsistency(db database.DBManager, root common.Hash) error {
 // checkStateConsistency checks that all data of a state root is present.
 func checkStateConsistency(db database.DBManager, root common.Hash) error {
 	// Create and iterate a state trie rooted in a sub-node
-	if _, err := db.ReadTrieNode(root.ExtendLegacy()); err != nil { // only works with hash32
+	if _, err := db.ReadTrieNode(root.ExtendZero()); err != nil { // only works with hash32
 		return nil // Consider a non existent state consistent.
 	}
 	state, err := New(root, NewDatabase(db), nil, nil)
@@ -273,7 +273,7 @@ func testIterativeStateSync(t *testing.T, count int, commit bool, bypath bool) {
 	for len(hashQueue)+len(pathQueue) > 0 {
 		results := make([]statedb.SyncResult, len(hashQueue)+len(pathQueue))
 		for i, hash := range hashQueue {
-			data, err := srcState.TrieDB().Node(hash.ExtendLegacy())
+			data, err := srcState.TrieDB().Node(hash.ExtendZero())
 			if err != nil {
 				data, err = srcState.ContractCode(hash)
 			}
@@ -375,7 +375,7 @@ func TestCheckStateConsistencyMissNode(t *testing.T) {
 		if !common.EmptyHash(it.Hash) {
 			var (
 				codehash = it.Hash
-				nodehash = it.Hash.ExtendLegacy()
+				nodehash = it.Hash.ExtendZero()
 				data     []byte
 				code     = isCode(it.Hash)
 				err      error
@@ -437,7 +437,7 @@ func TestIterativeDelayedStateSync(t *testing.T) {
 		// Sync only half of the scheduled nodes
 		results := make([]statedb.SyncResult, len(queue)/2+1)
 		for i, hash := range queue[:len(results)] {
-			data, err := srcState.TrieDB().Node(hash.ExtendLegacy())
+			data, err := srcState.TrieDB().Node(hash.ExtendZero())
 			if err != nil {
 				data, err = srcState.ContractCode(hash)
 			}
@@ -494,7 +494,7 @@ func testIterativeRandomStateSync(t *testing.T, count int) {
 		// Fetch all the queued nodes in a random order
 		results := make([]statedb.SyncResult, 0, len(queue))
 		for hash := range queue {
-			data, err := srcState.TrieDB().Node(hash.ExtendLegacy())
+			data, err := srcState.TrieDB().Node(hash.ExtendZero())
 			if err != nil {
 				data, err = srcState.ContractCode(hash)
 			}
@@ -553,7 +553,7 @@ func TestIterativeRandomDelayedStateSync(t *testing.T) {
 		for hash := range queue {
 			delete(queue, hash)
 
-			data, err := srcState.TrieDB().Node(hash.ExtendLegacy())
+			data, err := srcState.TrieDB().Node(hash.ExtendZero())
 			if err != nil {
 				data, err = srcState.ContractCode(hash)
 			}
@@ -627,7 +627,7 @@ func TestIncompleteStateSync(t *testing.T) {
 		// Fetch a batch of state nodes
 		results := make([]statedb.SyncResult, len(queue))
 		for i, hash := range queue {
-			data, err := srcState.TrieDB().Node(hash.ExtendLegacy())
+			data, err := srcState.TrieDB().Node(hash.ExtendZero())
 			if err != nil {
 				data, err = srcState.ContractCode(hash)
 			}
@@ -672,7 +672,7 @@ func TestIncompleteStateSync(t *testing.T) {
 			code     = isCode(hash)
 			val      []byte
 			codehash = hash
-			nodehash = hash.ExtendLegacy()
+			nodehash = hash.ExtendZero()
 		)
 		if code {
 			val = dstDb.ReadCode(codehash)

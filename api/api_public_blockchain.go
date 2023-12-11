@@ -25,9 +25,8 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"reflect"
 	"time"
-
-	"github.com/klaytn/klaytn/node/cn/filters"
 
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -39,6 +38,7 @@ import (
 	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/rpc"
+	"github.com/klaytn/klaytn/node/cn/filters"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 )
@@ -96,13 +96,14 @@ func (s *PublicBlockChainAPI) IsContractAccount(ctx context.Context, address com
 //	return state.IsHumanReadable(address), state.Error()
 // }
 
-// GetBlockReceipts returns all the transaction receipts for the given block hash.
-func (s *PublicBlockChainAPI) GetBlockReceipts(ctx context.Context, blockHash common.Hash) ([]map[string]interface{}, error) {
-	receipts := s.b.GetBlockReceipts(ctx, blockHash)
-	block, err := s.b.BlockByHash(ctx, blockHash)
+// GetBlockReceipts returns the receipts of all transactions in the block identified by number or hash.
+func (s *PublicBlockChainAPI) GetBlockReceipts(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) ([]map[string]interface{}, error) {
+	block, err := s.b.BlockByNumberOrHash(ctx, blockNrOrHash)
 	if err != nil {
 		return nil, err
 	}
+	blockHash := block.Hash()
+	receipts := s.b.GetBlockReceipts(ctx, blockHash)
 	txs := block.Transactions()
 	if receipts.Len() != txs.Len() {
 		return nil, fmt.Errorf("the size of transactions and receipts is different in the block (%s)", blockHash.String())
@@ -150,28 +151,29 @@ func (s *PublicBlockChainAPI) GetAccount(ctx context.Context, address common.Add
 	return serAcc, state.Error()
 }
 
-func (s *PublicKlayAPI) ForkStatus(ctx context.Context, number rpc.BlockNumber) (map[string]bool, error) {
+func (s *PublicKlayAPI) ForkStatus(ctx context.Context, number rpc.BlockNumber) (map[string]interface{}, error) {
 	block, err := s.b.BlockByNumber(ctx, number)
 	if err != nil {
 		return nil, err
 	}
-	blockNumber := block.Number()
-	cfg := s.b.ChainConfig()
+	blkNum := block.Number()
+	rules := s.b.ChainConfig().Rules(blkNum)
+	status := make(map[string]interface{})
 
-	return map[string]bool{
-		"Istanbul":  cfg.IsIstanbulForkEnabled(blockNumber),
-		"London":    cfg.IsLondonForkEnabled(blockNumber),
-		"EthTxType": cfg.IsEthTxTypeForkEnabled(blockNumber),
-		"Magma":     cfg.IsMagmaForkEnabled(blockNumber),
-		"Kore":      cfg.IsKoreForkEnabled(blockNumber),
-		"KIP103":    cfg.IsKIP103ForkBlock(blockNumber),
-		"Shanghai":  cfg.IsShanghaiForkEnabled(blockNumber),
-	}, nil
+	rulesVal := reflect.ValueOf(rules)
+	for i := 0; i < rulesVal.NumField(); i++ {
+		val := rulesVal.Field(i)
+		typ := rulesVal.Type().Field(i)
+		status[typ.Name] = val.Interface()
+	}
+	// `IsKIP103` is not defined in the `Rules` struct. Exceptionally, we manually add it
+	status["IsKIP103"] = s.b.ChainConfig().IsKIP103ForkBlock(blkNum)
+	return status, nil
 }
 
 // rpcMarshalHeader converts the given header to the RPC output.
 func (s *PublicBlockChainAPI) rpcMarshalHeader(header *types.Header) map[string]interface{} {
-	fields := filters.RPCMarshalHeader(header, s.b.ChainConfig().IsEthTxTypeForkEnabled(header.Number))
+	fields := filters.RPCMarshalHeader(header, s.b.ChainConfig().Rules(header.Number))
 	return fields
 }
 
@@ -280,9 +282,13 @@ type CallArgs struct {
 	Value                hexutil.Big     `json:"value"`
 	Data                 hexutil.Bytes   `json:"data"`
 	Input                hexutil.Bytes   `json:"input"`
+
+	// Introduced by AccessListTxType transaction.
+	AccessList *types.AccessList `json:"accessList,omitempty"`
+	ChainID    *hexutil.Big      `json:"chainId,omitempty"`
 }
 
-func (args *CallArgs) data() []byte {
+func (args *CallArgs) InputData() []byte {
 	if args.Input != nil {
 		return args.Input
 	}
@@ -311,7 +317,7 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.Blo
 	// this makes sure resources are cleaned up.
 	defer cancel()
 
-	intrinsicGas, err := types.IntrinsicGas(args.data(), nil, args.To == nil, b.ChainConfig().Rules(header.Number))
+	intrinsicGas, err := types.IntrinsicGas(args.InputData(), nil, args.To == nil, b.ChainConfig().Rules(header.Number))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -392,7 +398,7 @@ func (s *PublicBlockChainAPI) EstimateComputationCost(ctx context.Context, args 
 	if rpcGasCap := s.b.RPCGasCap(); rpcGasCap != nil {
 		gasCap = rpcGasCap
 	}
-	_, computationCost, err := DoCall(ctx, s.b, args, blockNrOrHash, vm.Config{UseOpcodeComputationCost: true}, s.b.RPCEVMTimeout(), gasCap)
+	_, computationCost, err := DoCall(ctx, s.b, args, blockNrOrHash, vm.Config{}, s.b.RPCEVMTimeout(), gasCap)
 	return (hexutil.Uint64)(computationCost), err
 }
 
@@ -456,10 +462,8 @@ type AccessListResult struct {
 
 // CreateAccessList creates a EIP-2930 type AccessList for the given transaction.
 // Reexec and BlockNrOrHash can be specified to create the accessList on top of a certain state.
-// TODO-Klaytn: Have to implement logic. For now, Klaytn does not implement actual access list logic, so return empty access list result.
-func (s *PublicBlockChainAPI) CreateAccessList(ctx context.Context, args SendTxArgs, blockNrOrHash *rpc.BlockNumberOrHash) (*AccessListResult, error) {
-	result := &AccessListResult{Accesslist: &types.AccessList{}, GasUsed: hexutil.Uint64(0)}
-	return result, nil
+func (s *PublicBlockChainAPI) CreateAccessList(ctx context.Context, args EthTransactionArgs, blockNrOrHash *rpc.BlockNumberOrHash) (interface{}, error) {
+	return doCreateAccessList(ctx, s.b, args, blockNrOrHash)
 }
 
 // StructLogRes stores a structured log emitted by the EVM while replaying a
@@ -525,7 +529,9 @@ func FormatLogs(timeout time.Duration, logs []vm.StructLog) ([]StructLogRes, err
 	return formatted, nil
 }
 
-func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool, isEnabledEthTxTypeFork bool) (map[string]interface{}, error) {
+// For klay_getBlockByNumber, klay_getBlockByHash, klay_getBlockWithconsensusInfoByNumber, klay_getBlockWithconsensusInfoByHash APIs
+// and Kafka chaindatafetcher.
+func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool, rules params.Rules) (map[string]interface{}, error) {
 	head := b.Header() // copies the header once
 	fields := map[string]interface{}{
 		"number":           (*hexutil.Big)(head.Number),
@@ -569,12 +575,16 @@ func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool, isEna
 		fields["transactions"] = transactions
 	}
 
-	if isEnabledEthTxTypeFork {
+	if rules.IsEthTxType {
 		if head.BaseFee == nil {
 			fields["baseFeePerGas"] = (*hexutil.Big)(new(big.Int).SetUint64(params.ZeroBaseFee))
 		} else {
 			fields["baseFeePerGas"] = (*hexutil.Big)(head.BaseFee)
 		}
+	}
+	if rules.IsRandao {
+		fields["randomReveal"] = hexutil.Bytes(head.RandomReveal)
+		fields["mixHash"] = hexutil.Bytes(head.MixHash)
 	}
 
 	return fields, nil
@@ -584,7 +594,7 @@ func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool, isEna
 // returned. When fullTx is true the returned block contains full transaction details, otherwise it will only contain
 // transaction hashes.
 func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]interface{}, error) {
-	return RpcOutputBlock(b, s.b.GetTd(b.Hash()), inclTx, fullTx, s.b.ChainConfig().IsEthTxTypeForkEnabled(b.Header().Number))
+	return RpcOutputBlock(b, s.b.GetTd(b.Hash()), inclTx, fullTx, s.b.ChainConfig().Rules(b.Header().Number))
 }
 
 func getFrom(tx *types.Transaction) common.Address {
@@ -704,10 +714,9 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 		value = args.Value.ToInt()
 	}
 
-	// TODO-Klaytn: Klaytn does not support accessList yet.
-	// var accessList types.AccessList
-	// if args.AccessList != nil {
-	//	 accessList = *args.AccessList
-	// }
-	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, args.data(), false, intrinsicGas), nil
+	var accessList types.AccessList
+	if args.AccessList != nil {
+		accessList = *args.AccessList
+	}
+	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, args.Data, false, intrinsicGas, accessList), nil
 }

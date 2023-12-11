@@ -21,10 +21,10 @@
 package common
 
 import (
+	"crypto/rand"
 	"encoding/binary"
 	"encoding/hex"
-	"math/rand"
-	"time"
+	"io"
 )
 
 // ToHex returns the hex representation of b, prefixed with '0x'.
@@ -161,9 +161,11 @@ func TrimRightZeroes(s []byte) []byte {
 }
 
 func MakeRandomBytes(n int) []byte {
-	rand.Seed(time.Now().UTC().UnixNano())
 	s := make([]byte, n)
-	rand.Read(s)
+	_, err := io.ReadFull(rand.Reader, s)
+	if err != nil {
+		return nil
+	}
 	return s
 }
 

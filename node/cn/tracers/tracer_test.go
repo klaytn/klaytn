@@ -56,8 +56,17 @@ type dummyStatedb struct {
 
 func (*dummyStatedb) GetRefund() uint64 { return 1337 }
 
+type vmContext struct {
+	blockCtx vm.BlockContext
+	txCtx    vm.TxContext
+}
+
+func testCtx() *vmContext {
+	return &vmContext{blockCtx: vm.BlockContext{BlockNumber: big.NewInt(1)}, txCtx: vm.TxContext{GasPrice: big.NewInt(100000)}}
+}
+
 func runTrace(tracer *Tracer) (json.RawMessage, error) {
-	env := vm.NewEVM(vm.Context{BlockNumber: big.NewInt(1)}, &dummyStatedb{}, params.TestChainConfig, &vm.Config{Debug: true, Tracer: tracer})
+	env := vm.NewEVM(vm.BlockContext{BlockNumber: big.NewInt(1)}, vm.TxContext{}, &dummyStatedb{}, params.TestChainConfig, &vm.Config{Debug: true, Tracer: tracer})
 
 	contract := vm.NewContract(account{}, account{}, big.NewInt(0), 10000)
 	contract.Code = []byte{byte(vm.PUSH1), 0x1, byte(vm.PUSH1), 0x1, 0x0}
@@ -71,7 +80,7 @@ func runTrace(tracer *Tracer) (json.RawMessage, error) {
 
 // TestRegressionPanicSlice tests that we don't panic on bad arguments to memory access
 func TestRegressionPanicSlice(t *testing.T) {
-	tracer, err := New("{depths: [], step: function(log) { this.depths.push(log.memory.slice(-1,-2)); }, fault: function() {}, result: function() { return this.depths; }}", true)
+	tracer, err := New("{depths: [], step: function(log) { this.depths.push(log.memory.slice(-1,-2)); }, fault: function() {}, result: function() { return this.depths; }}", new(Context), true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +91,7 @@ func TestRegressionPanicSlice(t *testing.T) {
 
 // TestRegressionPanicSlice tests that we don't panic on bad arguments to stack peeks
 func TestRegressionPanicPeek(t *testing.T) {
-	tracer, err := New("{depths: [], step: function(log) { this.depths.push(log.stack.peek(-1)); }, fault: function() {}, result: function() { return this.depths; }}", true)
+	tracer, err := New("{depths: [], step: function(log) { this.depths.push(log.stack.peek(-1)); }, fault: function() {}, result: function() { return this.depths; }}", new(Context), true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +102,7 @@ func TestRegressionPanicPeek(t *testing.T) {
 
 // TestRegressionPanicSlice tests that we don't panic on bad arguments to memory getUint
 func TestRegressionPanicGetUint(t *testing.T) {
-	tracer, err := New("{ depths: [], step: function(log, db) { this.depths.push(log.memory.getUint(-64));}, fault: function() {}, result: function() { return this.depths; }}", true)
+	tracer, err := New("{ depths: [], step: function(log, db) { this.depths.push(log.memory.getUint(-64));}, fault: function() {}, result: function() { return this.depths; }}", new(Context), true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -104,7 +113,7 @@ func TestRegressionPanicGetUint(t *testing.T) {
 
 // TestTracingDeepObject tests if it returns an expected error when the json object has too many recursive children
 func TestTracingDeepObject(t *testing.T) {
-	tracer, err := New("{step: function() {}, fault: function() {}, result: function() { var o={}; var x=o; for (var i=0; i<1000; i++){ o.foo={}; o=o.foo; } return x; }}", true)
+	tracer, err := New("{step: function() {}, fault: function() {}, result: function() { var o={}; var x=o; for (var i=0; i<1000; i++){ o.foo={}; o=o.foo; } return x; }}", new(Context), true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,7 +126,7 @@ func TestTracingDeepObject(t *testing.T) {
 }
 
 func TestTracing(t *testing.T) {
-	tracer, err := New("{count: 0, step: function() { this.count += 1; }, fault: function() {}, result: function() { return this.count; }}", true)
+	tracer, err := New("{count: 0, step: function() { this.count += 1; }, fault: function() {}, result: function() { return this.count; }}", new(Context), true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,14 +141,14 @@ func TestTracing(t *testing.T) {
 }
 
 func TestUnsafeTracingDisabled(t *testing.T) {
-	_, err := New("{count: 0, step: function() { this.count += 1; }, fault: function() {}, result: function() { return this.count; }}", false)
+	_, err := New("{count: 0, step: function() { this.count += 1; }, fault: function() {}, result: function() { return this.count; }}", new(Context), false)
 	if err == nil || err.Error() != "Only predefined tracers are supported" {
 		t.Fatal("Must disable JS code based tracers if unsafe")
 	}
 }
 
 func TestStack(t *testing.T) {
-	tracer, err := New("{depths: [], step: function(log) { this.depths.push(log.stack.length()); }, fault: function() {}, result: function() { return this.depths; }}", true)
+	tracer, err := New("{depths: [], step: function(log) { this.depths.push(log.stack.length()); }, fault: function() {}, result: function() { return this.depths; }}", new(Context), true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -154,7 +163,7 @@ func TestStack(t *testing.T) {
 }
 
 func TestOpcodes(t *testing.T) {
-	tracer, err := New("{opcodes: [], step: function(log) { this.opcodes.push(log.op.toString()); }, fault: function() {}, result: function() { return this.opcodes; }}", true)
+	tracer, err := New("{opcodes: [], step: function(log) { this.opcodes.push(log.op.toString()); }, fault: function() {}, result: function() { return this.opcodes; }}", new(Context), true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -172,7 +181,7 @@ func TestHalt(t *testing.T) {
 	t.Skip("duktape doesn't support abortion")
 
 	timeout := errors.New("stahp")
-	tracer, err := New("{step: function() { while(1); }, result: function() { return null; }}", true)
+	tracer, err := New("{step: function() { while(1); }, result: function() { return null; }}", new(Context), true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -188,20 +197,52 @@ func TestHalt(t *testing.T) {
 }
 
 func TestHaltBetweenSteps(t *testing.T) {
-	tracer, err := New("{step: function() {}, fault: function() {}, result: function() { return null; }}", true)
+	tracer, err := New("{step: function() {}, fault: function() {}, result: function() { return null; }}", new(Context), true)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	env := vm.NewEVM(vm.Context{BlockNumber: big.NewInt(1)}, &dummyStatedb{}, params.TestChainConfig, &vm.Config{Debug: true, Tracer: tracer})
+	env := vm.NewEVM(vm.BlockContext{BlockNumber: big.NewInt(1)}, vm.TxContext{}, &dummyStatedb{}, params.TestChainConfig, &vm.Config{Debug: true, Tracer: tracer})
 	contract := vm.NewContract(&account{}, &account{}, big.NewInt(0), 0)
 
-	tracer.CaptureState(env, 0, 0, 0, 0, nil, nil, contract, 0, nil)
+	tracer.CaptureState(env, 0, 0, 0, 0, &vm.ScopeContext{Contract: contract}, 0, nil)
 	timeout := errors.New("stahp")
 	tracer.Stop(timeout)
-	tracer.CaptureState(env, 0, 0, 0, 0, nil, nil, contract, 0, nil)
+	tracer.CaptureState(env, 0, 0, 0, 0, &vm.ScopeContext{Contract: contract}, 0, nil)
 
 	if _, err := tracer.GetResult(); err.Error() != timeout.Error() {
 		t.Errorf("Expected timeout error, got %v", err)
+	}
+}
+
+func TestEnterExit(t *testing.T) {
+	// test that either both or none of enter() and exit() are defined
+	if _, err := New("{step: function() {}, fault: function() {}, result: function() { return null; }, enter: function() {}}", new(Context), true); err == nil {
+		t.Fatal("tracer creation should've failed without exit() definition")
+	}
+	if _, err := New("{step: function() {}, fault: function() {}, result: function() { return null; }, enter: function() {}, exit: function() {}}", new(Context), true); err != nil {
+		t.Fatal(err)
+	}
+
+	// test that the enter and exit method are correctly invoked and the values passed
+	tracer, err := New("{enters: 0, exits: 0, enterGas: 0, gasUsed: 0, step: function() {}, fault: function() {}, result: function() { return {enters: this.enters, exits: this.exits, enterGas: this.enterGas, gasUsed: this.gasUsed} }, enter: function(frame) { this.enters++; this.enterGas = frame.getGas(); }, exit: function(res) { this.exits++; this.gasUsed = res.getGasUsed(); }}", new(Context), true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	scope := &vm.ScopeContext{
+		Contract: vm.NewContract(&account{}, &account{}, big.NewInt(0), 0),
+	}
+
+	tracer.CaptureEnter(vm.CALL, scope.Contract.Caller(), scope.Contract.Address(), []byte{}, 1000, new(big.Int))
+	tracer.CaptureExit([]byte{}, 400, nil)
+
+	have, err := tracer.GetResult()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `{"enters":1,"exits":1,"enterGas":1000,"gasUsed":400}`
+	if string(have) != want {
+		t.Errorf("Number of invocations of enter() and exit() is wrong. Have %s, want %s\n", have, want)
 	}
 }

@@ -206,6 +206,10 @@ func (bg *badgerDB) GetProperty(name string) string {
 	return ""
 }
 
+func (bg *badgerDB) TryCatchUpWithPrimary() error {
+	return nil
+}
+
 type badgerBatch struct {
 	db   *badger.DB
 	txn  *badger.Txn

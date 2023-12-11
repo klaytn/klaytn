@@ -23,6 +23,7 @@ package utils
 import (
 	"bufio"
 	"crypto/ecdsa"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -41,6 +42,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/fdlimit"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/crypto/bls"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kafka"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kas"
@@ -206,29 +208,60 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	cfg.NetworkID, _ = getNetworkId(ctx)
 }
 
-// setNodeKey creates a node key from set command line flags, either loading it
-// from a file or as a specified hex value. If neither flags were provided, this
-// method returns nil and an emphemeral key is to be generated.
+// setNodeKey parses manually provided node key from command line flags,
+// either loading it from a file or as a specified hex value. If neither flags
+// were provided, this method sets cfg.PrivateKey = nil and node.Config.NodeKey()
+// will handle the fallback logic.
 func setNodeKey(ctx *cli.Context, cfg *p2p.Config) {
 	var (
-		hex  = ctx.String(NodeKeyHexFlag.Name)
+		str  = ctx.String(NodeKeyHexFlag.Name)
 		file = ctx.String(NodeKeyFileFlag.Name)
 		key  *ecdsa.PrivateKey
 		err  error
 	)
 	switch {
-	case file != "" && hex != "":
+	case file != "" && str != "":
 		log.Fatalf("Options %q and %q are mutually exclusive", NodeKeyFileFlag.Name, NodeKeyHexFlag.Name)
 	case file != "":
 		if key, err = crypto.LoadECDSA(file); err != nil {
 			log.Fatalf("Option %q: %v", NodeKeyFileFlag.Name, err)
 		}
 		cfg.PrivateKey = key
-	case hex != "":
-		if key, err = crypto.HexToECDSA(hex); err != nil {
+	case str != "":
+		if key, err = crypto.HexToECDSA(str); err != nil {
 			log.Fatalf("Option %q: %v", NodeKeyHexFlag.Name, err)
 		}
 		cfg.PrivateKey = key
+	}
+}
+
+// setBlsNodeKey parses manually provided bls secret key from the command line flags,
+// either loading it from a file or as a specified hex value. If neither flags were
+// provided, this method sets cfg.BlsKey = nil and node.Config.BlsNodeKey() will
+// handle the fallback logic.
+func setBlsNodeKey(ctx *cli.Context, cfg *node.Config) {
+	str := ctx.String(BlsNodeKeyHexFlag.Name)
+	file := ctx.String(BlsNodeKeyFileFlag.Name)
+
+	switch {
+	case file != "" && str != "":
+		log.Fatalf("Options %q and %q are mutually exclusive", BlsNodeKeyFileFlag.Name, BlsNodeKeyHexFlag.Name)
+	case file != "":
+		key, err := bls.LoadKey(file)
+		if err != nil {
+			log.Fatalf("Option %q: %v", BlsNodeKeyFileFlag.Name, err)
+		}
+		cfg.BlsKey = key
+	case str != "":
+		b, err := hex.DecodeString(str)
+		if err != nil {
+			log.Fatalf("Option %q: %v", BlsNodeKeyHexFlag.Name, err)
+		}
+		key, err := bls.SecretKeyFromBytes(b)
+		if err != nil {
+			log.Fatalf("Option %q: %v", BlsNodeKeyHexFlag.Name, err)
+		}
+		cfg.BlsKey = key
 	}
 }
 
@@ -324,6 +357,7 @@ func (kCfg *KlayConfig) SetNodeConfig(ctx *cli.Context) {
 	cfg.DisableUnsafeDebug = ctx.Bool(UnsafeDebugDisableFlag.Name)
 
 	SetP2PConfig(ctx, &cfg.P2P)
+	setBlsNodeKey(ctx, cfg)
 	setIPC(ctx, cfg)
 
 	// httptype is http
@@ -399,6 +433,10 @@ func setHTTP(ctx *cli.Context, cfg *node.Config) {
 	}
 	if ctx.IsSet(RPCExecutionTimeoutFlag.Name) {
 		cfg.HTTPTimeouts.ExecutionTimeout = time.Duration(ctx.Int(RPCExecutionTimeoutFlag.Name)) * time.Second
+	}
+	if ctx.IsSet(RPCUpstreamArchiveENFlag.Name) {
+		rpc.UpstreamArchiveEN = ctx.String(RPCUpstreamArchiveENFlag.Name)
+		cfg.UpstreamArchiveEN = rpc.UpstreamArchiveEN
 	}
 }
 
@@ -524,10 +562,13 @@ func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
 	cfg.LevelDBCacheSize = ctx.Int(LevelDBCacheSizeFlag.Name)
 
 	cfg.RocksDBConfig.Secondary = ctx.Bool(RocksDBSecondaryFlag.Name)
+	cfg.RocksDBConfig.MaxOpenFiles = ctx.Int(RocksDBMaxOpenFilesFlag.Name)
 	if cfg.RocksDBConfig.Secondary {
 		cfg.FetcherDisable = true
 		cfg.DownloaderDisable = true
 		cfg.WorkerDisable = true
+		cfg.RocksDBConfig.MaxOpenFiles = -1
+		logger.Info("Secondary rocksdb is enabled, disabling fetcher, downloader, worker. MaxOpenFiles is forced to unlimited")
 	}
 	cfg.RocksDBConfig.CacheSize = ctx.Uint64(RocksDBCacheSizeFlag.Name)
 	cfg.RocksDBConfig.DumpMallocStat = ctx.Bool(RocksDBDumpMallocStatFlag.Name)
@@ -535,7 +576,6 @@ func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
 	cfg.RocksDBConfig.BottommostCompressionType = ctx.String(RocksDBBottommostCompressionTypeFlag.Name)
 	cfg.RocksDBConfig.FilterPolicy = ctx.String(RocksDBFilterPolicyFlag.Name)
 	cfg.RocksDBConfig.DisableMetrics = ctx.Bool(RocksDBDisableMetricsFlag.Name)
-	cfg.RocksDBConfig.MaxOpenFiles = ctx.Int(RocksDBMaxOpenFilesFlag.Name)
 	cfg.RocksDBConfig.CacheIndexAndFilter = ctx.Bool(RocksDBCacheIndexAndFilterFlag.Name)
 
 	cfg.DynamoDBConfig.TableName = ctx.String(DynamoDBTableNameFlag.Name)
@@ -613,6 +653,7 @@ func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
 		}
 	}
 	cfg.EnableInternalTxTracing = ctx.Bool(VMTraceInternalTxFlag.Name)
+	cfg.EnableOpDebug = ctx.Bool(VMOpDebugFlag.Name)
 
 	cfg.AutoRestartFlag = ctx.Bool(AutoRestartFlag.Name)
 	cfg.RestartTimeOutFlag = ctx.Duration(RestartTimeOutFlag.Name)
@@ -638,8 +679,9 @@ func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
 	if ctx.IsSet(BlockGenerationTimeLimitFlag.Name) {
 		params.BlockGenerationTimeLimit = ctx.Duration(BlockGenerationTimeLimitFlag.Name)
 	}
-
-	params.OpcodeComputationCostLimit = ctx.Uint64(OpcodeComputationCostLimitFlag.Name)
+	if ctx.IsSet(OpcodeComputationCostLimitFlag.Name) {
+		params.OpcodeComputationCostLimitOverride = ctx.Uint64(OpcodeComputationCostLimitFlag.Name)
+	}
 
 	if ctx.IsSet(SnapshotFlag.Name) {
 		cfg.SnapshotCacheSize = ctx.Int(SnapshotCacheSizeFlag.Name)

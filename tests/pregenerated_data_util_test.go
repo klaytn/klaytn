@@ -22,7 +22,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"math"
 	"math/big"
 	"os"
@@ -178,7 +177,7 @@ func getAddrsAndKeysFromFile(numAccounts int, testDataDir string, run int, fileP
 	addrs := make([]*common.Address, 0, numAccounts)
 	privKeys := make([]*ecdsa.PrivateKey, 0, numAccounts)
 
-	files, err := ioutil.ReadDir(path.Join(testDataDir, addressDirectory))
+	files, err := os.ReadDir(path.Join(testDataDir, addressDirectory))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -376,7 +375,14 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Setup istanbul consensus backend
-	engine := istanbulBackend.New(genesisAddr, istanbul.DefaultConfig, validatorPrivKeys[0], chainDB, gov, common.CONSENSUSNODE)
+	engine := istanbulBackend.New(&istanbulBackend.BackendOpts{
+		IstanbulConfig: istanbul.DefaultConfig,
+		Rewardbase:     genesisAddr,
+		PrivateKey:     validatorPrivKeys[0],
+		DB:             chainDB,
+		Governance:     gov,
+		NodeType:       common.CONSENSUSNODE,
+	})
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Make a blockChain

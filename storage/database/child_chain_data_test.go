@@ -17,7 +17,6 @@
 package database
 
 import (
-	"io/ioutil"
 	"math/big"
 	"os"
 	"testing"
@@ -28,7 +27,7 @@ import (
 )
 
 func TestChildChainData_ReadAndWrite_ChildChainTxHash(t *testing.T) {
-	dir, err := ioutil.TempDir("", "klaytn-test-child-chain-data")
+	dir, err := os.MkdirTemp("", "klaytn-test-child-chain-data")
 	if err != nil {
 		t.Fatalf("cannot create temporary directory: %v", err)
 	}
@@ -58,7 +57,7 @@ func TestChildChainData_ReadAndWrite_ChildChainTxHash(t *testing.T) {
 }
 
 func TestLastIndexedBlockData_ReadAndWrite_AnchoredBlockNumber(t *testing.T) {
-	dir, err := ioutil.TempDir("", "klaytn-test-child-chain-data")
+	dir, err := os.MkdirTemp("", "klaytn-test-child-chain-data")
 	if err != nil {
 		t.Fatalf("cannot create temporary directory: %v", err)
 	}
@@ -84,7 +83,7 @@ func TestLastIndexedBlockData_ReadAndWrite_AnchoredBlockNumber(t *testing.T) {
 }
 
 func TestChildChainData_ReadAndWrite_AnchoredBlockNumber(t *testing.T) {
-	dir, err := ioutil.TempDir("", "klaytn-test-child-chain-data")
+	dir, err := os.MkdirTemp("", "klaytn-test-child-chain-data")
 	if err != nil {
 		t.Fatalf("cannot create temporary directory: %v", err)
 	}
@@ -110,7 +109,7 @@ func TestChildChainData_ReadAndWrite_AnchoredBlockNumber(t *testing.T) {
 }
 
 func TestChildChainData_ReadAndWrite_ReceiptFromParentChain(t *testing.T) {
-	dir, err := ioutil.TempDir("", "klaytn-test-child-chain-data")
+	dir, err := os.MkdirTemp("", "klaytn-test-child-chain-data")
 	if err != nil {
 		t.Fatalf("cannot create temporary directory: %v", err)
 	}
@@ -142,7 +141,7 @@ func TestChildChainData_ReadAndWrite_ReceiptFromParentChain(t *testing.T) {
 }
 
 func TestChildChainData_ReadAndWrite_ValueTransferTxHash(t *testing.T) {
-	dir, err := ioutil.TempDir("", "klaytn-test-child-chain-data")
+	dir, err := os.MkdirTemp("", "klaytn-test-child-chain-data")
 	if err != nil {
 		t.Fatalf("cannot create temporary directory: %v", err)
 	}
@@ -172,7 +171,7 @@ func TestChildChainData_ReadAndWrite_ValueTransferTxHash(t *testing.T) {
 }
 
 func TestChildChainData_ReadAndWrite_OperatorFeePayer(t *testing.T) {
-	dir, err := ioutil.TempDir("", "klaytn-test-child-chain-data")
+	dir, err := os.MkdirTemp("", "klaytn-test-child-chain-data")
 	if err != nil {
 		t.Fatalf("cannot create temporary directory: %v", err)
 	}

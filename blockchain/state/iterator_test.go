@@ -50,7 +50,7 @@ func TestNodeIteratorCoverage(t *testing.T) {
 	// Cross check the iterated hashes and the database/nodepool content
 	// (TrieDB.Node + ContractCode) contains all iterated hashes
 	for itHash := range iterated {
-		_, err1 := db.TrieDB().Node(itHash.ExtendLegacy())
+		_, err1 := db.TrieDB().Node(itHash.ExtendZero())
 		_, err2 := db.ContractCode(itHash)
 		if err1 != nil && err2 != nil { // both failed
 			t.Errorf("failed to retrieve reported node %x", itHash)

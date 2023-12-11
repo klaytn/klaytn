@@ -280,6 +280,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		logger.Info("Writing live pruning flag to database")
 		chainDB.WritePruningEnabled()
 	}
+
 	// Live pruning is enabled according to the flag in database
 	// regardless of the command line flag --state.live-pruning
 	// But live pruning is disabled when --state.live-pruning-retention=0
@@ -345,6 +346,11 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.protocolManager.SetWsEndPoint(config.WsEndpoint)
 
 	if ctx.NodeType() == common.CONSENSUSNODE {
+		logger.Info("Loaded node keys",
+			"nodeAddress", crypto.PubkeyToAddress(ctx.NodeKey().PublicKey),
+			"nodePublicKey", hexutil.Encode(crypto.FromECDSAPub(&ctx.NodeKey().PublicKey)),
+			"blsPublicKey", hexutil.Encode(ctx.BlsNodeKey().PublicKey().Marshal()))
+
 		if _, err := cn.Rewardbase(); err != nil {
 			logger.Error("Cannot determine the rewardbase address", "err", err)
 		}
@@ -500,7 +506,15 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 	if chainConfig.Governance == nil {
 		chainConfig.Governance = params.GetDefaultGovernanceConfig()
 	}
-	return istanbulBackend.New(config.Rewardbase, &config.Istanbul, ctx.NodeKey(), db, gov, nodetype)
+	return istanbulBackend.New(&istanbulBackend.BackendOpts{
+		IstanbulConfig: &config.Istanbul,
+		Rewardbase:     config.Rewardbase,
+		PrivateKey:     ctx.NodeKey(),
+		BlsSecretKey:   ctx.BlsNodeKey(),
+		DB:             db,
+		Governance:     gov,
+		NodeType:       nodetype,
+	})
 }
 
 // APIs returns the collection of RPC services the ethereum package offers.

@@ -107,8 +107,9 @@ func callContract(bcdata *BCData, tx *types.Transaction) ([]byte, error) {
 		return nil, err
 	}
 
-	evmContext := blockchain.NewEVMContext(msg, header, bcdata.bc, nil)
-	vmenv := vm.NewEVM(evmContext, statedb, bcdata.bc.Config(), &vm.Config{})
+	txContext := blockchain.NewEVMTxContext(msg, header)
+	blockContext := blockchain.NewEVMBlockContext(header, bcdata.bc, nil)
+	vmenv := vm.NewEVM(blockContext, txContext, statedb, bcdata.bc.Config(), &vm.Config{})
 
 	ret, err := blockchain.NewStateTransition(vmenv, msg).TransitionDb()
 	if err != nil {
@@ -219,7 +220,7 @@ func executeBalanceOf(c *deployedContract, transactions types.Transactions, prof
 		}
 
 		balance := new(big.Int)
-		abii.Unpack(&balance, "balanceOf", ret)
+		abii.UnpackIntoInterface(&balance, "balanceOf", ret)
 	}
 
 	return nil

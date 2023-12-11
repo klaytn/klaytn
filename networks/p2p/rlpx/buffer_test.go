@@ -1,5 +1,4 @@
-// Modifications Copyright 2018 The klaytn Authors
-// Copyright 2017 The go-ethereum Authors
+// Copyright 2021 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -15,14 +14,40 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 //
-// This file is derived from core/vm/int_pool_verifier_empty.go (2018/06/04).
+// This file is derived from p2p/rlpx/buffer_test.go (2023/08/31).
 // Modified and improved for the klaytn development.
+package rlpx
 
-//go:build !VERIFY_EVM_INTEGER_POOL
-// +build !VERIFY_EVM_INTEGER_POOL
+import (
+	"bytes"
+	"testing"
 
-package vm
+	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/stretchr/testify/assert"
+)
 
-const verifyPool = false
+func TestReadBufferReset(t *testing.T) {
+	reader := bytes.NewReader(hexutil.MustDecode("0x010202030303040505"))
+	var b readBuffer
 
-func verifyIntegerPool(ip *intPool) {}
+	s1, _ := b.read(reader, 1)
+	s2, _ := b.read(reader, 2)
+	s3, _ := b.read(reader, 3)
+
+	assert.Equal(t, []byte{1}, s1)
+	assert.Equal(t, []byte{2, 2}, s2)
+	assert.Equal(t, []byte{3, 3, 3}, s3)
+
+	b.reset()
+
+	s4, _ := b.read(reader, 1)
+	s5, _ := b.read(reader, 2)
+
+	assert.Equal(t, []byte{4}, s4)
+	assert.Equal(t, []byte{5, 5}, s5)
+
+	s6, err := b.read(reader, 2)
+
+	assert.EqualError(t, err, "EOF")
+	assert.Nil(t, s6)
+}

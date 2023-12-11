@@ -49,8 +49,8 @@ type ChainDataFetcherConfig struct {
 	BlockChannelSize        int
 	MaxProcessingDataSize   int
 
-	KasConfig   *kas.KASConfig `json:"-"` // Deprecated: This configuration is not used anymore.
-	KafkaConfig *kafka.KafkaConfig
+	KasConfig   *kas.KASConfig     `json:"-"` // Deprecated: This configuration is not used anymore.
+	KafkaConfig *kafka.KafkaConfig `toml:",omitempty"`
 }
 
 func DefaultChainDataFetcherConfig() *ChainDataFetcherConfig {

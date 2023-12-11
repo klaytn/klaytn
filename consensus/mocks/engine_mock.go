@@ -140,6 +140,18 @@ func (mr *MockEngineMockRecorder) GetConsensusInfo(arg0 interface{}) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConsensusInfo", reflect.TypeOf((*MockEngine)(nil).GetConsensusInfo), arg0)
 }
 
+// InitSnapshot mocks base method.
+func (m *MockEngine) InitSnapshot() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "InitSnapshot")
+}
+
+// InitSnapshot indicates an expected call of InitSnapshot.
+func (mr *MockEngineMockRecorder) InitSnapshot() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitSnapshot", reflect.TypeOf((*MockEngine)(nil).InitSnapshot))
+}
+
 // Prepare mocks base method.
 func (m *MockEngine) Prepare(arg0 consensus.ChainReader, arg1 *types.Header) error {
 	m.ctrl.T.Helper()

@@ -35,6 +35,8 @@ const (
 	GovernanceIdxCacheLimit = 1000
 	// The prefix for governance cache
 	GovernanceCachePrefix = "governance"
+
+	CheckpointInterval = 1024
 )
 
 const (
@@ -161,4 +163,8 @@ func SetProposerUpdateInterval(num uint64) {
 func ProposerUpdateInterval() uint64 {
 	ret := atomic.LoadUint64(&proposerUpdateInterval)
 	return ret
+}
+
+func IsCheckpointInterval(blockNum uint64) bool {
+	return blockNum != 0 && blockNum%CheckpointInterval == 0
 }

@@ -20,7 +20,6 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"math/rand"
 	"os"
@@ -107,7 +106,7 @@ func createDBManagers(configs []*DBConfig) []DBManager {
 	dbManagers := make([]DBManager, 0, len(configs))
 
 	for i, c := range configs {
-		c.Dir, _ = ioutil.TempDir(os.TempDir(), fmt.Sprintf("test-db-manager-%v", i))
+		c.Dir, _ = os.MkdirTemp(os.TempDir(), fmt.Sprintf("test-db-manager-%v", i))
 		dbManagers = append(dbManagers, NewDBManager(c))
 	}
 
@@ -461,7 +460,7 @@ func TestDBManager_IstanbulSnapshot(t *testing.T) {
 func TestDBManager_TrieNode(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	var (
-		key1  = hash1.ExtendLegacy()
+		key1  = hash1.ExtendZero()
 		key2  = hash2.Extend()
 		node1 = hash1[:]
 		node2 = hash2[:]
@@ -1152,7 +1151,7 @@ func genTransaction(val uint64) (*types.Transaction, error) {
 
 // getFilesInDir returns all file names containing the substring in the directory
 func getFilesInDir(t *testing.T, dirPath string, substr string) []string {
-	files, err := ioutil.ReadDir(dirPath)
+	files, err := os.ReadDir(dirPath)
 	assert.NoError(t, err)
 
 	var dirNames []string

@@ -164,9 +164,10 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateD
 	if err != nil {
 		return nil, err
 	}
-	context := blockchain.NewEVMContext(msg, block.Header(), nil, &t.json.Env.Coinbase)
-	context.GetHash = vmTestBlockHash
-	evm := vm.NewEVM(context, statedb, config, &vmconfig)
+	txContext := blockchain.NewEVMTxContext(msg, block.Header())
+	blockContext := blockchain.NewEVMBlockContext(block.Header(), nil, &t.json.Env.Coinbase)
+	blockContext.GetHash = vmTestBlockHash
+	evm := vm.NewEVM(blockContext, txContext, statedb, config, &vmconfig)
 
 	snapshot := statedb.Snapshot()
 	if _, err = blockchain.ApplyMessage(evm, msg); err != nil {
@@ -179,7 +180,7 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateD
 	root, _ := statedb.Commit(true)
 	// Add 0-value mining reward. This only makes a difference in the cases
 	// where
-	// - the coinbase suicided, or
+	// - the coinbase self-destructed, or
 	// - there are only 'bad' transactions, which aren't executed. In those cases,
 	//   the coinbase gets no txfee, so isn't created, and thus needs to be touched
 	statedb.AddBalance(block.Rewardbase(), new(big.Int))
@@ -276,7 +277,7 @@ func (tx *stTransaction) toMessage(ps stPostState, r params.Rules) (blockchain.M
 		return nil, err
 	}
 
-	msg := types.NewMessage(from, to, tx.Nonce, value, gasLimit, tx.GasPrice, data, true, intrinsicGas)
+	msg := types.NewMessage(from, to, tx.Nonce, value, gasLimit, tx.GasPrice, data, true, intrinsicGas, nil)
 	return msg, nil
 }
 

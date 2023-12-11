@@ -257,7 +257,7 @@ func TestPruningRoot(t *testing.T) {
 	root := makeState(db)
 	stateDB, _ := New(root, db, nil, nil)
 	storageRoot, _ := stateDB.GetContractStorageRoot(addr)
-	assert.True(t, storageRoot.IsLegacy())
+	assert.True(t, storageRoot.IsZeroExtended())
 
 	// When pruning is enabled, storage root is nonzero-extended.
 	dbm = database.NewMemoryDBManager()
@@ -267,7 +267,7 @@ func TestPruningRoot(t *testing.T) {
 	root = makeState(db)
 	stateDB, _ = New(root, db, nil, nil) // Reopen trie to check the account stored in disk.
 	storageRoot, _ = stateDB.GetContractStorageRoot(addr)
-	assert.False(t, storageRoot.IsLegacy())
+	assert.False(t, storageRoot.IsZeroExtended())
 }
 
 // A snapshotTest checks that reverting StateDB snapshots properly undoes all changes
@@ -346,9 +346,9 @@ func newTestAction(addr common.Address, r *rand.Rand) testAction {
 			},
 		},
 		{
-			name: "Suicide",
+			name: "SelfDestruct",
 			fn: func(a testAction, s *StateDB) {
-				s.Suicide(addr)
+				s.SelfDestruct(addr)
 			},
 		},
 		{
@@ -390,6 +390,16 @@ func newTestAction(addr common.Address, r *rand.Rand) testAction {
 					common.Hash{byte(a.args[0])})
 			},
 			args: make([]int64, 1),
+		},
+		{
+			name: "SetTransientState",
+			fn: func(a testAction, s *StateDB) {
+				var key, val common.Hash
+				binary.BigEndian.PutUint16(key[:], uint16(a.args[0]))
+				binary.BigEndian.PutUint16(val[:], uint16(a.args[1]))
+				s.SetTransientState(addr, key, val)
+			},
+			args: make([]int64, 2),
 		},
 	}
 	action := actions[r.Intn(len(actions))]
@@ -488,7 +498,7 @@ func (test *snapshotTest) checkEqual(state, checkstate *StateDB) error {
 		}
 		// Check basic accessor methods.
 		checkeq("Exist", state.Exist(addr), checkstate.Exist(addr))
-		checkeq("HasSuicided", state.HasSuicided(addr), checkstate.HasSuicided(addr))
+		checkeq("HasSelfDestructed", state.HasSelfDestructed(addr), checkstate.HasSelfDestructed(addr))
 		checkeq("GetBalance", state.GetBalance(addr), checkstate.GetBalance(addr))
 		checkeq("GetNonce", state.GetNonce(addr), checkstate.GetNonce(addr))
 		checkeq("GetCode", state.GetCode(addr), checkstate.GetCode(addr))
@@ -786,5 +796,39 @@ func TestStateDBAccessList(t *testing.T) {
 	}
 	if got, exp := len(state.accessList.slots), 1; got != exp {
 		t.Fatalf("expected empty, got %d", got)
+	}
+}
+
+func TestStateDBTransientStorage(t *testing.T) {
+	memDb := database.NewMemoryDBManager()
+	db := NewDatabase(memDb)
+	state, _ := New(common.Hash{}, db, nil, nil)
+
+	key := common.Hash{0x01}
+	value := common.Hash{0x02}
+	addr := common.Address{}
+
+	state.SetTransientState(addr, key, value)
+	if exp, got := 1, state.journal.length(); exp != got {
+		t.Fatalf("journal length mismatch: have %d, want %d", got, exp)
+	}
+	// the retrieved value should equal what was set
+	if got := state.GetTransientState(addr, key); got != value {
+		t.Fatalf("transient storage mismatch: have %x, want %x", got, value)
+	}
+
+	// revert the transient state being set and then check that the
+	// value is now the empty hash
+	state.journal.revert(state, 0)
+	if got, exp := state.GetTransientState(addr, key), (common.Hash{}); exp != got {
+		t.Fatalf("transient storage mismatch: have %x, want %x", got, exp)
+	}
+
+	// set transient state and then copy the statedb and ensure that
+	// the transient state is copied
+	state.SetTransientState(addr, key, value)
+	cpy := state.Copy()
+	if got := cpy.GetTransientState(addr, key); got != value {
+		t.Fatalf("transient storage mismatch: have %x, want %x", got, value)
 	}
 }

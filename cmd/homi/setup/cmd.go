@@ -21,7 +21,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math/big"
 	"math/rand"
 	"net"
@@ -35,6 +35,7 @@ import (
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/accounts/keystore"
 	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/system"
 	istcommon "github.com/klaytn/klaytn/cmd/homi/common"
 	"github.com/klaytn/klaytn/cmd/homi/docker/compose"
 	"github.com/klaytn/klaytn/cmd/homi/docker/service"
@@ -125,8 +126,14 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewInt64Flag(magmaCompatibleBlockNumberFlag),
 	altsrc.NewInt64Flag(koreCompatibleBlockNumberFlag),
 	altsrc.NewInt64Flag(shanghaiCompatibleBlockNumberFlag),
+	altsrc.NewInt64Flag(cancunCompatibleBlockNumberFlag),
 	altsrc.NewInt64Flag(kip103CompatibleBlockNumberFlag),
 	altsrc.NewStringFlag(kip103ContractAddressFlag),
+	altsrc.NewInt64Flag(randaoCompatibleBlockNumberFlag),
+	altsrc.NewStringFlag(kip113ProxyAddressFlag),
+	altsrc.NewStringFlag(kip113LogicAddressFlag),
+	altsrc.NewBoolFlag(kip113MockFlag),
+	altsrc.NewBoolFlag(registryMockFlag),
 }
 
 var SetupCommand = &cli.Command{
@@ -336,7 +343,7 @@ func genRewardKeystore(account accounts.Account, i int) {
 	}
 	defer file.Close()
 
-	data, err := ioutil.ReadAll(file)
+	data, err := io.ReadAll(file)
 	if err != nil {
 		log.Fatalf("Failed to read file: %s", err)
 	}
@@ -547,6 +554,78 @@ func useAddressBookMock(ctx *cli.Context, genesisJson *blockchain.Genesis) {
 	allocationFunction(genesisJson)
 }
 
+func allocateRegistry(ctx *cli.Context, genesisJson *blockchain.Genesis, owner common.Address, kip113Addr *common.Address) {
+	if randaoCompatibleBlock := ctx.Int64(randaoCompatibleBlockNumberFlag.Name); randaoCompatibleBlock != 0 {
+		return
+	}
+
+	registryConfig := &params.RegistryConfig{
+		Records: make(map[string]common.Address),
+		Owner:   owner,
+	}
+
+	if kip113Addr != nil {
+		registryConfig.Records[system.Kip113Name] = *kip113Addr
+	}
+
+	allocRegistryStorage := system.AllocRegistry(registryConfig)
+
+	allocationFunction := genesis.AllocateRegistry(allocRegistryStorage)
+	allocationFunction(genesisJson)
+}
+
+func useRegistryMock(ctx *cli.Context, genesisJson *blockchain.Genesis) {
+	if useMock := ctx.Bool(registryMockFlag.Name); !useMock {
+		return
+	}
+
+	allocationFunction := genesis.RegistryMock()
+	allocationFunction(genesisJson)
+}
+
+func allocateKip113(ctx *cli.Context, genesisJson *blockchain.Genesis, init system.AllocKip113Init) (*common.Address, *common.Address) {
+	if randaoCompatibleBlock := ctx.Int64(randaoCompatibleBlockNumberFlag.Name); randaoCompatibleBlock != 0 {
+		return nil, nil
+	}
+	if len(init.Infos) == 0 {
+		return nil, nil
+	}
+
+	kip113ProxyAddr := common.HexToAddress(ctx.String(kip113ProxyAddressFlag.Name))
+	kip113LogicAddr := common.HexToAddress(ctx.String(kip113LogicAddressFlag.Name))
+
+	if !common.IsHexAddress(ctx.String(kip113ProxyAddressFlag.Name)) {
+		log.Fatalf("Kip113 proxy address is not a valid hex address", "value", kip113ProxyAddr)
+		kip113ProxyAddr = system.Kip113ProxyAddrMock
+	}
+	if !common.IsHexAddress(ctx.String(kip113LogicAddressFlag.Name)) {
+		log.Fatalf("Kip113 logic address is not a valid hex address", "value", kip113LogicAddr)
+		kip113LogicAddr = system.Kip113LogicAddrMock
+	}
+
+	allocProxyStorage := system.AllocProxy(kip113LogicAddr)
+	allocKip113Storage := system.AllocKip113Proxy(init)
+	allocStorage := system.MergeStorage(allocProxyStorage, allocKip113Storage)
+	allocLogicStorage := system.AllocKip113Logic()
+
+	allocationFunction := genesis.AllocateKip113(kip113ProxyAddr, kip113LogicAddr, allocStorage, allocLogicStorage)
+	allocationFunction(genesisJson)
+
+	return &kip113ProxyAddr, &kip113LogicAddr
+}
+
+func useKip113Mock(ctx *cli.Context, genesisJson *blockchain.Genesis, kip113LogicAddr *common.Address) {
+	if useMock := ctx.Bool(kip113MockFlag.Name); !useMock {
+		return
+	}
+	if kip113LogicAddr == nil {
+		return
+	}
+
+	allocationFunction := genesis.Kip113Mock(*kip113LogicAddr)
+	allocationFunction(genesisJson)
+}
+
 func RandStringRunes(n int) string {
 	letterRunes := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789~!@#$%^&*()_+{}|[]")
 
@@ -643,6 +722,7 @@ func Gen(ctx *cli.Context) error {
 	}
 
 	testPrivKeys, testKeys, testAddrs := istcommon.GenerateKeys(numTestAccs)
+	kip113Init := istcommon.GenerateKip113Init(privKeys[:numValidators], nodeAddrs[0])
 
 	var (
 		genesisJson      *blockchain.Genesis
@@ -674,14 +754,25 @@ func Gen(ctx *cli.Context) error {
 	patchGenesisAddressBook(ctx, genesisJson, validatorNodeAddrs)
 	useAddressBookMock(ctx, genesisJson)
 
+	// Randao hardfork related system contracts
+	kip113ProxyAddr, kip113LogicAddr := allocateKip113(ctx, genesisJson, kip113Init)
+	allocateRegistry(ctx, genesisJson, nodeAddrs[0], kip113ProxyAddr)
+	useKip113Mock(ctx, genesisJson, kip113LogicAddr)
+	useRegistryMock(ctx, genesisJson)
+
 	genesisJson.Config.IstanbulCompatibleBlock = big.NewInt(ctx.Int64(istanbulCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.LondonCompatibleBlock = big.NewInt(ctx.Int64(londonCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.EthTxTypeCompatibleBlock = big.NewInt(ctx.Int64(ethTxTypeCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.MagmaCompatibleBlock = big.NewInt(ctx.Int64(magmaCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.KoreCompatibleBlock = big.NewInt(ctx.Int64(koreCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.ShanghaiCompatibleBlock = big.NewInt(ctx.Int64(shanghaiCompatibleBlockNumberFlag.Name))
+	genesisJson.Config.CancunCompatibleBlock = big.NewInt(ctx.Int64(cancunCompatibleBlockNumberFlag.Name))
+
+	// KIP103 hardfork is optional
 	genesisJson.Config.Kip103CompatibleBlock = big.NewInt(ctx.Int64(kip103CompatibleBlockNumberFlag.Name))
 	genesisJson.Config.Kip103ContractAddress = common.HexToAddress(ctx.String(kip103ContractAddressFlag.Name))
+
+	genesisJson.Config.RandaoCompatibleBlock = big.NewInt(ctx.Int64(randaoCompatibleBlockNumberFlag.Name))
 
 	genesisJsonBytes, _ = json.MarshalIndent(genesisJson, "", "    ")
 	genValidatorKeystore(privKeys)
@@ -754,9 +845,9 @@ func Gen(ctx *cli.Context) error {
 				TxGenDuration:   ctx.String(txGenDurFlag.Name),
 			})
 		os.MkdirAll(outputPath, os.ModePerm)
-		ioutil.WriteFile(path.Join(outputPath, "docker-compose.yml"), []byte(compose.String()), os.ModePerm)
+		os.WriteFile(path.Join(outputPath, "docker-compose.yml"), []byte(compose.String()), os.ModePerm)
 		fmt.Println("Created : ", path.Join(outputPath, "docker-compose.yml"))
-		ioutil.WriteFile(path.Join(outputPath, "prometheus.yml"), []byte(compose.PrometheusService.Config.String()), os.ModePerm)
+		os.WriteFile(path.Join(outputPath, "prometheus.yml"), []byte(compose.PrometheusService.Config.String()), os.ModePerm)
 		fmt.Println("Created : ", path.Join(outputPath, "prometheus.yml"))
 		downLoadGrafanaJson()
 	case TypeLocal:
@@ -788,12 +879,12 @@ func downLoadGrafanaJson() {
 		} else if resp.StatusCode != 200 {
 			fmt.Printf("Failed to download the imgs dashboard file(%s) [%s] - %v\n", file.url, resp.Status, err)
 		} else {
-			bytes, e := ioutil.ReadAll(resp.Body)
+			bytes, e := io.ReadAll(resp.Body)
 			if e != nil {
 				fmt.Println("Failed to read http response", e)
 			} else {
 				fileName := file.name
-				ioutil.WriteFile(path.Join(outputPath, fileName), bytes, os.ModePerm)
+				os.WriteFile(path.Join(outputPath, fileName), bytes, os.ModePerm)
 				fmt.Println("Created : ", path.Join(outputPath, fileName))
 			}
 			resp.Body.Close()
@@ -1112,12 +1203,12 @@ func writeValidatorsAndNodesToFile(validators []*ValidatorInfo, parentDir string
 
 	for i, v := range validators {
 		nodeKeyFilePath := path.Join(parentPath, "nodekey"+strconv.Itoa(i+1))
-		ioutil.WriteFile(nodeKeyFilePath, []byte(nodekeys[i]), os.ModePerm)
+		os.WriteFile(nodeKeyFilePath, []byte(nodekeys[i]), os.ModePerm)
 		fmt.Println("Created : ", nodeKeyFilePath)
 
 		str, _ := json.MarshalIndent(v, "", "\t")
 		validatorInfoFilePath := path.Join(parentPath, "validator"+strconv.Itoa(i+1))
-		ioutil.WriteFile(validatorInfoFilePath, []byte(str), os.ModePerm)
+		os.WriteFile(validatorInfoFilePath, []byte(str), os.ModePerm)
 		fmt.Println("Created : ", validatorInfoFilePath)
 	}
 }
@@ -1128,7 +1219,7 @@ func writeTestKeys(parentDir string, privKeys []*ecdsa.PrivateKey, keys []string
 
 	for i, key := range keys {
 		testKeyFilePath := path.Join(parentPath, "testkey"+strconv.Itoa(i+1))
-		ioutil.WriteFile(testKeyFilePath, []byte(key), os.ModePerm)
+		os.WriteFile(testKeyFilePath, []byte(key), os.ModePerm)
 		fmt.Println("Created : ", testKeyFilePath)
 
 		pk := privKeys[i]
@@ -1143,7 +1234,7 @@ func writeTestKeys(parentDir string, privKeys []*ecdsa.PrivateKey, keys []string
 func WriteFile(content []byte, parentFolder string, fileName string) {
 	filePath := path.Join(outputPath, parentFolder, fileName)
 	os.MkdirAll(path.Dir(filePath), os.ModePerm)
-	ioutil.WriteFile(filePath, content, os.ModePerm)
+	os.WriteFile(filePath, content, os.ModePerm)
 	fmt.Println("Created : ", filePath)
 }
 

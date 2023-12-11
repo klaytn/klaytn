@@ -26,6 +26,7 @@ import (
 
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/crypto/bls"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/rpc"
@@ -74,6 +75,10 @@ func (ctx *ServiceContext) Service(service interface{}) error {
 // NodeKey returns node key from config
 func (ctx *ServiceContext) NodeKey() *ecdsa.PrivateKey {
 	return ctx.config.NodeKey()
+}
+
+func (ctx *ServiceContext) BlsNodeKey() bls.SecretKey {
+	return ctx.config.BlsNodeKey()
 }
 
 func (ctx *ServiceContext) NodeType() common.ConnType {

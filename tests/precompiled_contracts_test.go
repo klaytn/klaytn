@@ -117,7 +117,7 @@ func TestPrecompiledContract(t *testing.T) {
 
 		// Check the returned value.
 		var addr common.Address
-		if err := abii.Unpack(&addr, "callEcrecover", ret); err != nil {
+		if err := abii.UnpackIntoInterface(&addr, "callEcrecover", ret); err != nil {
 			t.Fatal(err)
 		}
 		require.Equal(t, *bcdata.addrs[0], addr)
@@ -166,7 +166,7 @@ func TestPrecompiledContract(t *testing.T) {
 		var addr [32]byte
 		var bb [32]byte
 		copy(bb[:], hash[:])
-		if err := abii.Unpack(&addr, fn, ret); err != nil {
+		if err := abii.UnpackIntoInterface(&addr, fn, ret); err != nil {
 			t.Fatal(err)
 		}
 		require.Equal(t, bb, addr)
@@ -217,7 +217,7 @@ func TestPrecompiledContract(t *testing.T) {
 		var addr [32]byte
 		var bb [32]byte
 		copy(bb[:], hash[:])
-		if err := abii.Unpack(&addr, fn, ret); err != nil {
+		if err := abii.UnpackIntoInterface(&addr, fn, ret); err != nil {
 			t.Fatal(err)
 		}
 		require.Equal(t, bb, addr)
@@ -263,7 +263,7 @@ func TestPrecompiledContract(t *testing.T) {
 
 		// Check the returned value.
 		var addr []byte
-		if err := abii.Unpack(&addr, fn, ret); err != nil {
+		if err := abii.UnpackIntoInterface(&addr, fn, ret); err != nil {
 			t.Fatal(err)
 		}
 		require.Equal(t, dd, addr)
@@ -312,7 +312,7 @@ func TestPrecompiledContract(t *testing.T) {
 
 		// Check the returned value.
 		var result [32]byte
-		if err := abii.Unpack(&result, fn, ret); err != nil {
+		if err := abii.UnpackIntoInterface(&result, fn, ret); err != nil {
 			t.Fatal(err)
 		}
 		require.Equal(t, hexutil.MustDecode("0x0000000000000000000000000002dc17ba6bb47224fccc9a5ece97e2f691b4aa"), result[:])
@@ -362,7 +362,7 @@ func TestPrecompiledContract(t *testing.T) {
 
 		// Check the returned value.
 		var result [2][32]byte
-		if err := abii.Unpack(&result, fn, ret); err != nil {
+		if err := abii.UnpackIntoInterface(&result, fn, ret); err != nil {
 			t.Fatal(err)
 		}
 		require.Equal(t, hexutil.MustDecode("0x15bf2bb17880144b5d1cd2b1f46eff9d617bffd1ca57c37fb5a49bd84e53cf66"), result[0][:])
@@ -412,7 +412,7 @@ func TestPrecompiledContract(t *testing.T) {
 
 		// Check the returned value.
 		var result [2][32]byte
-		if err := abii.Unpack(&result, fn, ret); err != nil {
+		if err := abii.UnpackIntoInterface(&result, fn, ret); err != nil {
 			t.Fatal(err)
 		}
 		require.Equal(t, hexutil.MustDecode("0x070a8d6a982153cae4be29d434e8faef8a47b274a053f5a4ee2a6c9c13c31e5c"), result[0][:])
@@ -484,7 +484,7 @@ func TestPrecompiledContract(t *testing.T) {
 
 		// Check the returned value.
 		var result [32]byte
-		if err := abii.Unpack(&result, fn, ret); err != nil {
+		if err := abii.UnpackIntoInterface(&result, fn, ret); err != nil {
 			t.Fatal(err)
 		}
 		require.Equal(t, hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000001"), result[:])

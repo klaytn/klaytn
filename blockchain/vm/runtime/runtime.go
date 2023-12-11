@@ -115,11 +115,10 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *state.StateDB, error) {
 		address = common.BytesToAddress([]byte("contract"))
 		vmenv   = NewEnv(cfg)
 		sender  = vm.AccountRef(cfg.Origin)
-		rules   = cfg.ChainConfig.Rules(vmenv.BlockNumber)
+		rules   = cfg.ChainConfig.Rules(vmenv.Context.BlockNumber)
 	)
-	if rules.IsKore {
-		cfg.State.PrepareAccessList(rules, cfg.Origin, common.Address{}, cfg.Coinbase, &address, vm.ActivePrecompiles(rules))
-	}
+
+	cfg.State.Prepare(rules, cfg.Origin, common.Address{}, cfg.Coinbase, &address, vm.ActivePrecompiles(rules), nil)
 	cfg.State.CreateSmartContractAccount(address, params.CodeFormatEVM, cfg.ChainConfig.Rules(cfg.BlockNumber))
 	// set the receiver's (the executing contract) code for execution.
 	cfg.State.SetCode(address, code)
@@ -149,11 +148,10 @@ func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 	var (
 		vmenv  = NewEnv(cfg)
 		sender = vm.AccountRef(cfg.Origin)
-		rules  = cfg.ChainConfig.Rules(vmenv.BlockNumber)
+		rules  = cfg.ChainConfig.Rules(vmenv.Context.BlockNumber)
 	)
-	if rules.IsKore {
-		cfg.State.PrepareAccessList(rules, cfg.Origin, common.Address{}, cfg.Coinbase, nil, vm.ActivePrecompiles(rules))
-	}
+
+	cfg.State.Prepare(rules, cfg.Origin, common.Address{}, cfg.Coinbase, nil, vm.ActivePrecompiles(rules), nil)
 	// Call the code with the given configuration.
 	code, address, leftOverGas, err := vmenv.Create(
 		sender,
@@ -177,11 +175,10 @@ func Call(address common.Address, input []byte, cfg *Config) ([]byte, uint64, er
 		vmenv         = NewEnv(cfg)
 		senderAccount = cfg.State.GetOrNewStateObject(cfg.Origin)
 		sender        = types.NewAccountRefWithFeePayer(senderAccount.Address(), senderAccount.Address())
-		rules         = cfg.ChainConfig.Rules(vmenv.BlockNumber)
+		rules         = cfg.ChainConfig.Rules(vmenv.Context.BlockNumber)
 	)
-	if rules.IsKore {
-		cfg.State.PrepareAccessList(rules, cfg.Origin, common.Address{}, cfg.Coinbase, &address, vm.ActivePrecompiles(rules))
-	}
+
+	cfg.State.Prepare(rules, cfg.Origin, common.Address{}, cfg.Coinbase, &address, vm.ActivePrecompiles(rules), nil)
 	// Call the code with the given configuration.
 	ret, leftOverGas, err := vmenv.Call(
 		sender,

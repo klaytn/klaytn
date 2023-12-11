@@ -22,7 +22,6 @@ package discover
 
 import (
 	"bytes"
-	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
@@ -272,7 +271,7 @@ func TestNodeDBSeedQuery(t *testing.T) {
 }
 
 func TestNodeDBPersistency(t *testing.T) {
-	root, err := ioutil.TempDir("", "nodedb-")
+	root, err := os.MkdirTemp("", "nodedb-")
 	if err != nil {
 		t.Fatalf("failed to create temporary data folder: %v", err)
 	}

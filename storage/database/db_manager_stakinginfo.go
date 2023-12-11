@@ -54,3 +54,12 @@ func (dbm *databaseManager) WriteStakingInfo(blockNum uint64, stakingInfo []byte
 	key := makeKey(stakingInfoPrefix, blockNum)
 	return db.Put(key, stakingInfo)
 }
+
+func (dbm *databaseManager) DeleteStakingInfo(blockNum uint64) {
+	db := dbm.getDatabase(MiscDB)
+
+	key := makeKey(stakingInfoPrefix, blockNum)
+	if err := db.Delete(key); err != nil {
+		logger.Crit("Failed to delete staking info", "err", err)
+	}
+}

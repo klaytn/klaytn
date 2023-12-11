@@ -508,6 +508,10 @@ func (db *levelDB) GetProperty(name string) string {
 	return db.GetProperty(name)
 }
 
+func (db *levelDB) TryCatchUpWithPrimary() error {
+	return nil
+}
+
 func (db *levelDB) NewBatch() Batch {
 	return &ldbBatch{b: new(leveldb.Batch), ldb: db}
 }

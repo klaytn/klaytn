@@ -22,7 +22,6 @@ package node
 
 import (
 	"errors"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"testing"
@@ -79,7 +78,7 @@ func TestNodeLifeCycle(t *testing.T) {
 // Tests that if the data dir is already in use, an appropriate error is returned.
 func TestNodeUsedDataDir(t *testing.T) {
 	// Create a temporary folder to use as the data directory
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	if err != nil {
 		t.Fatalf("failed to create temporary data directory: %v", err)
 	}
