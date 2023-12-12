@@ -182,7 +182,7 @@ func TestCNAPIBackend_SetHead(t *testing.T) {
 	api.cn.governance = testGov()
 
 	number := uint64(123)
-	mockBlockChain.EXPECT().SetHead(number).Times(1)
+	mockBlockChain.EXPECT().SetHead(number, true).Times(1)
 
 	api.SetHead(number)
 	block := newBlock(int(number))

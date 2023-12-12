@@ -155,7 +155,7 @@ func testSetHead(t *testing.T, tt *rewindTest) {
 	}
 
 	// Set the head of the chain back to the requested number
-	chain.SetHead(tt.setheadBlock)
+	chain.SetHead(tt.setheadBlock, true)
 
 	// Iterate over all the remaining blocks and ensure there are no gaps
 	verifyNoGaps(t, chain, true, canonblocks)
@@ -301,11 +301,11 @@ func testSetHeadEarlyExit(t *testing.T, tt *rewindTest) {
 	}
 
 	db.WriteLastPrunedBlockNumber(tt.setheadBlock + 1)
-	assert.Error(t, chain.SetHead(tt.setheadBlock))
+	assert.Error(t, chain.SetHead(tt.setheadBlock, true))
 
 	db.WriteLastPrunedBlockNumber(tt.setheadBlock)
-	assert.Error(t, chain.SetHead(tt.setheadBlock))
+	assert.Error(t, chain.SetHead(tt.setheadBlock, true))
 
 	db.WriteLastPrunedBlockNumber(tt.setheadBlock - 1)
-	assert.Nil(t, chain.SetHead(tt.setheadBlock))
+	assert.Nil(t, chain.SetHead(tt.setheadBlock, true))
 }

@@ -320,7 +320,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	// Rewind the chain in case of an incompatible config upgrade.
 	if compat, ok := genesisErr.(*params.ConfigCompatError); ok {
 		logger.Error("Rewinding chain to upgrade configuration", "err", compat)
-		cn.blockchain.SetHead(compat.RewindTo)
+		cn.blockchain.SetHead(compat.RewindTo, false)
 		chainDB.WriteChainConfig(genesisHash, cn.chainConfig)
 	}
 	cn.bloomIndexer.Start(cn.blockchain)

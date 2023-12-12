@@ -301,7 +301,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		if diskRoot != (common.Hash{}) {
 			logger.Warn("Head state missing, repairing", "number", head.Number(), "hash", head.Hash(), "snaproot", diskRoot)
 
-			snapDisk, err := bc.setHeadBeyondRoot(head.NumberU64(), diskRoot, true)
+			snapDisk, err := bc.setHeadBeyondRoot(head.NumberU64(), diskRoot, true, false)
 			if err != nil {
 				return nil, err
 			}
@@ -314,7 +314,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 			// Dangling block without a state associated, init from scratch
 			logger.Warn("Head state missing, repairing chain",
 				"number", head.NumberU64(), "hash", head.Hash().String())
-			if _, err := bc.setHeadBeyondRoot(head.NumberU64(), common.Hash{}, true); err != nil {
+			if _, err := bc.setHeadBeyondRoot(head.NumberU64(), common.Hash{}, true, false); err != nil {
 				return nil, err
 			}
 		}
@@ -327,7 +327,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 			// make sure the headerByNumber (if present) is in our current canonical chain
 			if headerByNumber != nil && headerByNumber.Hash() == header.Hash() {
 				logger.Error("Found bad hash, rewinding chain", "number", header.Number, "hash", header.ParentHash)
-				bc.SetHead(header.Number.Uint64() - 1)
+				bc.SetHead(header.Number.Uint64()-1, false)
 				logger.Error("Chain rewind was successful, resuming normal operation")
 			}
 		}
@@ -424,7 +424,7 @@ func (bc *BlockChain) SetCanonicalBlock(blockNum uint64) {
 		// Dangling block without a state associated, init from scratch
 		logger.Warn("Head state missing, repairing chain",
 			"number", head.NumberU64(), "hash", head.Hash().String())
-		if _, err := bc.setHeadBeyondRoot(head.NumberU64(), common.Hash{}, true); err != nil {
+		if _, err := bc.setHeadBeyondRoot(head.NumberU64(), common.Hash{}, true, false); err != nil {
 			logger.Error("Repairing chain is failed", "number", head.NumberU64(), "hash", head.Hash().String(), "err", err)
 			return
 		}
@@ -513,7 +513,7 @@ func (bc *BlockChain) loadLastState() error {
 // SetHead rewinds the local chain to a new head with the extra condition
 // that the rewind must pass the specified state root. The method will try to
 // delete minimal data from disk whilst retaining chain consistency.
-func (bc *BlockChain) SetHead(head uint64) error {
+func (bc *BlockChain) SetHead(head uint64, deleteSnapshot bool) error {
 	// With the live pruning enabled, an attempt to SetHead into a state-pruned block number
 	// may result in an infinite loop, trying to find the existing block (probably the genesis block).
 	// If the target `head` is below the surviving block numbers, SetHead early exits with an error.
@@ -523,7 +523,7 @@ func (bc *BlockChain) SetHead(head uint64) error {
 				lastPruned, head)
 		}
 	}
-	_, err := bc.setHeadBeyondRoot(head, common.Hash{}, false)
+	_, err := bc.setHeadBeyondRoot(head, common.Hash{}, false, deleteSnapshot)
 	return err
 }
 
@@ -535,7 +535,7 @@ func (bc *BlockChain) SetHead(head uint64) error {
 // retaining chain consistency.
 //
 // The method returns the block number where the requested root cap was found.
-func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair bool) (uint64, error) {
+func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair, deleteSnpashot bool) (uint64, error) {
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
 
@@ -645,25 +645,28 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair bo
 		}
 	}
 
-	// Delete istanbul snapshot database further two epochs
-	var (
-		curBlkNum   = bc.CurrentBlock().Number().Uint64()
-		epoch       = bc.Config().Istanbul.Epoch
-		votingEpoch = curBlkNum - (curBlkNum % epoch)
-	)
-	if votingEpoch == 0 {
-		votingEpoch = 1
-	}
-	// Delete the snapshot state beyond the block number of the previous epoch on the right
-	for i := curBlkNum; i >= votingEpoch; i-- {
-		if params.IsCheckpointInterval(i) {
-			// delete from sethead number to previous two epoch block nums
-			// to handle a block that contains non-empty vote data to make sure
-			// the `HandleGovernanceVote()` cannot be skipped
-			bc.db.DeleteIstanbulSnapshot(bc.GetBlockByNumber(i).Hash())
+	// Snapshot delete operation is invoked only if the sethead was originated from explicit API call
+	if deleteSnpashot {
+		// Delete istanbul snapshot database further two epochs
+		var (
+			curBlkNum   = bc.CurrentBlock().Number().Uint64()
+			epoch       = bc.Config().Istanbul.Epoch
+			votingEpoch = curBlkNum - (curBlkNum % epoch)
+		)
+		if votingEpoch == 0 {
+			votingEpoch = 1
 		}
+		// Delete the snapshot state beyond the block number of the previous epoch on the right
+		for i := curBlkNum; i >= votingEpoch; i-- {
+			if params.IsCheckpointInterval(i) {
+				// delete from sethead number to previous two epoch block nums
+				// to handle a block that contains non-empty vote data to make sure
+				// the `HandleGovernanceVote()` cannot be skipped
+				bc.db.DeleteIstanbulSnapshot(bc.GetBlockByNumber(i).Hash())
+			}
+		}
+		logger.Trace("[SetHead] Snapshot database deleted", "from", originLatestBlkNum, "to", votingEpoch)
 	}
-	logger.Trace("[SetHead] Snapshot database deleted", "from", originLatestBlkNum, "to", votingEpoch)
 
 	// Clear out any stale content from the caches
 	bc.futureBlocks.Purge()
@@ -784,7 +787,7 @@ func (bc *BlockChain) Reset() error {
 // specified genesis state.
 func (bc *BlockChain) ResetWithGenesisBlock(genesis *types.Block) error {
 	// Dump the entire block chain and purge the caches
-	if err := bc.SetHead(0); err != nil {
+	if err := bc.SetHead(0, false); err != nil {
 		return err
 	}
 	bc.mu.Lock()
