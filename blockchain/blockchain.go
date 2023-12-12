@@ -645,9 +645,9 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair, d
 		}
 	}
 
-	// Snapshot delete operation is invoked only if the sethead was originated from explicit API call
 	if deleteSnpashot {
 		// Delete istanbul snapshot database further two epochs
+		// Invoked only if the sethead was originated from explicit API call
 		var (
 			curBlkNum   = bc.CurrentBlock().Number().Uint64()
 			epoch       = bc.Config().Istanbul.Epoch
