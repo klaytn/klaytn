@@ -1070,6 +1070,12 @@ web3._extend({
 			params: 3,
 			inputFormatter: [null, web3._extend.formatters.inputBlockNumberFormatter, null]
 		}),
+		new web3._extend.Method({
+			name: 'getProof',
+			call: 'klay_getProof',
+			params: 3,
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter, null, web3._extend.formatters.inputBlockNumberFormatter]
+		}),
 	],
 	properties: [
 		new web3._extend.Property({
