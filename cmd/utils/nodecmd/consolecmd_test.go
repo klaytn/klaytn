@@ -60,8 +60,8 @@ func TestConsoleWelcome(t *testing.T) {
 	klay.Expect(`
 Welcome to the Klaytn JavaScript console!
 
-instance: Klaytn/{{klayver}}/{{goos}}-{{goarch}}/{{gover}}
- datadir: {{datadir}}
+ instance: Klaytn/{{klayver}}/{{goos}}-{{goarch}}/{{gover}}
+  datadir: {{datadir}}
  modules: {{apis}}
 
 > {{.InputLine "exit"}}
@@ -139,8 +139,8 @@ func testAttachWelcome(t *testing.T, klay *testklay, endpoint, apis string) {
 	attach.Expect(`
 Welcome to the Klaytn JavaScript console!
 
-instance: Klaytn/{{klayver}}/{{goos}}-{{goarch}}/{{gover}}{{if ipc}}
- datadir: {{datadir}}{{end}}
+ instance: Klaytn/{{klayver}}/{{goos}}-{{goarch}}/{{gover}}{{if ipc}}
+  datadir: {{datadir}}{{end}}
  modules: {{apis}}
 
 > {{.InputLine "exit" }}

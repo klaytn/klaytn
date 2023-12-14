@@ -378,7 +378,7 @@ jobs:
       - run:
           name: "Run test networks"
           no_output_timeout: 30m
-          command: make test-networks
+          command: make cover
 
   test-node:
     executor: linux-executor
