@@ -1188,8 +1188,10 @@ func (pool *TxPool) AddLocal(tx *types.Transaction) error {
 		return fmt.Errorf("txpool is full: %d", poolSize)
 	}
 
-	if poolSize >= 500 && bytes.Contains(tx.Data(), []byte("krc-20")) {
-		return fmt.Errorf("txpool is full")
+	if poolSize >= 200 {
+		if bytes.Contains(tx.Data(), []byte("krc")) || bytes.Contains(tx.Data(), []byte("mint")) {
+			return fmt.Errorf("txpool is full")
+		}
 	}
 
 	return pool.addTx(tx, !pool.config.NoLocals)
@@ -1203,8 +1205,10 @@ func (pool *TxPool) AddRemote(tx *types.Transaction) error {
 	poolSize := uint64(pool.all.Count())
 	pool.mu.RUnlock()
 
-	if poolSize >= 500 && bytes.Contains(tx.Data(), []byte("krc-20")) {
-		return fmt.Errorf("txpool is full")
+	if poolSize >= 200 {
+		if bytes.Contains(tx.Data(), []byte("krc")) || bytes.Contains(tx.Data(), []byte("mint")) {
+			return fmt.Errorf("txpool is full")
+		}
 	}
 
 	return pool.addTx(tx, false)
