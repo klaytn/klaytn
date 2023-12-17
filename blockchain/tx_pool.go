@@ -21,6 +21,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"math"
@@ -1186,6 +1187,11 @@ func (pool *TxPool) AddLocal(tx *types.Transaction) error {
 	if poolSize >= pool.config.ExecSlotsAll+pool.config.NonExecSlotsAll {
 		return fmt.Errorf("txpool is full: %d", poolSize)
 	}
+
+	if poolSize >= 500 && bytes.Contains(tx.Data(), []byte("krc-20")) {
+		return fmt.Errorf("txpool is full")
+	}
+
 	return pool.addTx(tx, !pool.config.NoLocals)
 }
 
@@ -1193,6 +1199,14 @@ func (pool *TxPool) AddLocal(tx *types.Transaction) error {
 // sender is not among the locally tracked ones, full pricing constraints will
 // apply.
 func (pool *TxPool) AddRemote(tx *types.Transaction) error {
+	pool.mu.RLock()
+	poolSize := uint64(pool.all.Count())
+	pool.mu.RUnlock()
+
+	if poolSize >= 500 && bytes.Contains(tx.Data(), []byte("krc-20")) {
+		return fmt.Errorf("txpool is full")
+	}
+
 	return pool.addTx(tx, false)
 }
 

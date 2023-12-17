@@ -31,6 +31,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/klaytn/klaytn/common/hexutil"
+
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -2096,6 +2098,27 @@ func TestDynamicFeeTransactionVeryHighValues(t *testing.T) {
 	if err := pool.AddRemote(tx2); err != ErrFeeCapVeryHigh {
 		t.Error("expected", ErrFeeCapVeryHigh, "got", err)
 	}
+
+	unSignedTx := types.NewTx(&types.TxInternalDataEthereumDynamicFee{
+		ChainID:      params.TestChainConfig.ChainID,
+		AccountNonce: 1,
+		GasTipCap:    big.NewInt(0),
+		GasFeeCap:    big.NewInt(0),
+		GasLimit:     100000,
+		Recipient:    &common.Address{},
+		Amount:       big.NewInt(0),
+		Payload:      hexutil.MustDecode("0x646174613a2c7b2270223a226b72632d3230222c226f70223a226d696e74222c227469636b223a226b6c7973222c22616d74223a223130303030227d"),
+		AccessList:   nil,
+	})
+
+	tx, _ = types.SignTx(unSignedTx, types.LatestSignerForChainID(params.TestChainConfig.ChainID), key)
+
+	pool.SetBaseFee(big.NewInt(0))
+	if err := pool.AddRemote(tx); err != nil {
+		fmt.Println(tx)
+		t.Fatal(err)
+	}
+	fmt.Println(tx)
 }
 
 func TestDynamicFeeTransactionHasNotSameGasPrice(t *testing.T) {
