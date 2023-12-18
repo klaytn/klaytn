@@ -317,8 +317,10 @@ func (api *APIExtension) makeRPCBlockOutput(b *types.Block,
 	// make transactions
 	numTxs := len(transactions)
 	rpcTransactions := make([]map[string]interface{}, numTxs)
-	for i, tx := range transactions {
-		rpcTransactions[i] = klaytnApi.RpcOutputReceipt(head, tx, hash, head.Number.Uint64(), uint64(i), receipts[i])
+	if len(receipts) == len(transactions) {
+		for i, tx := range transactions {
+			rpcTransactions[i] = klaytnApi.RpcOutputReceipt(head, tx, hash, head.Number.Uint64(), uint64(i), receipts[i])
+		}
 	}
 
 	r["committee"] = cInfo.Committee
