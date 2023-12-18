@@ -608,6 +608,10 @@ func getFrom(tx *types.Transaction) common.Address {
 	return from
 }
 
+func NewRPCTransaction(b *types.Block, tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64) map[string]interface{} {
+	return newRPCTransaction(b, tx, blockHash, blockNumber, index)
+}
+
 // newRPCTransaction returns a transaction that will serialize to the RPC
 // representation, with the given location metadata set (if available).
 func newRPCTransaction(b *types.Block, tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64) map[string]interface{} {
