@@ -921,8 +921,50 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		logger.Trace("Stored voting snapshot to disk", "number", snap.Number, "hash", snap.Hash)
 	}
 
+	sb.regen(chain, headers, writable)
+
 	sb.recents.Add(snap.Hash, snap)
 	return snap, err
+}
+
+// regen commits snapshot data to database
+func (sb *backend) regen(chain consensus.ChainReader, headers []*types.Header, writable bool) {
+	if !sb.isRestoring.Load() && len(headers) > 1 {
+		sb.isRestoring.Store(true)
+		defer func() {
+			sb.isRestoring.Store(false)
+		}()
+
+		var (
+			from        = headers[0].Number
+			to          = headers[len(headers)-1].Number
+			start       = time.Now()
+			commitTried = false
+		)
+		for _, header := range headers {
+			var (
+				hn = header.Number.Uint64()
+				hh = header.Hash()
+			)
+			if params.IsCheckpointInterval(hn) {
+				snap, err := sb.snapshot(chain, hn, hh, nil, writable)
+				if err != nil {
+					logger.Warn("[Snapshot] Snapshot restoring failed", "len(headers)", len(headers), "from", from, "to", to, "headerNumber", hn)
+					continue
+				}
+				// Store snapshot data if it was not committed before
+				if loadSnap, _ := sb.db.ReadIstanbulSnapshot(hh); loadSnap == nil {
+					if err = snap.store(sb.db); err != nil {
+						logger.Warn("[Snapshot] Snapshot restoring failed", "len(headers)", len(headers), "from", from, "to", to, "headerNumber", hn)
+					}
+					commitTried = true
+				}
+			}
+		}
+		if commitTried { // This prevents push too many logs by potential DoS attack
+			logger.Trace("[Snapshot] Snapshot restoring completed", "len(headers)", len(headers), "from", from, "to", to, "end", time.Since(start))
+		}
+	}
 }
 
 // FIXME: Need to update this for Istanbul

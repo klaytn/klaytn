@@ -143,6 +143,8 @@ type backend struct {
 
 	// Node type
 	nodetype common.ConnType
+
+	isRestoring atomic.Bool
 }
 
 func (sb *backend) NodeType() common.ConnType {
