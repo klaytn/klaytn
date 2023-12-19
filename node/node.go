@@ -468,23 +468,23 @@ func (n *Node) startHTTP(endpoint string, apis []rpc.API, modules []string, cors
 }
 
 // startFastHTTP initializes and starts the HTTP RPC endpoint.
-func (n *Node) startFastHTTP(endpoint string, apis []rpc.API, modules []string, cors []string, vhosts []string, timeouts rpc.HTTPTimeouts) error {
-	// Short circuit if the HTTP endpoint isn't being exposed
-	if endpoint == "" {
-		return nil
-	}
-	listener, handler, err := rpc.StartFastHTTPEndpoint(endpoint, apis, modules, cors, vhosts, timeouts)
-	if err != nil {
-		return err
-	}
-	n.logger.Info("FastHTTP endpoint opened", "url", fmt.Sprintf("http://%s", endpoint), "cors", strings.Join(cors, ","), "vhosts", strings.Join(vhosts, ","))
-	// All listeners booted successfully
-	n.httpEndpoint = endpoint
-	n.httpListener = listener
-	n.httpHandler = handler
+// func (n *Node) startFastHTTP(endpoint string, apis []rpc.API, modules []string, cors []string, vhosts []string, timeouts rpc.HTTPTimeouts) error {
+// 	// Short circuit if the HTTP endpoint isn't being exposed
+// 	if endpoint == "" {
+// 		return nil
+// 	}
+// 	listener, handler, err := rpc.StartFastHTTPEndpoint(endpoint, apis, modules, cors, vhosts, timeouts)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	n.logger.Info("FastHTTP endpoint opened", "url", fmt.Sprintf("http://%s", endpoint), "cors", strings.Join(cors, ","), "vhosts", strings.Join(vhosts, ","))
+// 	// All listeners booted successfully
+// 	n.httpEndpoint = endpoint
+// 	n.httpListener = listener
+// 	n.httpHandler = handler
 
-	return nil
-}
+// 	return nil
+// }
 
 // stopHTTP terminates the HTTP RPC endpoint.
 func (n *Node) stopHTTP() {
@@ -520,23 +520,23 @@ func (n *Node) startWS(endpoint string, apis []rpc.API, modules []string, wsOrig
 }
 
 // startFastWS initializes and starts the websocket RPC endpoint.
-func (n *Node) startFastWS(endpoint string, apis []rpc.API, modules []string, wsOrigins []string, exposeAll bool) error {
-	// Short circuit if the WS endpoint isn't being exposed
-	if endpoint == "" {
-		return nil
-	}
-	listener, handler, err := rpc.StartFastWSEndpoint(endpoint, apis, modules, wsOrigins, exposeAll)
-	if err != nil {
-		return err
-	}
-	n.logger.Info("FastWebSocket endpoint opened", "url", fmt.Sprintf("ws://%s", listener.Addr()))
-	// All listeners booted successfully
-	n.wsEndpoint = endpoint
-	n.wsListener = listener
-	n.wsHandler = handler
+// func (n *Node) startFastWS(endpoint string, apis []rpc.API, modules []string, wsOrigins []string, exposeAll bool) error {
+// 	// Short circuit if the WS endpoint isn't being exposed
+// 	if endpoint == "" {
+// 		return nil
+// 	}
+// 	listener, handler, err := rpc.StartFastWSEndpoint(endpoint, apis, modules, wsOrigins, exposeAll)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	n.logger.Info("FastWebSocket endpoint opened", "url", fmt.Sprintf("ws://%s", listener.Addr()))
+// 	// All listeners booted successfully
+// 	n.wsEndpoint = endpoint
+// 	n.wsListener = listener
+// 	n.wsHandler = handler
 
-	return nil
-}
+// 	return nil
+// }
 
 // stopWS terminates the websocket RPC endpoint.
 func (n *Node) stopWS() {
