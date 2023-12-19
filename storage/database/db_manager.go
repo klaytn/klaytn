@@ -909,9 +909,12 @@ func (dbm *databaseManager) Stat(property string) (string, error) {
 
 func (dbm *databaseManager) Compact(start []byte, limit []byte) error {
 	errs := ""
-	for _, db := range dbm.dbs {
+	for idx, db := range dbm.dbs {
 		if db != nil {
-			db.Compact(start, limit)
+			if err := db.Compact(start, limit); err != nil {
+				headInfo := fmt.Sprintf(" [%s:%s]\n", DBEntryType(idx), db.Type())
+				errs = headInfo + err.Error()
+			}
 		}
 	}
 	if errs == "" {
