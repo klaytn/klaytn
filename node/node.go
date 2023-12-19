@@ -784,18 +784,14 @@ func (n *Node) apis() []rpc.API {
 			Version:   "1.0",
 			Service:   NewPublicKlayAPI(n),
 			Public:    true,
+		}, {
+			Namespace:          "debug",
+			Version:            "1.0",
+			Service:            debug.Handler,
+			DisableUnsafeDebug: n.config.DisableUnsafeDebug,
 		},
 	}
-	debugRpcApi := []rpc.API{
-		{
-			Namespace: "debug",
-			Version:   "1.0",
-			Service:   debug.Handler,
-		},
-	}
-	if !n.config.DisableUnsafeDebug {
-		rpcApi = append(rpcApi, debugRpcApi...)
-	}
+
 	return rpcApi
 }
 
