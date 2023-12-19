@@ -80,7 +80,7 @@ func (b *CNAPIBackend) CurrentBlock() *types.Block {
 }
 
 func doSetHead(bc work.BlockChain, cn consensus.Engine, gov governance.Engine, targetBlkNum uint64) error {
-	if err := bc.SetHead(targetBlkNum, true); err != nil {
+	if err := bc.SetHead(targetBlkNum); err != nil {
 		return err
 	}
 	// Initialize snapshot cache, staking info cache, and governance cache

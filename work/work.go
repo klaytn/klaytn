@@ -258,7 +258,7 @@ type BlockChain interface {
 	StateCache() state.Database
 
 	SubscribeChainEvent(ch chan<- blockchain.ChainEvent) event.Subscription
-	SetHead(head uint64, delteSnapshot bool) error
+	SetHead(head uint64) error
 	Stop()
 
 	SubscribeRemovedLogsEvent(ch chan<- blockchain.RemovedLogsEvent) event.Subscription
