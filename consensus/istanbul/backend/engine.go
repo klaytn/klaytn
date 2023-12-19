@@ -921,14 +921,14 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		logger.Trace("Stored voting snapshot to disk", "number", snap.Number, "hash", snap.Hash)
 	}
 
-	sb.regen(chain, headers, writable)
+	sb.regen(chain, headers)
 
 	sb.recents.Add(snap.Hash, snap)
 	return snap, err
 }
 
 // regen commits snapshot data to database
-func (sb *backend) regen(chain consensus.ChainReader, headers []*types.Header, writable bool) {
+func (sb *backend) regen(chain consensus.ChainReader, headers []*types.Header) {
 	if !sb.isRestoring.Load() && len(headers) > 1 {
 		sb.isRestoring.Store(true)
 		defer func() {
@@ -947,7 +947,7 @@ func (sb *backend) regen(chain consensus.ChainReader, headers []*types.Header, w
 				hh = header.Hash()
 			)
 			if params.IsCheckpointInterval(hn) {
-				snap, err := sb.snapshot(chain, hn, hh, nil, writable)
+				snap, err := sb.snapshot(chain, hn, hh, nil, false)
 				if err != nil {
 					logger.Warn("[Snapshot] Snapshot restoring failed", "len(headers)", len(headers), "from", from, "to", to, "headerNumber", hn)
 					continue
