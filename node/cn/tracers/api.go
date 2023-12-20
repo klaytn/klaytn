@@ -98,22 +98,36 @@ type Backend interface {
 	StateAtTransaction(ctx context.Context, block *types.Block, txIndex int, reexec uint64) (blockchain.Message, vm.BlockContext, vm.TxContext, *state.StateDB, error)
 }
 
-// API is the collection of tracing APIs exposed over the private debugging endpoint.
-type API struct {
+// CommonAPI is the collection of tracing APIs exposed over the private debugging endpoint.
+type CommonAPI struct {
 	backend     Backend
 	unsafeTrace bool
 }
 
-// NewAPIUnsafeDisabled creates a new API definition for the tracing methods of the CN service,
+// API is the safe APIs
+type API struct {
+	CommonAPI
+}
+
+// UNsafeAPI is the unsafe APIs
+type UnsafeAPI struct {
+	CommonAPI
+}
+
+// NewUnsafeAPI creates a new API definition for the tracing methods of the CN service,
 // only allowing predefined tracers.
-func NewAPIUnsafeDisabled(backend Backend) *API {
-	return &API{backend: backend, unsafeTrace: false}
+func NewUnsafeAPI(backend Backend) *UnsafeAPI {
+	return &UnsafeAPI{
+		CommonAPI{backend: backend, unsafeTrace: false},
+	}
 }
 
 // NewAPI creates a new API definition for the tracing methods of the CN service,
 // allowing both predefined tracers and Javascript snippet based tracing.
 func NewAPI(backend Backend) *API {
-	return &API{backend: backend, unsafeTrace: true}
+	return &API{
+		CommonAPI{backend: backend, unsafeTrace: true},
+	}
 }
 
 type chainContext struct {
@@ -148,19 +162,19 @@ func newChainContext(ctx context.Context, backend Backend) blockchain.ChainConte
 
 // blockByNumber is the wrapper of the chain access function offered by the backend.
 // It will return an error if the block is not found.
-func (api *API) blockByNumber(ctx context.Context, number rpc.BlockNumber) (*types.Block, error) {
+func (api *CommonAPI) blockByNumber(ctx context.Context, number rpc.BlockNumber) (*types.Block, error) {
 	return api.backend.BlockByNumber(ctx, number)
 }
 
 // blockByHash is the wrapper of the chain access function offered by the backend.
 // It will return an error if the block is not found.
-func (api *API) blockByHash(ctx context.Context, hash common.Hash) (*types.Block, error) {
+func (api *CommonAPI) blockByHash(ctx context.Context, hash common.Hash) (*types.Block, error) {
 	return api.backend.BlockByHash(ctx, hash)
 }
 
 // blockByNumberAndHash is the wrapper of the chain access function offered by
 // the backend. It will return an error if the block is not found.
-func (api *API) blockByNumberAndHash(ctx context.Context, number rpc.BlockNumber, hash common.Hash) (*types.Block, error) {
+func (api *CommonAPI) blockByNumberAndHash(ctx context.Context, number rpc.BlockNumber, hash common.Hash) (*types.Block, error) {
 	block, err := api.blockByNumber(ctx, number)
 	if err != nil {
 		return nil, err
@@ -218,7 +232,7 @@ type txTraceTask struct {
 	index   int            // Transaction offset in the block
 }
 
-func checkRangeAndReturnBlock(api *API, ctx context.Context, start, end rpc.BlockNumber) (*types.Block, *types.Block, error) {
+func checkRangeAndReturnBlock(api *CommonAPI, ctx context.Context, start, end rpc.BlockNumber) (*types.Block, *types.Block, error) {
 	// Fetch the block interval that we want to trace
 	from, err := api.blockByNumber(ctx, start)
 	if err != nil {
@@ -244,11 +258,8 @@ func checkRangeAndReturnBlock(api *API, ctx context.Context, start, end rpc.Bloc
 
 // TraceChain returns the structured logs created during the execution of EVM
 // between two blocks (excluding start) and returns them as a JSON object.
-func (api *API) TraceChain(ctx context.Context, start, end rpc.BlockNumber, config *TraceConfig) (*rpc.Subscription, error) {
-	if !api.unsafeTrace {
-		return nil, errors.New("TraceChain is disabled")
-	}
-	from, to, err := checkRangeAndReturnBlock(api, ctx, start, end)
+func (api *UnsafeAPI) TraceChain(ctx context.Context, start, end rpc.BlockNumber, config *TraceConfig) (*rpc.Subscription, error) {
+	from, to, err := checkRangeAndReturnBlock(&api.CommonAPI, ctx, start, end)
 	if err != nil {
 		return nil, err
 	}
@@ -257,8 +268,7 @@ func (api *API) TraceChain(ctx context.Context, start, end rpc.BlockNumber, conf
 	if !supported {
 		return &rpc.Subscription{}, rpc.ErrNotificationsUnsupported
 	}
-	var sub *rpc.Subscription
-	sub = notifier.CreateSubscription()
+	sub := notifier.CreateSubscription()
 	_, err = api.traceChain(from, to, config, notifier, sub)
 	return sub, err
 }
@@ -268,7 +278,7 @@ func (api *API) TraceChain(ctx context.Context, start, end rpc.BlockNumber, conf
 // The traceChain operates in two modes: subscription mode and rpc mode
 //   - if notifier and sub is not nil, it works as a subscription mode and returns nothing
 //   - if those parameters are nil, it works as a rpc mode and returns the block trace results, so it can pass the result through rpc-call
-func (api *API) traceChain(start, end *types.Block, config *TraceConfig, notifier *rpc.Notifier, sub *rpc.Subscription) (map[uint64]*blockTraceResult, error) {
+func (api *CommonAPI) traceChain(start, end *types.Block, config *TraceConfig, notifier *rpc.Notifier, sub *rpc.Subscription) (map[uint64]*blockTraceResult, error) {
 	// Prepare all the states for tracing. Note this procedure can take very
 	// long time. Timeout mechanism is necessary.
 	reexec := defaultTraceReexec
@@ -480,13 +490,10 @@ func (api *API) TraceBlockByNumber(ctx context.Context, number rpc.BlockNumber, 
 
 // TraceBlockByNumberRange returns the ranged blocks tracing results
 // TODO-tracer: limit the result by the size of the return
-func (api *API) TraceBlockByNumberRange(ctx context.Context, start, end rpc.BlockNumber, config *TraceConfig) (map[uint64]*blockTraceResult, error) {
-	if !api.unsafeTrace {
-		return nil, fmt.Errorf("TraceBlockByNumberRange is disabled")
-	}
+func (api *UnsafeAPI) TraceBlockByNumberRange(ctx context.Context, start, end rpc.BlockNumber, config *TraceConfig) (map[uint64]*blockTraceResult, error) {
 	// When the block range is [start,end], the actual tracing block would be [start+1,end]
 	// this is the reason why we change the block range to [start-1, end] so that we can trace [start,end] blocks
-	from, to, err := checkRangeAndReturnBlock(api, ctx, start-1, end)
+	from, to, err := checkRangeAndReturnBlock(&api.CommonAPI, ctx, start-1, end)
 	if err != nil {
 		return nil, err
 	}
@@ -505,7 +512,7 @@ func (api *API) TraceBlockByHash(ctx context.Context, hash common.Hash, config *
 
 // TraceBlock returns the structured logs created during the execution of EVM
 // and returns them as a JSON object.
-func (api *API) TraceBlock(ctx context.Context, blob hexutil.Bytes, config *TraceConfig) ([]*txTraceResult, error) {
+func (api *CommonAPI) TraceBlock(ctx context.Context, blob hexutil.Bytes, config *TraceConfig) ([]*txTraceResult, error) {
 	block := new(types.Block)
 	if err := rlp.Decode(bytes.NewReader(blob), block); err != nil {
 		return nil, fmt.Errorf("could not decode block: %v", err)
@@ -515,10 +522,7 @@ func (api *API) TraceBlock(ctx context.Context, blob hexutil.Bytes, config *Trac
 
 // TraceBlockFromFile returns the structured logs created during the execution of
 // EVM and returns them as a JSON object.
-func (api *API) TraceBlockFromFile(ctx context.Context, file string, config *TraceConfig) ([]*txTraceResult, error) {
-	if !api.unsafeTrace {
-		return nil, errors.New("TraceBlockFromFile is disabled")
-	}
+func (api *UnsafeAPI) TraceBlockFromFile(ctx context.Context, file string, config *TraceConfig) ([]*txTraceResult, error) {
 	blob, err := os.ReadFile(file)
 	if err != nil {
 		return nil, fmt.Errorf("could not read file: %v", err)
@@ -545,10 +549,7 @@ func (api *API) TraceBadBlock(ctx context.Context, hash common.Hash, config *Tra
 // StandardTraceBlockToFile dumps the structured logs created during the
 // execution of EVM to the local file system and returns a list of files
 // to the caller.
-func (api *API) StandardTraceBlockToFile(ctx context.Context, hash common.Hash, config *StdTraceConfig) ([]string, error) {
-	if !api.unsafeTrace {
-		return nil, errors.New("StandardTraceBlockToFile is disabled")
-	}
+func (api *UnsafeAPI) StandardTraceBlockToFile(ctx context.Context, hash common.Hash, config *StdTraceConfig) ([]string, error) {
 	block, err := api.blockByHash(ctx, hash)
 	if err != nil {
 		return nil, fmt.Errorf("block %#x not found", hash)
@@ -559,10 +560,7 @@ func (api *API) StandardTraceBlockToFile(ctx context.Context, hash common.Hash, 
 // StandardTraceBadBlockToFile dumps the structured logs created during the
 // execution of EVM against a block pulled from the pool of bad ones to the
 // local file system and returns a list of files to the caller.
-func (api *API) StandardTraceBadBlockToFile(ctx context.Context, hash common.Hash, config *StdTraceConfig) ([]string, error) {
-	if !api.unsafeTrace {
-		return nil, errors.New("StandardTraceBadBlockToFile is disabled")
-	}
+func (api *UnsafeAPI) StandardTraceBadBlockToFile(ctx context.Context, hash common.Hash, config *StdTraceConfig) ([]string, error) {
 	blocks, err := api.backend.ChainDB().ReadAllBadBlocks()
 	if err != nil {
 		return nil, err
@@ -578,7 +576,7 @@ func (api *API) StandardTraceBadBlockToFile(ctx context.Context, hash common.Has
 // traceBlock configures a new tracer according to the provided configuration, and
 // executes all the transactions contained within. The return value will be one item
 // per transaction, dependent on the requestd tracer.
-func (api *API) traceBlock(ctx context.Context, block *types.Block, config *TraceConfig) ([]*txTraceResult, error) {
+func (api *CommonAPI) traceBlock(ctx context.Context, block *types.Block, config *TraceConfig) ([]*txTraceResult, error) {
 	if !api.unsafeTrace {
 		if atomic.LoadInt32(&heavyAPIRequestCount) >= HeavyAPIRequestLimit {
 			return nil, fmt.Errorf("heavy debug api requests exceed the limit: %d", int64(HeavyAPIRequestLimit))
@@ -678,7 +676,7 @@ func (api *API) traceBlock(ctx context.Context, block *types.Block, config *Trac
 // standardTraceBlockToFile configures a new tracer which uses standard JSON output,
 // and traces either a full block or an individual transaction. The return value will
 // be one filename per transaction traced.
-func (api *API) standardTraceBlockToFile(ctx context.Context, block *types.Block, config *StdTraceConfig) ([]string, error) {
+func (api *CommonAPI) standardTraceBlockToFile(ctx context.Context, block *types.Block, config *StdTraceConfig) ([]string, error) {
 	// If we're tracing a single transaction, make sure it's present
 	if config != nil && !common.EmptyHash(config.TxHash) {
 		if !containsTx(block, config.TxHash) {
@@ -787,7 +785,7 @@ func containsTx(block *types.Block, hash common.Hash) bool {
 
 // TraceTransaction returns the structured logs created during the execution of EVM
 // and returns them as a JSON object.
-func (api *API) TraceTransaction(ctx context.Context, hash common.Hash, config *TraceConfig) (interface{}, error) {
+func (api *CommonAPI) TraceTransaction(ctx context.Context, hash common.Hash, config *TraceConfig) (interface{}, error) {
 	if !api.unsafeTrace {
 		if atomic.LoadInt32(&heavyAPIRequestCount) >= HeavyAPIRequestLimit {
 			return nil, fmt.Errorf("heavy debug api requests exceed the limit: %d", int64(HeavyAPIRequestLimit))
@@ -823,7 +821,7 @@ func (api *API) TraceTransaction(ctx context.Context, hash common.Hash, config *
 // TraceCall lets you trace a given klay_call. It collects the structured logs
 // created during the execution of EVM if the given transaction was added on
 // top of the provided block and returns them as a JSON object.
-func (api *API) TraceCall(ctx context.Context, args klaytnapi.CallArgs, blockNrOrHash rpc.BlockNumberOrHash, config *TraceConfig) (interface{}, error) {
+func (api *CommonAPI) TraceCall(ctx context.Context, args klaytnapi.CallArgs, blockNrOrHash rpc.BlockNumberOrHash, config *TraceConfig) (interface{}, error) {
 	if !api.unsafeTrace {
 		if atomic.LoadInt32(&heavyAPIRequestCount) >= HeavyAPIRequestLimit {
 			return nil, fmt.Errorf("heavy debug api requests exceed the limit: %d", int64(HeavyAPIRequestLimit))
@@ -886,7 +884,7 @@ func (api *API) TraceCall(ctx context.Context, args klaytnapi.CallArgs, blockNrO
 // traceTx configures a new tracer according to the provided configuration, and
 // executes the given message in the provided environment. The return value will
 // be tracer dependent.
-func (api *API) traceTx(ctx context.Context, message blockchain.Message, blockCtx vm.BlockContext, txCtx vm.TxContext, statedb *state.StateDB, config *TraceConfig) (interface{}, error) {
+func (api *CommonAPI) traceTx(ctx context.Context, message blockchain.Message, blockCtx vm.BlockContext, txCtx vm.TxContext, statedb *state.StateDB, config *TraceConfig) (interface{}, error) {
 	// Assemble the structured logger or the JavaScript tracer
 	var (
 		tracer vm.Tracer
