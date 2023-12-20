@@ -441,14 +441,6 @@ func (db *shardedDB) Meter(prefix string) {
 	}
 }
 
-func (db *shardedDB) GetProperty(name string) string {
-	var buf bytes.Buffer
-	for index, shard := range db.shards {
-		buf.WriteString(fmt.Sprintf("shard %d: %s\n", index, shard.GetProperty(name)))
-	}
-	return buf.String()
-}
-
 func (db *shardedDB) TryCatchUpWithPrimary() error {
 	for _, shard := range db.shards {
 		if err := shard.TryCatchUpWithPrimary(); err != nil {

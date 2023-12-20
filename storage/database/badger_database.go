@@ -203,10 +203,6 @@ func (bg *badgerDB) Meter(prefix string) {
 	logger.Warn("badgerDB does not support metrics!")
 }
 
-func (bg *badgerDB) GetProperty(name string) string {
-	return ""
-}
-
 func (bg *badgerDB) TryCatchUpWithPrimary() error {
 	return nil
 }

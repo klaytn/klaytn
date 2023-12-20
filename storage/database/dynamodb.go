@@ -446,10 +446,6 @@ func (dynamo *dynamoDB) Meter(prefix string) {
 	dynamoBatchWriteTimeMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/time", nil)
 }
 
-func (dynamo *dynamoDB) GetProperty(name string) string {
-	return ""
-}
-
 func (dynamo *dynamoDB) TryCatchUpWithPrimary() error {
 	return nil
 }

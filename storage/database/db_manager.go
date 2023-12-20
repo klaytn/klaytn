@@ -69,7 +69,6 @@ type DBManager interface {
 	GetStateTrieMigrationDB() Database
 	GetMiscDB() Database
 	GetSnapshotDB() Database
-	GetProperty(dt DBEntryType, name string) string
 
 	// from accessors_chain.go
 	ReadCanonicalHash(number uint64) common.Hash
@@ -869,10 +868,6 @@ func (dbm *databaseManager) GetMiscDB() Database {
 
 func (dbm *databaseManager) GetSnapshotDB() Database {
 	return dbm.getDatabase(SnapshotDB)
-}
-
-func (dbm *databaseManager) GetProperty(dt DBEntryType, name string) string {
-	return dbm.getDatabase(dt).GetProperty(name)
 }
 
 func (dbm *databaseManager) TryCatchUpWithPrimary() error {

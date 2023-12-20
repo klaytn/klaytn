@@ -100,7 +100,6 @@ type Database interface {
 	Meter(prefix string)
 	Iteratee
 
-	GetProperty(name string) string
 	TryCatchUpWithPrimary() error
 }
 
