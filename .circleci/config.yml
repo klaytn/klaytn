@@ -125,6 +125,8 @@ commands:
           command: |
             export GOPATH=~/go
             export PATH=$HOME/go1.20.6/go/bin:$PATH
+            export CGO_CFLAGS="-O -D__BLST_PORTABLE__" 
+            export CGO_CFLAGS_ALLOW="-O -D__BLST_PORTABLE__"
             make all
             for item in kcn kpn ken kscn kspn ksen kbn kgen homi; do
               ./build/package-tar.sh << parameters.baobab >> << parameters.os-network >> $item
@@ -480,6 +482,17 @@ jobs:
       - notify-failure
       - notify-success
 
+  darwin-amd64-build-test:
+    executor: darwin-executor
+    steps:
+      - checkout
+      - install-darwin-dependencies
+      - pre-build
+      - build-packaging:
+          os-network: "darwin-amd64"
+      - store_artifacts:
+          path: /users/distiller/go/src/github.com/klaytn/klaytn/build/bin/ken
+
   packaging-linux:
     executor: linux-executor
     resource_class: large
@@ -580,7 +593,7 @@ workflows:
           filters: *filter-version-not-release
       - test-tests:
           filters: *filter-version-not-release
-      - test-others:
+      - darwin-amd64-build-test:
           filters: *filter-version-not-release
       - test-linter:
           filters: *filter-version-not-release
@@ -600,7 +613,7 @@ workflows:
             - test-networks
             - test-node
             - test-tests
-            - test-others
+            - darwin-amd64-build-test
             - tag-verify
             - tagger-verify
           filters: *filter-version-not-release
