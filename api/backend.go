@@ -151,11 +151,11 @@ func GetAPIs(apiBackend Backend, disableUnsafeDebug bool) ([]rpc.API, *EthereumA
 			Service:   NewPrivateAccountAPI(apiBackend, nonceLock),
 			Public:    false,
 		}, {
-			Namespace:          "debug",
-			Version:            "1.0",
-			Service:            NewPrivateDebugAPI(apiBackend),
-			Public:             false,
-			DisableUnsafeDebug: disableUnsafeDebug,
+			Namespace: "debug",
+			Version:   "1.0",
+			Service:   NewPrivateDebugAPI(apiBackend),
+			Public:    false,
+			IPCOnly:   disableUnsafeDebug,
 		},
 	}
 

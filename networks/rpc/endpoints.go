@@ -34,7 +34,7 @@ func StartHTTPEndpoint(endpoint string, apis []API, modules []string, cors []str
 	// Register all the APIs exposed by the services
 	handler := NewServer()
 	for _, api := range apis {
-		if !api.DisableUnsafeDebug && (whitelist[api.Namespace] || (len(whitelist) == 0 && api.Public)) {
+		if !api.IPCOnly && (whitelist[api.Namespace] || (len(whitelist) == 0 && api.Public)) {
 			if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
 				return nil, nil, err
 			}
@@ -92,7 +92,7 @@ func StartWSEndpoint(endpoint string, apis []API, modules []string, wsOrigins []
 	// Register all the APIs exposed by the services
 	handler := NewServer()
 	for _, api := range apis {
-		if !api.DisableUnsafeDebug && (exposeAll || whitelist[api.Namespace] || (len(whitelist) == 0 && api.Public)) {
+		if !api.IPCOnly && (exposeAll || whitelist[api.Namespace] || (len(whitelist) == 0 && api.Public)) {
 			if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
 				return nil, nil, err
 			}

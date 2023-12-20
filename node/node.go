@@ -785,10 +785,10 @@ func (n *Node) apis() []rpc.API {
 			Service:   NewPublicKlayAPI(n),
 			Public:    true,
 		}, {
-			Namespace:          "debug",
-			Version:            "1.0",
-			Service:            debug.Handler,
-			DisableUnsafeDebug: n.config.DisableUnsafeDebug,
+			Namespace: "debug",
+			Version:   "1.0",
+			Service:   debug.Handler,
+			IPCOnly:   n.config.DisableUnsafeDebug,
 		},
 	}
 
