@@ -22,7 +22,6 @@ package nodecmd
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"runtime"
 	"sort"
@@ -34,11 +33,11 @@ import (
 	"github.com/klaytn/klaytn/console"
 	metricutils "github.com/klaytn/klaytn/metrics/utils"
 	"github.com/klaytn/klaytn/node"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 func tmpdir(t *testing.T) string {
-	dir, err := ioutil.TempDir("", "klay-test")
+	dir, err := os.MkdirTemp("", "klay-test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,17 +57,17 @@ var (
 	app = utils.NewApp(GetGitCommit(), "the Klaytn command line interface")
 
 	// flags that configure the node
-	nodeFlags = CommonNodeFlags
+	nodeFlags = utils.CommonNodeFlags
 
-	rpcFlags = CommonRPCFlags
+	rpcFlags = utils.CommonRPCFlags
 )
 
 func init() {
 	// Initialize the CLI app and start Klay
 	app.Action = RunKlaytnNode
 	app.HideVersion = true // we have a command to print the version
-	app.Copyright = "Copyright 2018-2019 The klaytn Authors"
-	app.Commands = []cli.Command{
+	app.Copyright = "Copyright 2018-2023 The klaytn Authors"
+	app.Commands = []*cli.Command{
 		// See chaincmd.go:
 		InitCommand,
 
@@ -87,9 +86,10 @@ func init() {
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 
-	app.Flags = allNodeFlags()
+	app.Flags = utils.AllNodeFlags()
 
 	app.Before = func(ctx *cli.Context) error {
+		MigrateGlobalFlags(ctx)
 		runtime.GOMAXPROCS(runtime.NumCPU())
 		logDir := (&node.Config{DataDir: utils.MakeDataDir(ctx)}).ResolvePath("logs")
 		debug.CreateLogDir(logDir)
@@ -153,7 +153,7 @@ func runKlay(t *testing.T, name string, args ...string) *testklay {
 	if tt.Datadir == "" {
 		tt.Datadir = tmpdir(t)
 		tt.Cleanup = func() { os.RemoveAll(tt.Datadir) }
-		args = append([]string{"-datadir", tt.Datadir}, args...)
+		args = append([]string{"--datadir", tt.Datadir}, args...)
 		// Remove the temporary datadir if something fails below.
 		defer func() {
 			if t.Failed() {

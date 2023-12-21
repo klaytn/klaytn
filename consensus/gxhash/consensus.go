@@ -343,6 +343,8 @@ func calcBlockScoreHomestead(time uint64, parent *types.Header) *big.Int {
 	return x
 }
 
+func (gxhash *Gxhash) InitSnapshot() {}
+
 // VerifySeal implements consensus.Engine, checking whether the given block satisfies
 // the PoW blockscore requirements.
 func (gxhash *Gxhash) VerifySeal(chain consensus.ChainReader, header *types.Header) error {

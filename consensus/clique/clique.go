@@ -46,7 +46,6 @@ import (
 )
 
 const (
-	checkpointInterval = 1024 // Number of blocks after which to save the vote snapshot to the database
 	inmemorySnapshots  = 128  // Number of recent vote snapshots to keep in memory
 	inmemorySignatures = 4096 // Number of recent block signatures to keep in memory
 
@@ -359,7 +358,7 @@ func (c *Clique) verifyCascadingFields(chain consensus.ChainReader, header *type
 	return c.verifySeal(chain, header, parents)
 }
 
-// CreateSnapshot does not return a snapshot but creates a new snapshot at a given point in time.
+// CreateSnapshot does not return a snapshot but creates a new snapshot if not exists at a given point in time
 func (c *Clique) CreateSnapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) error {
 	_, err := c.snapshot(chain, number, hash, parents)
 	return err
@@ -379,7 +378,7 @@ func (c *Clique) snapshot(chain consensus.ChainReader, number uint64, hash commo
 			break
 		}
 		// If an on-disk checkpoint snapshot can be found, use that
-		if number%checkpointInterval == 0 {
+		if params.IsCheckpointInterval(number) {
 			if s, err := loadSnapshot(c.config, c.signatures, c.db, hash); err == nil {
 				logger.Trace("Loaded voting snapshot from disk", "number", number, "hash", hash)
 				snap = s
@@ -433,7 +432,7 @@ func (c *Clique) snapshot(chain consensus.ChainReader, number uint64, hash commo
 	c.recents.Add(snap.Hash, snap)
 
 	// If we've generated a new checkpoint snapshot, save to disk
-	if snap.Number%checkpointInterval == 0 && len(headers) > 0 {
+	if params.IsCheckpointInterval(snap.Number) && len(headers) > 0 {
 		if err = snap.store(c.db); err != nil {
 			return nil, err
 		}
@@ -568,6 +567,8 @@ func (c *Clique) Prepare(chain consensus.ChainReader, header *types.Header) erro
 	}
 	return nil
 }
+
+func (c *Clique) InitSnapshot() {}
 
 // Finalize implements consensus.Engine and returns the final block.
 func (c *Clique) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) (*types.Block, error) {

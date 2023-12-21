@@ -126,7 +126,7 @@ func (it *NodeIterator) step() error {
 	obj := serializer.GetAccount()
 
 	if pa := account.GetProgramAccount(obj); pa != nil {
-		dataTrie, err := it.state.db.OpenStorageTrie(pa.GetStorageRoot())
+		dataTrie, err := it.state.db.OpenStorageTrie(pa.GetStorageRoot(), nil)
 		if err != nil {
 			return err
 		}
@@ -189,16 +189,16 @@ func (it *NodeIterator) retrieve() bool {
 // CheckStateConsistencyParallel checks the consistency of all state/storage trie of given two state databases in parallel.
 func CheckStateConsistencyParallel(oldDB Database, newDB Database, root common.Hash, quitCh chan struct{}) error {
 	// Check if the tries can be called
-	_, err := oldDB.OpenTrie(root)
+	_, err := oldDB.OpenTrie(root, nil)
 	if err != nil {
 		return errors.WithMessage(err, "can not open oldDB trie")
 	}
-	_, err = newDB.OpenTrie(root)
+	_, err = newDB.OpenTrie(root, nil)
 	if err != nil {
 		return errors.WithMessage(err, "can not open newDB trie")
 	}
 	// get children hash
-	children, err := oldDB.TrieDB().NodeChildren(root)
+	children, err := oldDB.TrieDB().NodeChildren(root.ExtendZero()) // does not work with Live Pruning
 	if err != nil {
 		logger.Error("cannot start CheckStateConsistencyParallel", "err", err)
 		return errors.WithMessage(err, "cannot get children before consistency check")
@@ -246,19 +246,20 @@ func CheckStateConsistencyParallel(oldDB Database, newDB Database, root common.H
 }
 
 // concurrentIterator checks the consistency of all state/storage trie of given two state database
-// and pass the result via the channel.
-func concurrentIterator(oldDB Database, newDB Database, root common.Hash, quit chan struct{}, resultCh chan struct{}, finishCh chan error) (resultErr error) {
+// and pass the result via the channel. The 'root' here can be a subtrie root.
+// Does not work with Live Pruning.
+func concurrentIterator(oldDB Database, newDB Database, root common.ExtHash, quit chan struct{}, resultCh chan struct{}, finishCh chan error) (resultErr error) {
 	defer func() {
 		finishCh <- resultErr
 	}()
 
 	// Create and iterate a state trie rooted in a sub-node
-	oldState, err := New(root, oldDB, nil)
+	oldState, err := New(root.Unextend(), oldDB, nil, nil)
 	if err != nil {
 		return errors.WithMessage(err, "can not open oldDB trie")
 	}
 
-	newState, err := New(root, newDB, nil)
+	newState, err := New(root.Unextend(), newDB, nil, nil)
 	if err != nil {
 		return errors.WithMessage(err, "can not open newDB trie")
 	}
@@ -326,12 +327,12 @@ func concurrentIterator(oldDB Database, newDB Database, root common.Hash, quit c
 // CheckStateConsistency checks the consistency of all state/storage trie of given two state database.
 func CheckStateConsistency(oldDB Database, newDB Database, root common.Hash, mapSize int, quit chan struct{}) error {
 	// Create and iterate a state trie rooted in a sub-node
-	oldState, err := New(root, oldDB, nil)
+	oldState, err := New(root, oldDB, nil, nil)
 	if err != nil {
 		return err
 	}
 
-	newState, err := New(root, newDB, nil)
+	newState, err := New(root, newDB, nil, nil)
 	if err != nil {
 		return err
 	}

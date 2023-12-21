@@ -25,6 +25,8 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
+	"sync"
 
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts/abi"
@@ -76,6 +78,29 @@ type WatchOpts struct {
 	Context context.Context // Network context to support cancellation and timeouts (nil = no timeout)
 }
 
+// MetaData collects all metadata for a bound contract.
+type MetaData struct {
+	mu   sync.Mutex
+	Sigs map[string]string
+	Bin  string
+	ABI  string
+	ab   *abi.ABI
+}
+
+func (m *MetaData) GetAbi() (*abi.ABI, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.ab != nil {
+		return m.ab, nil
+	}
+	if parsed, err := abi.JSON(strings.NewReader(m.ABI)); err != nil {
+		return nil, err
+	} else {
+		m.ab = &parsed
+	}
+	return m.ab, nil
+}
+
 // BoundContract is the base wrapper object that reflects a contract on the
 // Klaytn network. It contains a collection of methods that are used by the
 // higher level contract bindings to operate.
@@ -121,10 +146,14 @@ func DeployContract(opts *TransactOpts, abi abi.ABI, bytecode []byte, backend Co
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (c *BoundContract) Call(opts *CallOpts, result interface{}, method string, params ...interface{}) error {
+func (c *BoundContract) Call(opts *CallOpts, results *[]interface{}, method string, params ...interface{}) error {
 	// Don't crash on a lazy user
 	if opts == nil {
 		opts = new(CallOpts)
+	}
+
+	if results == nil {
+		results = new([]interface{})
 	}
 	// Pack the input, call and unpack the results
 	input, err := c.abi.Pack(method, params...)
@@ -143,7 +172,10 @@ func (c *BoundContract) Call(opts *CallOpts, result interface{}, method string, 
 			return ErrNoPendingState
 		}
 		output, err = pb.PendingCallContract(ctx, msg)
-		if err == nil && len(output) == 0 {
+		if err != nil {
+			return err
+		}
+		if len(output) == 0 {
 			// Make sure we have a contract to operate on, and bail out otherwise.
 			if code, err = pb.PendingCodeAt(ctx, c.address); err != nil {
 				return err
@@ -153,7 +185,10 @@ func (c *BoundContract) Call(opts *CallOpts, result interface{}, method string, 
 		}
 	} else {
 		output, err = c.caller.CallContract(ctx, msg, opts.BlockNumber)
-		if err == nil && len(output) == 0 {
+		if err != nil {
+			return err
+		}
+		if len(output) == 0 {
 			// Make sure we have a contract to operate on, and bail out otherwise.
 			if code, err = c.caller.CodeAt(ctx, c.address, opts.BlockNumber); err != nil {
 				return err
@@ -162,10 +197,13 @@ func (c *BoundContract) Call(opts *CallOpts, result interface{}, method string, 
 			}
 		}
 	}
-	if err != nil {
+	if len(*results) == 0 {
+		res, err := c.abi.Unpack(method, output)
+		*results = res
 		return err
 	}
-	return c.abi.Unpack(result, method, output)
+	res := *results
+	return c.abi.UnpackIntoInterface(res[0], method, output)
 }
 
 // Transact invokes the (paid) contract method with params as input values.
@@ -353,7 +391,7 @@ func (c *BoundContract) WatchLogs(opts *WatchOpts, name string, query ...[]inter
 // UnpackLog unpacks a retrieved log into the provided output structure.
 func (c *BoundContract) UnpackLog(out interface{}, event string, log types.Log) error {
 	if len(log.Data) > 0 {
-		if err := c.abi.Unpack(out, event, log.Data); err != nil {
+		if err := c.abi.UnpackIntoInterface(out, event, log.Data); err != nil {
 			return err
 		}
 	}

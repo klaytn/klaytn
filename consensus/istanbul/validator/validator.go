@@ -21,6 +21,7 @@
 package validator
 
 import (
+	"encoding/binary"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -138,4 +139,38 @@ func SelectRandomCommittee(validators []istanbul.Validator, committeeSize uint64
 	}
 
 	return committee
+}
+
+// SelectRandaoCommittee composes a committee selecting validators randomly based on the mixHash.
+// It returns nil if the given committeeSize is bigger than validatorSize.
+func SelectRandaoCommittee(validators []istanbul.Validator, committeeSize uint64, mixHash []byte) []istanbul.Validator {
+	// it cannot be happened. just to make sure
+	if committeeSize < 2 {
+		if committeeSize == 0 {
+			logger.Error("invalid committee size", "committeeSize", committeeSize)
+			return nil
+		}
+		return validators
+	}
+
+	seed := int64(binary.BigEndian.Uint64(mixHash[:8]))
+	size := committeeSize
+	if committeeSize > uint64(len(validators)) {
+		size = uint64(len(validators))
+	}
+	return shuffleValidators(validators, seed)[:size]
+}
+
+func shuffleValidators(validators istanbul.Validators, seed int64) []istanbul.Validator {
+	ret := make([]istanbul.Validator, len(validators))
+	copy(ret, validators)
+	swap := func(x, y int) {
+		ret[x], ret[y] = ret[y], ret[x]
+	}
+
+	r := rand.New(rand.NewSource(seed))
+	// The Fisher-Yates algorithm used in this shuffle is deterministic for a given seed.
+	r.Shuffle(len(ret), swap)
+
+	return ret
 }

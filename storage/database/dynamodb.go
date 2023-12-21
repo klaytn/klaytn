@@ -444,6 +444,14 @@ func (dynamo *dynamoDB) Meter(prefix string) {
 	dynamoBatchWriteTimeMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/time", nil)
 }
 
+func (dynamo *dynamoDB) GetProperty(name string) string {
+	return ""
+}
+
+func (dynamo *dynamoDB) TryCatchUpWithPrimary() error {
+	return nil
+}
+
 func (dynamo *dynamoDB) NewIterator(prefix []byte, start []byte) Iterator {
 	// TODO-Klaytn: implement this later.
 	return nil
@@ -611,6 +619,10 @@ func (batch *dynamoBatch) Reset() {
 	batch.batchItems = []*dynamodb.WriteRequest{}
 	batch.keyMap = map[string]struct{}{}
 	batch.size = 0
+}
+
+func (batch *dynamoBatch) Release() {
+	// nothing to do with dynamoBatch
 }
 
 func (batch *dynamoBatch) Replay(w KeyValueWriter) error {

@@ -132,6 +132,9 @@ func (bg *badgerDB) Has(key []byte) (bool, error) {
 	defer txn.Discard()
 	item, err := txn.Get(key)
 	if err != nil {
+		if err == badger.ErrKeyNotFound {
+			return false, nil
+		}
 		return false, err
 	}
 	err = item.Value(nil)
@@ -199,6 +202,14 @@ func (bg *badgerDB) Meter(prefix string) {
 	logger.Warn("badgerDB does not support metrics!")
 }
 
+func (bg *badgerDB) GetProperty(name string) string {
+	return ""
+}
+
+func (bg *badgerDB) TryCatchUpWithPrimary() error {
+	return nil
+}
+
 type badgerBatch struct {
 	db   *badger.DB
 	txn  *badger.Txn
@@ -235,6 +246,10 @@ func (b *badgerBatch) ValueSize() int {
 func (b *badgerBatch) Reset() {
 	b.txn = b.db.NewTransaction(true)
 	b.size = 0
+}
+
+func (b *badgerBatch) Release() {
+	// nothing to do with badgerBatch
 }
 
 // Replay replays the batch contents.

@@ -4,11 +4,6 @@
 [![GoDoc](https://godoc.org/github.com/klaytn/klaytn?status.svg)](https://pkg.go.dev/github.com/klaytn/klaytn)
 [![Gitter](https://badges.gitter.im/klaytn/Lobby.svg)](https://gitter.im/klaytn/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
-# Branch name will be changed
-
-We will change the `master` branch to `main` on Dec 15, 2022.
-After the branch policy change, please check your local or forked repository settings.
-
 # Klaytn
 
 Official golang implementation of the Klaytn protocol. Please visit [KlaytnDocs](https://docs.klaytn.com/) for more details on Klaytn design, node operation guides and application development resources.
@@ -33,7 +28,7 @@ After successful build, executable binaries are installed at `build/bin/`.
 | `ken` | The CLI client for Klaytn Endpoint Node, which is the entry point into the Klaytn network (main-, test- or private net).  It can be used by other processes as a gateway into the Klaytn network via JSON RPC endpoints exposed on top of HTTP, WebSocket, gRPC, and/or IPC transports. Run `ken --help` for command-line flags. |
 | `kscn` | The CLI client for Klaytn ServiceChain Consensus Node.  Run `kscn --help` for command-line flags. |
 | `kspn` | The CLI client for Klaytn ServiceChain Proxy Node.  Run `kspn --help` for command-line flags. |
-| `ksen` | The CLI client for Klaytn ServiceChain Endopoint Node.  Run `ksen --help` for command-line flags. |
+| `ksen` | The CLI client for Klaytn ServiceChain Endpoint Node.  Run `ksen --help` for command-line flags. |
 | `kbn` | The CLI client for Klaytn Bootnode. Run `kbn --help` for command-line flags. |
 | `kgen` | The CLI client for Klaytn Nodekey Generation Tool. Run `kgen --help` for command-line flags. |
 | `homi` | The CLI client for Klaytn Helper Tool to generate initialization files. Run `homi --help` for command-line flags. |

@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"hash"
 	"sync/atomic"
+	"time"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/math"
@@ -38,22 +39,33 @@ type Config struct {
 	NoRecursion             bool   // Disables call, callcode, delegate call and create
 	EnablePreimageRecording bool   // Enables recording of SHA3/keccak preimages
 
-	JumpTable [256]*operation // EVM instruction table, automatically populated if unset
+	JumpTable JumpTable // EVM instruction table, automatically populated if unset
 
 	// RunningEVM is to indicate the running EVM and used to stop the EVM.
 	RunningEVM chan *EVM
 
-	// UseOpcodeComputationCost is to enable applying the opcode computation cost limit.
-	UseOpcodeComputationCost bool
+	// ComputationCostLimit is the limit of the total computation cost of a transaction. Set infinite to disable the computation cost limit.
+	ComputationCostLimit uint64
 
 	// Enables collecting internal transaction data during processing a block
 	EnableInternalTxTracing bool
+
+	// Enables collecting and printing opcode execution time
+	EnableOpDebug bool
 
 	// Prefetching is true if the EVM is used for prefetching.
 	Prefetching bool
 
 	// Additional EIPs that are to be enabled
 	ExtraEips []int
+}
+
+// ScopeContext contains the things that are per-call, such as stack and memory,
+// but not transients like pc and gas
+type ScopeContext struct {
+	Memory   *Memory
+	Stack    *Stack
+	Contract *Contract
 }
 
 // keccakState wraps sha3.state. In addition to the usual hash methods, it also supports
@@ -64,15 +76,13 @@ type keccakState interface {
 	Read([]byte) (int, error)
 }
 
-// Interpreter is used to run Klaytn based contracts and will utilise the
+// EVMInterpreter is used to run Klaytn based contracts and will utilise the
 // passed environment to query external sources for state information.
-// The Interpreter will run the byte code VM based on the passed
+// The EVMInterpreter will run the byte code VM based on the passed
 // configuration.
-type Interpreter struct {
+type EVMInterpreter struct {
 	evm *EVM
 	cfg *Config
-
-	intPool *intPool
 
 	hasher    keccakState // Keccak256 hasher instance shared across opcodes
 	hasherBuf common.Hash // Keccak256 hasher result array shared aross opcodes
@@ -82,13 +92,18 @@ type Interpreter struct {
 }
 
 // NewEVMInterpreter returns a new instance of the Interpreter.
-func NewEVMInterpreter(evm *EVM, cfg *Config) *Interpreter {
+func NewEVMInterpreter(evm *EVM) *EVMInterpreter {
 	// We use the STOP instruction whether to see
 	// the jump table was initialised. If it was not
 	// we'll set the default jump table.
+	cfg := evm.Config
 	if cfg.JumpTable[STOP] == nil {
 		var jt JumpTable
 		switch {
+		case evm.chainRules.IsCancun:
+			jt = CancunInstructionSet
+		case evm.chainRules.IsShanghai:
+			jt = ShanghaiInstructionSet
 		case evm.chainRules.IsKore:
 			jt = KoreInstructionSet
 		case evm.chainRules.IsLondon:
@@ -108,24 +123,32 @@ func NewEVMInterpreter(evm *EVM, cfg *Config) *Interpreter {
 		cfg.JumpTable = jt
 	}
 
-	return &Interpreter{
+	// Enable the opcode computation cost limit
+	if cfg.ComputationCostLimit == 0 {
+		switch {
+		case evm.chainRules.IsCancun:
+			cfg.ComputationCostLimit = uint64(params.OpcodeComputationCostLimitCancun)
+		default:
+			cfg.ComputationCostLimit = uint64(params.OpcodeComputationCostLimit)
+		}
+	}
+
+	// It is an experimental feature.
+	if params.OpcodeComputationCostLimitOverride != 0 {
+		cfg.ComputationCostLimit = params.OpcodeComputationCostLimitOverride
+	}
+
+	return &EVMInterpreter{
 		evm: evm,
 		cfg: cfg,
 	}
 }
 
-///////////////////////////////////////////////////////
-// OpcodeComputationCostLimit: The below code is commented and will be usd for debugging purposes.
-//var (
-//	prevOp OpCode
-//	globalTimer = time.Now()
-//	opCnt = make([]uint64, 256)
-//	opTime = make([]uint64, 256)
-//	precompiledCnt = make([]uint64, 16)
-//	precompiledTime = make([]uint64, 16)
-//	opDebug = true
-//)
-///////////////////////////////////////////////////////
+// count values and execution time of the opcodes are collected until the node is turned off.
+var (
+	opCnt  = make([]uint64, 256)
+	opTime = make([]uint64, 256)
+)
 
 // Run loops and evaluates the contract's code with the given input data and returns
 // the return byte-slice and an error if one occurred.
@@ -133,40 +156,7 @@ func NewEVMInterpreter(evm *EVM, cfg *Config) *Interpreter {
 // It's important to note that any errors returned by the interpreter should be
 // considered a revert-and-consume-all-gas operation except for
 // ErrExecutionReverted which means revert-and-keep-gas-left.
-func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err error) {
-	if in.intPool == nil {
-		in.intPool = poolOfIntPools.get()
-		defer func() {
-			poolOfIntPools.put(in.intPool)
-			in.intPool = nil
-		}()
-	}
-
-	///////////////////////////////////////////////////////
-	// OpcodeComputationCostLimit: The below code is commented and will be usd for debugging purposes.
-	//if opDebug {
-	//	if in.evm.depth == 0 {
-	//		for i := 0; i< 256; i++ {
-	//			opCnt[i] = 0
-	//			opTime[i] = 0
-	//		}
-	//		prevOp = 0
-	//		defer func() {
-	//			for i := 0; i < 256; i++ {
-	//				if opCnt[i] > 0 {
-	//					fmt.Println("op", OpCode(i).String(), "computationCost", in.cfg.JumpTable[i].computationCost, "cnt", opCnt[i], "avg", opTime[i]/opCnt[i])
-	//				}
-	//			}
-	//			for i := 0; i < 16; i++ {
-	//				if precompiledCnt[i] > 0 {
-	//					fmt.Println("precompiled contract addr", i, "cnt", precompiledCnt[i], "avg", precompiledTime[i]/precompiledCnt[i])
-	//				}
-	//			}
-	//		}()
-	//	}
-	//}
-	///////////////////////////////////////////////////////
-
+func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err error) {
 	// Increment the call depth which is restricted to 1024
 	in.evm.depth++
 	defer func() { in.evm.depth-- }()
@@ -181,9 +171,14 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 	}
 
 	var (
-		op    OpCode        // current opcode
-		mem   = NewMemory() // bound memory
-		stack = newstack()  // local stack
+		op          OpCode        // current opcode
+		mem         = NewMemory() // bound memory
+		stack       = newstack()  // local stack
+		callContext = &ScopeContext{
+			Memory:   mem,
+			Stack:    stack,
+			Contract: contract,
+		}
 		// For optimisation reason we're using uint64 as the program counter.
 		// It's theoretically possible to go above 2^64. The YP defines the PC
 		// to be uint256. Practically much less so feasible.
@@ -195,19 +190,19 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		logged              bool                // deferred Tracer should ignore already logged steps
 		res                 []byte              // result of the opcode execution function
 		allocatedMemorySize = uint64(mem.Len()) // Currently allocated memory size
+
+		// used for collecting opcode execution time
+		opExecStart time.Time
 	)
 	contract.Input = input
-
-	// Reclaim the stack as an int pool when the execution stops
-	defer func() { in.intPool.put(stack.data...) }()
 
 	if in.cfg.Debug {
 		defer func() {
 			if err != nil {
 				if !logged {
-					in.cfg.Tracer.CaptureState(in.evm, pcCopy, op, gasCopy, cost, mem, stack, contract, in.evm.depth, err)
+					in.cfg.Tracer.CaptureState(in.evm, pcCopy, op, gasCopy, cost, callContext, in.evm.depth, err)
 				} else {
-					in.cfg.Tracer.CaptureFault(in.evm, pcCopy, op, gasCopy, cost, mem, stack, contract, in.evm.depth, err)
+					in.cfg.Tracer.CaptureFault(in.evm, pcCopy, op, gasCopy, cost, callContext, in.evm.depth, err)
 				}
 			}
 		}()
@@ -218,17 +213,14 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 	// the execution of one of the operations or until the done flag is set by the
 	// parent context.
 	for atomic.LoadInt32(&in.evm.abort) == 0 {
+		if in.evm.Config.EnableOpDebug {
+			opExecStart = time.Now()
+		}
 		if in.cfg.Debug {
 			// Capture pre-execution values for tracing.
 			logged, pcCopy, gasCopy = false, pc, contract.Gas
 		}
 
-		///////////////////////////////////////////////////////
-		// OpcodeComputationCostLimit: The below code is commented and will be usd for debugging purposes.
-		//if opDebug {
-		//	prevOp = op
-		//}
-		///////////////////////////////////////////////////////
 		// Get the operation from the jump table and validate the stack to ensure there are
 		// enough stack items available to perform the operation.
 		op = contract.GetOp(pc)
@@ -242,17 +234,6 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		} else if sLen > operation.maxStack {
 			return nil, fmt.Errorf("stack limit reached %d (%d)", sLen, operation.maxStack)
 		}
-		// If the operation is valid, enforce and write restrictions
-		if in.readOnly {
-			// If the interpreter is operating in readonly mode, make sure no
-			// state-modifying operation is performed. The 3rd stack item
-			// for a call operation is the value. Transferring value from one
-			// account to the others means the state is modified and should also
-			// return with an error.
-			if operation.writes || (op == CALL && stack.Back(2).Sign() != 0) {
-				return nil, ErrWriteProtection
-			}
-		}
 
 		// Static portion of gas
 		cost = operation.constantGas // For tracing
@@ -261,19 +242,9 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		}
 
 		// We limit tx's execution time using the sum of computation cost of opcodes.
-		if in.evm.vmConfig.UseOpcodeComputationCost {
-			///////////////////////////////////////////////////////
-			// OpcodeComputationCostLimit: The below code is commented and will be usd for debugging purposes.
-			//if opDebug && prevOp > 0 {
-			//	elapsed := uint64(time.Since(globalTimer).Nanoseconds())
-			//	fmt.Println("[", in.evm.depth, "]", "prevop", prevOp.String(), "-", op.String(),  "computationCost", in.cfg.JumpTable[prevOp].computationCost, "total", in.evm.opcodeComputationCostSum, "elapsed", elapsed)
-			//	opTime[prevOp] += elapsed
-			//	opCnt[prevOp] += 1
-			//}
-			//globalTimer = time.Now()
-			///////////////////////////////////////////////////////
+		if in.evm.Config.ComputationCostLimit != 0 {
 			in.evm.opcodeComputationCostSum += operation.computationCost
-			if in.evm.opcodeComputationCostSum > params.OpcodeComputationCostLimit {
+			if in.evm.opcodeComputationCostSum > in.evm.Config.ComputationCostLimit {
 				return nil, ErrOpcodeComputationCostLimitReached
 			}
 		}
@@ -314,38 +285,38 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		}
 
 		if in.cfg.Debug {
-			in.cfg.Tracer.CaptureState(in.evm, pc, op, gasCopy, cost, mem, stack, contract, in.evm.depth, err)
+			in.cfg.Tracer.CaptureState(in.evm, pc, op, gasCopy, cost, callContext, in.evm.depth, err)
 			logged = true
 		}
 
 		// execute the operation
-		res, err = operation.execute(&pc, in.evm, contract, mem, stack)
-		// verifyPool is a build flag. Pool verification makes sure the integrity
-		// of the integer pool by comparing values to a default value.
-		if verifyPool {
-			verifyIntegerPool(in.intPool)
+		res, err = operation.execute(&pc, in, &ScopeContext{mem, stack, contract})
+		if in.evm.Config.EnableOpDebug {
+			opTime[op] += uint64(time.Since(opExecStart).Nanoseconds())
+			opCnt[op] += 1
 		}
-		// if the operation clears the return data (e.g. it has returning data)
-		// set the last return to the result of the operation.
-		if operation.returns {
-			in.returnData = res
+		if err != nil {
+			break
 		}
-
-		switch {
-		case err != nil:
-			return nil, err // TODO-Klaytn-Issue615
-		case operation.reverts:
-			return res, ErrExecutionReverted // TODO-Klaytn-Issue615
-		case operation.halts:
-			return res, nil
-		case !operation.jumps:
-			pc++
-		}
+		pc++
 	}
 
 	abort := atomic.LoadInt32(&in.evm.abort)
 	if (abort & CancelByTotalTimeLimit) != 0 {
 		return nil, ErrTotalTimeLimitReached // TODO-Klaytn-Issue615
 	}
-	return nil, nil
+	if err == errStopToken {
+		err = nil // clear stop token error
+	}
+
+	return res, err
+}
+
+func PrintOpCodeExecTime() {
+	logger.Info("Printing the execution time of the opcodes during this node operation")
+	for i := 0; i < 256; i++ {
+		if opCnt[i] > 0 {
+			logger.Info("op "+OpCode(i).String(), "cnt", opCnt[i], "avg", opTime[i]/opCnt[i])
+		}
+	}
 }

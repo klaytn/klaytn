@@ -25,7 +25,6 @@ import (
 	"fmt"
 	"io"
 	"math/big"
-	"time"
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -102,10 +101,18 @@ func (s *StructLog) ErrorString() string {
 // Note that reference types are actual VM data structures; make copies
 // if you need to retain them beyond the current call.
 type Tracer interface {
-	CaptureStart(from common.Address, to common.Address, call bool, input []byte, gas uint64, value *big.Int) error
-	CaptureState(env *EVM, pc uint64, op OpCode, gas, cost uint64, memory *Memory, stack *Stack, contract *Contract, depth int, err error) error
-	CaptureFault(env *EVM, pc uint64, op OpCode, gas, cost uint64, memory *Memory, stack *Stack, contract *Contract, depth int, err error) error
-	CaptureEnd(output []byte, gasUsed uint64, t time.Duration, err error) error
+	// Transaction level
+	CaptureTxStart(gasLimit uint64)
+	CaptureTxEnd(restGas uint64)
+	// Top call frame
+	CaptureStart(env *EVM, from common.Address, to common.Address, call bool, input []byte, gas uint64, value *big.Int)
+	CaptureEnd(output []byte, gasUsed uint64, err error)
+	// Rest of call frames
+	CaptureEnter(typ OpCode, from common.Address, to common.Address, input []byte, gas uint64, value *big.Int)
+	CaptureExit(output []byte, gasUsed uint64, err error)
+	// Opcode level
+	CaptureState(env *EVM, pc uint64, op OpCode, gas, cost uint64, scope *ScopeContext, depth int, err error)
+	CaptureFault(env *EVM, pc uint64, op OpCode, gas, cost uint64, scope *ScopeContext, depth int, err error)
 }
 
 // StructLogger is an EVM state logger and implements Tracer.
@@ -134,17 +141,19 @@ func NewStructLogger(cfg *LogConfig) *StructLogger {
 }
 
 // CaptureStart implements the Tracer interface to initialize the tracing operation.
-func (l *StructLogger) CaptureStart(from common.Address, to common.Address, create bool, input []byte, gas uint64, value *big.Int) error {
-	return nil
+func (l *StructLogger) CaptureStart(env *EVM, from common.Address, to common.Address, create bool, input []byte, gas uint64, value *big.Int) {
 }
 
 // CaptureState logs a new structured log message and pushes it out to the environment
 //
 // CaptureState also tracks SSTORE ops to track dirty values.
-func (l *StructLogger) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost uint64, memory *Memory, stack *Stack, contract *Contract, depth int, err error) error {
+func (l *StructLogger) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost uint64, scope *ScopeContext, depth int, err error) {
+	memory := scope.Memory
+	stack := scope.Stack
+	contract := scope.Contract
 	// check if already accumulated the specified number of logs
 	if l.cfg.Limit != 0 && l.cfg.Limit <= len(l.logs) {
-		return ErrTraceLimitReached
+		return
 	}
 
 	// initialise new changed values storage container for this contract
@@ -157,8 +166,8 @@ func (l *StructLogger) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost ui
 	// it in the local storage container.
 	if op == SSTORE && stack.len() >= 2 {
 		var (
-			value   = common.BigToHash(stack.data[stack.len()-2])
-			address = common.BigToHash(stack.data[stack.len()-1])
+			value   = common.Hash(stack.data[stack.len()-2].Bytes32())
+			address = common.Hash(stack.data[stack.len()-1].Bytes32())
 		)
 		l.changedValues[contract.Address()][address] = value
 	}
@@ -173,7 +182,7 @@ func (l *StructLogger) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost ui
 	if !l.cfg.DisableStack {
 		stck = make([]*big.Int, len(stack.Data()))
 		for i, item := range stack.Data() {
-			stck[i] = new(big.Int).Set(item)
+			stck[i] = new(big.Int).Set(item.ToBig())
 		}
 	}
 	// Copy a snapshot of the current storage to a new container
@@ -185,17 +194,15 @@ func (l *StructLogger) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost ui
 	log := StructLog{pc, op, gas, cost, mem, memory.Len(), stck, storage, depth, env.StateDB.GetRefund(), err}
 
 	l.logs = append(l.logs, log)
-	return nil
 }
 
 // CaptureFault implements the Tracer interface to trace an execution fault
 // while running an opcode.
-func (l *StructLogger) CaptureFault(env *EVM, pc uint64, op OpCode, gas, cost uint64, memory *Memory, stack *Stack, contract *Contract, depth int, err error) error {
-	return nil
+func (l *StructLogger) CaptureFault(env *EVM, pc uint64, op OpCode, gas, cost uint64, scope *ScopeContext, depth int, err error) {
 }
 
 // CaptureEnd is called after the call finishes to finalize the tracing.
-func (l *StructLogger) CaptureEnd(output []byte, gasUsed uint64, t time.Duration, err error) error {
+func (l *StructLogger) CaptureEnd(output []byte, gasUsed uint64, err error) {
 	l.output = output
 	l.err = err
 	if l.cfg.Debug {
@@ -204,8 +211,16 @@ func (l *StructLogger) CaptureEnd(output []byte, gasUsed uint64, t time.Duration
 			fmt.Printf(" error: %v\n", err)
 		}
 	}
-	return nil
 }
+
+func (l *StructLogger) CaptureEnter(typ OpCode, from common.Address, to common.Address, input []byte, gas uint64, value *big.Int) {
+}
+
+func (l *StructLogger) CaptureExit(output []byte, gasUsed uint64, err error) {}
+
+func (l *StructLogger) CaptureTxStart(gasLimit uint64) {}
+
+func (l *StructLogger) CaptureTxEnd(restGas uint64) {}
 
 // StructLogs returns the captured log entries.
 func (l *StructLogger) StructLogs() []StructLog { return l.logs }

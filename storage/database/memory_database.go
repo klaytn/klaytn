@@ -194,6 +194,14 @@ func (db *MemDB) Meter(prefix string) {
 	logger.Warn("MemDB does not support metrics!")
 }
 
+func (db *MemDB) GetProperty(name string) string {
+	return ""
+}
+
+func (db *MemDB) TryCatchUpWithPrimary() error {
+	return nil
+}
+
 // keyvalue is a key-value tuple tagged with a deletion field to allow creating
 // memory-database write batches.
 type keyvalue struct {
@@ -250,6 +258,10 @@ func (b *memBatch) Reset() {
 	b.size = 0
 }
 
+func (b *memBatch) Release() {
+	// nothing to do with memBatch
+}
+
 // Replay replays the batch contents.
 func (b *memBatch) Replay(w KeyValueWriter) error {
 	for _, keyvalue := range b.writes {
@@ -301,6 +313,9 @@ func (it *iterator) Error() error {
 // should not modify the contents of the returned slice, and its contents may
 // change on the next call to Next.
 func (it *iterator) Key() []byte {
+	if !it.inited {
+		return nil
+	}
 	if len(it.keys) > 0 {
 		return []byte(it.keys[0])
 	}
@@ -311,6 +326,9 @@ func (it *iterator) Key() []byte {
 // caller should not modify the contents of the returned slice, and its contents
 // may change on the next call to Next.
 func (it *iterator) Value() []byte {
+	if !it.inited {
+		return nil
+	}
 	if len(it.values) > 0 {
 		return it.values[0]
 	}

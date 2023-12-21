@@ -17,7 +17,6 @@
 package sc
 
 import (
-	"io/ioutil"
 	"log"
 	"math/big"
 	"os"
@@ -99,7 +98,7 @@ var ops = map[uint8]*operations{
 
 // TestBasicKLAYTransferRecovery tests each methods of the value transfer recovery.
 func TestBasicKLAYTransferRecovery(t *testing.T) {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -237,7 +236,7 @@ func TestKLAYTransferLongRangeRecovery(t *testing.T) {
 
 // TestBasicTokenTransferRecovery tests the token transfer recovery.
 func TestBasicTokenTransferRecovery(t *testing.T) {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -277,7 +276,7 @@ func TestBasicTokenTransferRecovery(t *testing.T) {
 // TestBasicNFTTransferRecovery tests the NFT transfer recovery.
 // TODO-Klaytn-ServiceChain: implement NFT transfer.
 func TestBasicNFTTransferRecovery(t *testing.T) {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -316,7 +315,7 @@ func TestBasicNFTTransferRecovery(t *testing.T) {
 
 // TestMethodRecover tests the valueTransferRecovery.Recover() method.
 func TestMethodRecover(t *testing.T) {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -354,7 +353,7 @@ func TestMethodRecover(t *testing.T) {
 
 // TestMethodStop tests the Stop method for stop the internal goroutine.
 func TestMethodStop(t *testing.T) {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -391,7 +390,7 @@ func TestMethodStop(t *testing.T) {
 
 // TestFlagVTRecovery tests the disabled vtrecovery option.
 func TestFlagVTRecovery(t *testing.T) {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -419,7 +418,7 @@ func TestFlagVTRecovery(t *testing.T) {
 
 // TestAlreadyStartedVTRecovery tests the already started VTR error cases.
 func TestAlreadyStartedVTRecovery(t *testing.T) {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -446,7 +445,7 @@ func TestAlreadyStartedVTRecovery(t *testing.T) {
 
 // TestScenarioMainChainRecovery tests the value transfer recovery of the parent chain to child chain value transfers.
 func TestScenarioMainChainRecovery(t *testing.T) {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -484,7 +483,7 @@ func TestScenarioMainChainRecovery(t *testing.T) {
 
 // TestScenarioAutomaticRecovery tests the recovery of the internal goroutine.
 func TestScenarioAutomaticRecovery(t *testing.T) {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -524,7 +523,7 @@ func TestScenarioAutomaticRecovery(t *testing.T) {
 
 // TestMultiOperatorRequestRecovery tests value transfer recovery for the multi-operator.
 func TestMultiOperatorRequestRecovery(t *testing.T) {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -631,7 +630,7 @@ func TestMultiOperatorRequestRecovery(t *testing.T) {
 func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 	// Setup configuration.
 	config := &SCConfig{}
-	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
 	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {

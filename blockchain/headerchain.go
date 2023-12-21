@@ -360,6 +360,13 @@ func (hc *HeaderChain) CurrentHeader() *types.Header {
 	return hc.currentHeader.Load().(*types.Header)
 }
 
+// CurrentBlock is added because HeaderChain is sometimes used as
+// type consensus.ChainReader and consensus.ChainReader interface has CurrentBlock.
+// However CurrentBlock is not supported in HeaderChain so this function just panics.
+func (hc *HeaderChain) CurrentBlock() *types.Block {
+	panic("CurrentBlock not supported for HeaderChain")
+}
+
 // SetCurrentHeader sets the current head header of the canonical chain.
 func (hc *HeaderChain) SetCurrentHeader(head *types.Header) {
 	hc.chainDB.WriteHeadHeaderHash(head.Hash())
@@ -373,7 +380,7 @@ type (
 	// before head header is updated. The method will return the actual block it
 	// updated the head to (missing state) and a flag if setHead should continue
 	// rewinding till that forcefully (exceeded ancient limits)
-	UpdateHeadBlocksCallback func(*types.Header) error
+	UpdateHeadBlocksCallback func(*types.Header) (uint64, error)
 
 	// DeleteBlockContentCallback is a callback function that is called by SetHead
 	// before each header is deleted.
@@ -400,8 +407,14 @@ func (hc *HeaderChain) SetHead(head uint64, updateFn UpdateHeadBlocksCallback, d
 		//
 		// Update head first(head fast block, head full block) before deleting the data.
 		if updateFn != nil {
-			if err := updateFn(parent); err != nil {
+			latestBlkNum, err := updateFn(parent)
+			if err != nil {
 				return err
+			}
+			if latestBlkNum < head {
+				// Discrepancy of loop iteration occurs. blockchain sets the
+				// current block number to `latestBlkNum`. Remove further blocks accordingly
+				head = latestBlkNum
 			}
 		}
 		// Update head header then.
@@ -445,4 +458,8 @@ func (hc *HeaderChain) GetBlock(hash common.Hash, number uint64) *types.Block {
 
 func (hc *HeaderChain) State() (*state.StateDB, error) {
 	return nil, errors.New("HeaderChain does not support State() method")
+}
+
+func (hc *HeaderChain) StateAt(root common.Hash) (*state.StateDB, error) {
+	return nil, errors.New("HeaderChain does not support StateAt() method")
 }

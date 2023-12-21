@@ -33,7 +33,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -127,9 +126,6 @@ type ProtocolManager struct {
 	peerWg sync.WaitGroup
 	// istanbul BFT
 	engine consensus.Engine
-
-	rewardbase   common.Address
-	rewardwallet accounts.Wallet
 
 	wsendpoint string
 
@@ -351,14 +347,6 @@ func (pm *ProtocolManager) RegisterValidator(connType common.ConnType, validator
 
 func (pm *ProtocolManager) getWSEndPoint() string {
 	return pm.wsendpoint
-}
-
-func (pm *ProtocolManager) SetRewardbase(addr common.Address) {
-	pm.rewardbase = addr
-}
-
-func (pm *ProtocolManager) SetRewardbaseWallet(wallet accounts.Wallet) {
-	pm.rewardwallet = wallet
 }
 
 func (pm *ProtocolManager) removePeer(id string) {
@@ -1055,12 +1043,10 @@ func handleStakingInfoRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error
 		// Retrieve the requested block's staking information, skipping if unknown to us
 		header := pm.blockchain.GetHeaderByHash(hash)
 		if header == nil {
-			logger.Error("Failed to get header", "hash", hash)
 			continue
 		}
 		result := reward.GetStakingInfoOnStakingBlock(header.Number.Uint64())
 		if result == nil {
-			logger.Error("Failed to get staking information on a specific block", "number", header.Number.Uint64(), "hash", hash)
 			continue
 		}
 		// If known, encode and queue for response packet

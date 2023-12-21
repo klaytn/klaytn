@@ -24,7 +24,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -36,7 +35,7 @@ import (
 )
 
 func tmpKeyStoreIface(t *testing.T, encrypted bool) (dir string, ks keyStore) {
-	d, err := ioutil.TempDir("", "klay-keystore-test")
+	d, err := os.MkdirTemp("", "klay-keystore-test")
 	if err != nil {
 		t.Fatal(err)
 	}

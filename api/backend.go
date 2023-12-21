@@ -23,6 +23,7 @@ package api
 import (
 	"context"
 	"math/big"
+	"time"
 
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts"
@@ -46,18 +47,20 @@ type Backend interface {
 	Progress() klaytn.SyncProgress
 	ProtocolVersion() int
 	SuggestPrice(ctx context.Context) (*big.Int, error)
+	SuggestTipCap(ctx context.Context) (*big.Int, error)
 	UpperBoundGasPrice(ctx context.Context) *big.Int
 	LowerBoundGasPrice(ctx context.Context) *big.Int
 	ChainDB() database.DBManager
 	EventMux() *event.TypeMux
 	AccountManager() accounts.AccountManager
-	RPCGasCap() *big.Int  // global gas cap for klay_call over rpc: DoS protection
-	RPCTxFeeCap() float64 // global tx fee cap for all transaction related APIs
+	RPCEVMTimeout() time.Duration // global timeout for klay_call
+	RPCGasCap() *big.Int          // global gas cap for klay_call over rpc: DoS protection
+	RPCTxFeeCap() float64         // global tx fee cap for all transaction related APIs
 	Engine() consensus.Engine
 	FeeHistory(ctx context.Context, blockCount int, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error)
 
 	// BlockChain API
-	SetHead(number uint64)
+	SetHead(number uint64) error
 	HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error)
 	HeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error)
 	HeaderByNumberOrHash(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*types.Header, error)
@@ -95,7 +98,7 @@ type Backend interface {
 	GetTxLookupInfoAndReceiptInCache(Hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, *types.Receipt)
 }
 
-func GetAPIs(apiBackend Backend) ([]rpc.API, *EthereumAPI) {
+func GetAPIs(apiBackend Backend, disableUnsafeDebug bool) ([]rpc.API, *EthereumAPI) {
 	nonceLock := new(AddrLocker)
 
 	ethAPI := NewEthereumAPI()
@@ -110,7 +113,7 @@ func GetAPIs(apiBackend Backend) ([]rpc.API, *EthereumAPI) {
 	ethAPI.SetPublicTransactionPoolAPI(publicTransactionPoolAPI)
 	ethAPI.SetPublicAccountAPI(publicAccountAPI)
 
-	return []rpc.API{
+	rpcApi := []rpc.API{
 		{
 			Namespace: "klay",
 			Version:   "1.0",
@@ -137,11 +140,6 @@ func GetAPIs(apiBackend Backend) ([]rpc.API, *EthereumAPI) {
 			Service:   NewPublicDebugAPI(apiBackend),
 			Public:    false,
 		}, {
-			Namespace: "unsafedebug",
-			Version:   "1.0",
-			Service:   NewPrivateDebugAPI(apiBackend),
-			Public:    false,
-		}, {
 			Namespace: "klay",
 			Version:   "1.0",
 			Service:   publicAccountAPI,
@@ -152,5 +150,18 @@ func GetAPIs(apiBackend Backend) ([]rpc.API, *EthereumAPI) {
 			Service:   NewPrivateAccountAPI(apiBackend, nonceLock),
 			Public:    false,
 		},
-	}, ethAPI
+	}
+	privateDebugApi := []rpc.API{
+		{
+			Namespace: "debug",
+			Version:   "1.0",
+			Service:   NewPrivateDebugAPI(apiBackend),
+			Public:    false,
+		},
+	}
+	if !disableUnsafeDebug {
+		rpcApi = append(rpcApi, privateDebugApi...)
+	}
+
+	return rpcApi, ethAPI
 }

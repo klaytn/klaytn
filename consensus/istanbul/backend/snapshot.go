@@ -23,6 +23,7 @@ package backend
 import (
 	"bytes"
 	"encoding/json"
+	"math/big"
 
 	"github.com/klaytn/klaytn/consensus"
 
@@ -51,8 +52,8 @@ type Snapshot struct {
 	Tally         []governance.GovernanceTallyItem // Current vote tally to avoid recalculating
 }
 
-func getGovernanceValue(gov governance.Engine, number uint64) (epoch uint64, policy uint64, committeeSize uint64) {
-	pset, err := gov.ParamsAt(number)
+func effectiveParams(gov governance.Engine, number uint64) (epoch uint64, policy uint64, committeeSize uint64) {
+	pset, err := gov.EffectiveParams(number)
 	if err != nil {
 		// TODO-Klaytn-Kore: remove err condition
 		logger.Error("Couldn't get governance value. Resorting to defaults", "err", err)
@@ -72,7 +73,7 @@ func getGovernanceValue(gov governance.Engine, number uint64) (epoch uint64, pol
 // method does not initialize the set of recent validators, so only ever use if for
 // the genesis block.
 func newSnapshot(gov governance.Engine, number uint64, hash common.Hash, valSet istanbul.ValidatorSet, chainConfig *params.ChainConfig) *Snapshot {
-	epoch, policy, committeeSize := getGovernanceValue(gov, number)
+	epoch, policy, committeeSize := effectiveParams(gov, number+1)
 
 	snap := &Snapshot{
 		Epoch:         epoch,
@@ -156,7 +157,7 @@ func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, addr co
 	snap := s.copy()
 
 	// Copy values which might be changed by governance vote
-	snap.Epoch, snap.Policy, snap.CommitteeSize = getGovernanceValue(gov, snap.Number)
+	snap.Epoch, snap.Policy, snap.CommitteeSize = effectiveParams(gov, snap.Number+1)
 
 	for _, header := range headers {
 		// Remove any votes on checkpoint blocks
@@ -179,11 +180,12 @@ func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, addr co
 				}
 				gov.ClearVotes(number)
 			}
-			// Reload governance values because epoch changed
-			snap.Epoch, snap.Policy, snap.CommitteeSize = getGovernanceValue(gov, number)
 			snap.Votes = make([]governance.GovernanceVote, 0)
 			snap.Tally = make([]governance.GovernanceTallyItem, 0)
 		}
+
+		// Reload governance values
+		snap.Epoch, snap.Policy, snap.CommitteeSize = effectiveParams(gov, number+1)
 
 		snap.ValSet, snap.Votes, snap.Tally = gov.HandleGovernanceVote(snap.ValSet, snap.Votes, snap.Tally, header, validator, addr, writable)
 		if policy == uint64(params.WeightedRandom) {
@@ -193,7 +195,9 @@ func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, addr co
 			//
 			// Proposers for Block N+1 can be calculated from the nearest previous proposersUpdateInterval block.
 			// Refresh proposers in Snapshot_N using previous proposersUpdateInterval block for N+1, if not updated yet.
-			pset, err := gov.ParamsAt(number)
+
+			// because snapshot(num)'s ValSet = validators for num+1
+			pset, err := gov.EffectiveParams(number + 1)
 			if err != nil {
 				return nil, err
 			}
@@ -220,8 +224,16 @@ func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, addr co
 	snap.Hash = headers[len(headers)-1].Hash()
 
 	if snap.ValSet.Policy() == istanbul.WeightedRandom {
-		// TODO-Klaytn-Issue1166 We have to update block number of ValSet too.
 		snap.ValSet.SetBlockNum(snap.Number)
+
+		bigNum := new(big.Int).SetUint64(snap.Number)
+		if chain.Config().IsRandaoForkBlockParent(bigNum) {
+			// The ForkBlock must select proposers using MixHash but (ForkBlock - 1) has no MixHash. Using ZeroMixHash instead.
+			snap.ValSet.SetMixHash(params.ZeroMixHash)
+		} else if chain.Config().IsRandaoForkEnabled(bigNum) {
+			// Feed parent MixHash
+			snap.ValSet.SetMixHash(headers[len(headers)-1].MixHash)
+		}
 	}
 	snap.ValSet.SetSubGroupSize(snap.CommitteeSize)
 
@@ -300,6 +312,7 @@ type snapshotJSON struct {
 	Proposers         []common.Address `json:"proposers"`
 	ProposersBlockNum uint64           `json:"proposersBlockNum"`
 	DemotedValidators []common.Address `json:"demotedValidators"`
+	MixHash           []byte           `json:"mixHash,omitempty"`
 }
 
 func (s *Snapshot) toJSONStruct() *snapshotJSON {
@@ -310,10 +323,10 @@ func (s *Snapshot) toJSONStruct() *snapshotJSON {
 	var proposersBlockNum uint64
 	var validators []common.Address
 	var demotedValidators []common.Address
+	var mixHash []byte
 
-	// TODO-Klaytn-Issue1166 For weightedCouncil
 	if s.ValSet.Policy() == istanbul.WeightedRandom {
-		validators, demotedValidators, rewardAddrs, votingPowers, weights, proposers, proposersBlockNum = validator.GetWeightedCouncilData(s.ValSet)
+		validators, demotedValidators, rewardAddrs, votingPowers, weights, proposers, proposersBlockNum, mixHash = validator.GetWeightedCouncilData(s.ValSet)
 	} else {
 		validators = s.validators()
 	}
@@ -333,6 +346,7 @@ func (s *Snapshot) toJSONStruct() *snapshotJSON {
 		Proposers:         proposers,
 		ProposersBlockNum: proposersBlockNum,
 		DemotedValidators: demotedValidators,
+		MixHash:           mixHash,
 	}
 }
 
@@ -349,10 +363,10 @@ func (s *Snapshot) UnmarshalJSON(b []byte) error {
 	s.Votes = j.Votes
 	s.Tally = j.Tally
 
-	// TODO-Klaytn-Issue1166 For weightedCouncil
 	if j.Policy == istanbul.WeightedRandom {
 		s.ValSet = validator.NewWeightedCouncil(j.Validators, j.DemotedValidators, j.RewardAddrs, j.VotingPowers, j.Weights, j.Policy, j.SubGroupSize, j.Number, j.ProposersBlockNum, nil)
 		validator.RecoverWeightedCouncilProposer(s.ValSet, j.Proposers)
+		s.ValSet.SetMixHash(j.MixHash)
 	} else {
 		s.ValSet = validator.NewSubSet(j.Validators, j.Policy, j.SubGroupSize)
 	}

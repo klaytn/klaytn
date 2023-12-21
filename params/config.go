@@ -46,7 +46,11 @@ var (
 		LondonCompatibleBlock:    big.NewInt(86816005),
 		EthTxTypeCompatibleBlock: big.NewInt(86816005),
 		MagmaCompatibleBlock:     big.NewInt(99841497),
-		KoreCompatibleBlock:      big.NewInt(0xffffffff),
+		KoreCompatibleBlock:      big.NewInt(119750400),
+		ShanghaiCompatibleBlock:  big.NewInt(135456000),
+		CancunCompatibleBlock:    nil, // TODO-Klaytn-Cancun: set Cypress CancunCompatibleBlock
+		Kip103CompatibleBlock:    big.NewInt(119750400),
+		Kip103ContractAddress:    common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
 		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x52d41ca72af615a1ac3301b0a93efa222ecc7541"),
@@ -76,8 +80,19 @@ var (
 		LondonCompatibleBlock:    big.NewInt(80295291),
 		EthTxTypeCompatibleBlock: big.NewInt(86513895),
 		MagmaCompatibleBlock:     big.NewInt(98347376),
-		KoreCompatibleBlock:      big.NewInt(0xffffffff),
-		DeriveShaImpl:            2,
+		KoreCompatibleBlock:      big.NewInt(111736800),
+		ShanghaiCompatibleBlock:  big.NewInt(131608000),
+		CancunCompatibleBlock:    big.NewInt(141367000),
+		RandaoCompatibleBlock:    big.NewInt(141367000),
+		RandaoRegistry: &RegistryConfig{
+			Records: map[string]common.Address{
+				"KIP113": common.HexToAddress("0x4BEed0651C46aE5a7CB3b7737345d2ee733789e6"),
+			},
+			Owner: common.HexToAddress("0x04992a2B7E7CE809d409adE32185D49A96AAa32d"),
+		},
+		Kip103CompatibleBlock: big.NewInt(119145600),
+		Kip103ContractAddress: common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
+		DeriveShaImpl:         2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x99fb17d324fa0e07f23b49d09028ac0919414db6"),
 			GovernanceMode: "single",
@@ -176,6 +191,18 @@ type ChainConfig struct {
 	EthTxTypeCompatibleBlock *big.Int `json:"ethTxTypeCompatibleBlock,omitempty"` // EthTxTypeCompatibleBlock switch block (nil = no fork, 0 = already on ethTxType)
 	MagmaCompatibleBlock     *big.Int `json:"magmaCompatibleBlock,omitempty"`     // MagmaCompatible switch block (nil = no fork, 0 already on Magma)
 	KoreCompatibleBlock      *big.Int `json:"koreCompatibleBlock,omitempty"`      // KoreCompatible switch block (nil = no fork, 0 already on Kore)
+	ShanghaiCompatibleBlock  *big.Int `json:"shanghaiCompatibleBlock,omitempty"`  // ShanghaiCompatible switch block (nil = no fork, 0 already on shanghai)
+	CancunCompatibleBlock    *big.Int `json:"cancunCompatibleBlock,omitempty"`    // CancunCompatible switch block (nil = no fork, 0 already on Cancun)
+
+	// KIP103 is a special purpose hardfork feature that can be executed only once
+	// Both Kip103CompatibleBlock and Kip103ContractAddress should be specified to enable KIP103
+	Kip103CompatibleBlock *big.Int       `json:"kip103CompatibleBlock,omitempty"` // Kip103Compatible activate block (nil = no fork)
+	Kip103ContractAddress common.Address `json:"kip103ContractAddress,omitempty"` // Kip103 contract address already deployed on the network
+
+	// Randao is an optional hardfork
+	// RandaoCompatibleBlock, RandaoRegistryRecords and RandaoRegistryOwner all must be specified to enable Randao
+	RandaoCompatibleBlock *big.Int        `json:"randaoCompatibleBlock,omitempty"` // RandaoCompatible activate block (nil = no fork)
+	RandaoRegistry        *RegistryConfig `json:"randaoRegistry,omitempty"`        // Registry initial states
 
 	// Various consensus engines
 	Gxhash   *GxhashConfig   `json:"gxhash,omitempty"` // (deprecated) not supported engine
@@ -203,7 +230,7 @@ func (g *GovernanceConfig) DeferredTxFee() bool {
 // RewardConfig stores information about the network's token economy
 type RewardConfig struct {
 	MintingAmount          *big.Int `json:"mintingAmount"`
-	Ratio                  string   `json:"ratio"`                  // Define how much portion of reward be distributed to CN/PoC/KIR
+	Ratio                  string   `json:"ratio"`                  // Define how much portion of reward be distributed to CN/KFF/KCF
 	Kip82Ratio             string   `json:"kip82ratio,omitempty"`   // Define how much portion of reward be distributed to proposer/stakers
 	UseGiniCoeff           bool     `json:"useGiniCoeff"`           // Decide if Gini Coefficient will be used or not
 	DeferredTxFee          bool     `json:"deferredTxFee"`          // Decide if TX fee will be handled instantly or handled later at block finalization
@@ -226,6 +253,19 @@ type IstanbulConfig struct {
 	Epoch          uint64 `json:"epoch"`  // Epoch length to reset votes and checkpoint
 	ProposerPolicy uint64 `json:"policy"` // The policy for proposer selection; 0: Round Robin, 1: Sticky, 2: Weighted Random
 	SubGroupSize   uint64 `json:"sub"`
+}
+
+// RegistryConfig is the initial KIP-149 system contract registry states.
+// It is installed at block (RandaoCompatibleBlock - 1). Initial states are not applied if RandaoCompatibleBlock is nil or 0.
+// To install the initial states from the block 0, use the AllocRegistry to generate GenesisAlloc.
+//
+// This struct only represents a special case of Registry state where:
+// - there is only one record for each name
+// - the activation of all records is zero
+// - the names array is lexicographically sorted
+type RegistryConfig struct {
+	Records map[string]common.Address `json:"records"`
+	Owner   common.Address            `json:"owner"`
 }
 
 // GxhashConfig is the consensus engine configs for proof-of-work based sealing.
@@ -266,27 +306,38 @@ func (c *ChainConfig) String() string {
 	default:
 		engine = "unknown"
 	}
+
+	kip103 := fmt.Sprintf("KIP103CompatibleBlock: %v KIP103ContractAddress %s", c.Kip103CompatibleBlock, c.Kip103ContractAddress.String())
+
 	if c.Istanbul != nil {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v ShanghaiCompatibleBlock: %v CancunCompatibleBlock: %v RandaoCompatibleBlock: %v %s SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
 			c.ChainID,
 			c.IstanbulCompatibleBlock,
 			c.LondonCompatibleBlock,
 			c.EthTxTypeCompatibleBlock,
 			c.MagmaCompatibleBlock,
 			c.KoreCompatibleBlock,
+			c.ShanghaiCompatibleBlock,
+			c.CancunCompatibleBlock,
+			c.RandaoCompatibleBlock,
+			kip103,
 			c.Istanbul.SubGroupSize,
 			c.UnitPrice,
 			c.DeriveShaImpl,
 			engine,
 		)
 	} else {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v ShanghaiCompatibleBlock: %v CancunCompatibleBlock: %v RandaoCompatibleBlock: %v %s UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
 			c.ChainID,
 			c.IstanbulCompatibleBlock,
 			c.LondonCompatibleBlock,
 			c.EthTxTypeCompatibleBlock,
 			c.MagmaCompatibleBlock,
 			c.KoreCompatibleBlock,
+			c.ShanghaiCompatibleBlock,
+			c.CancunCompatibleBlock,
+			c.RandaoCompatibleBlock,
+			kip103,
 			c.UnitPrice,
 			c.DeriveShaImpl,
 			engine,
@@ -316,14 +367,54 @@ func (c *ChainConfig) IsEthTxTypeForkEnabled(num *big.Int) bool {
 	return isForked(c.EthTxTypeCompatibleBlock, num)
 }
 
-// IsMagmaForkedEnabled returns whether num is either equal to the magma block or greater.
+// IsMagmaForkEnabled returns whether num is either equal to the magma block or greater.
 func (c *ChainConfig) IsMagmaForkEnabled(num *big.Int) bool {
 	return isForked(c.MagmaCompatibleBlock, num)
 }
 
-// IsKoreForkedEnabled returns whether num is either equal to the kore block or greater.
+// IsKoreForkEnabled returns whether num is either equal to the kore block or greater.
 func (c *ChainConfig) IsKoreForkEnabled(num *big.Int) bool {
 	return isForked(c.KoreCompatibleBlock, num)
+}
+
+// IsShanghaiForkEnabled returns whether num is either equal to the shanghai block or greater.
+func (c *ChainConfig) IsShanghaiForkEnabled(num *big.Int) bool {
+	return isForked(c.ShanghaiCompatibleBlock, num)
+}
+
+// IsCancunForkEnabled returns whether num is either equal to the cancun block or greater.
+func (c *ChainConfig) IsCancunForkEnabled(num *big.Int) bool {
+	return isForked(c.CancunCompatibleBlock, num)
+}
+
+// IsRandaoForkEnabled returns whether num is either equal to the randao block or greater.
+func (c *ChainConfig) IsRandaoForkEnabled(num *big.Int) bool {
+	return isForked(c.RandaoCompatibleBlock, num)
+}
+
+// IsKIP103ForkBlock returns whether num is equal to the kip103 block.
+func (c *ChainConfig) IsKIP103ForkBlock(num *big.Int) bool {
+	if c.Kip103CompatibleBlock == nil || num == nil {
+		return false
+	}
+	return c.Kip103CompatibleBlock.Cmp(num) == 0
+}
+
+// IsRandaoForkBlockParent returns whethere num is one block before the randao block.
+func (c *ChainConfig) IsRandaoForkBlockParent(num *big.Int) bool {
+	if c.RandaoCompatibleBlock == nil || num == nil {
+		return false
+	}
+	nextNum := new(big.Int).Add(num, common.Big1)
+	return c.RandaoCompatibleBlock.Cmp(nextNum) == 0 // randao == num + 1
+}
+
+// IsRandaoForkBlock returns whether num is equal to the randao block.
+func (c *ChainConfig) IsRandaoForkBlock(num *big.Int) bool {
+	if c.RandaoCompatibleBlock == nil || num == nil {
+		return false
+	}
+	return c.RandaoCompatibleBlock.Cmp(num) == 0
 }
 
 // CheckCompatible checks whether scheduled fork transitions have been imported
@@ -359,6 +450,9 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 		{name: "ethTxTypeBlock", block: c.EthTxTypeCompatibleBlock},
 		{name: "magmaBlock", block: c.MagmaCompatibleBlock},
 		{name: "koreBlock", block: c.KoreCompatibleBlock},
+		{name: "shanghaiBlock", block: c.ShanghaiCompatibleBlock},
+		{name: "cancunBlock", block: c.CancunCompatibleBlock},
+		{name: "randaoBlock", block: c.RandaoCompatibleBlock, optional: true},
 	} {
 		if lastFork.name != "" {
 			// Next one must be higher number
@@ -396,6 +490,17 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	}
 	if isForkIncompatible(c.KoreCompatibleBlock, newcfg.KoreCompatibleBlock, head) {
 		return newCompatError("Kore Block", c.KoreCompatibleBlock, newcfg.KoreCompatibleBlock)
+	}
+	// We have intentionally skipped kip103Block in the fork ordering check since kip103 is designed
+	// as an optional hardfork and there are no dependency with other forks.
+	if isForkIncompatible(c.ShanghaiCompatibleBlock, newcfg.ShanghaiCompatibleBlock, head) {
+		return newCompatError("Shanghai Block", c.ShanghaiCompatibleBlock, newcfg.ShanghaiCompatibleBlock)
+	}
+	if isForkIncompatible(c.CancunCompatibleBlock, newcfg.CancunCompatibleBlock, head) {
+		return newCompatError("Cancun Block", c.CancunCompatibleBlock, newcfg.CancunCompatibleBlock)
+	}
+	if isForkIncompatible(c.RandaoCompatibleBlock, newcfg.RandaoCompatibleBlock, head) {
+		return newCompatError("Randao Block", c.RandaoCompatibleBlock, newcfg.RandaoCompatibleBlock)
 	}
 	return nil
 }
@@ -509,11 +614,15 @@ func (err *ConfigCompatError) Error() string {
 // Rules is a one time interface meaning that it shouldn't be used in between transition
 // phases.
 type Rules struct {
-	ChainID    *big.Int
-	IsIstanbul bool
-	IsLondon   bool
-	IsMagma    bool
-	IsKore     bool
+	ChainID     *big.Int
+	IsIstanbul  bool
+	IsLondon    bool
+	IsEthTxType bool
+	IsMagma     bool
+	IsKore      bool
+	IsShanghai  bool
+	IsCancun    bool
+	IsRandao    bool
 }
 
 // Rules ensures c's ChainID is not nil.
@@ -523,11 +632,15 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 		chainID = new(big.Int)
 	}
 	return Rules{
-		ChainID:    new(big.Int).Set(chainID),
-		IsIstanbul: c.IsIstanbulForkEnabled(num),
-		IsLondon:   c.IsLondonForkEnabled(num),
-		IsMagma:    c.IsMagmaForkEnabled(num),
-		IsKore:     c.IsKoreForkEnabled(num),
+		ChainID:     new(big.Int).Set(chainID),
+		IsIstanbul:  c.IsIstanbulForkEnabled(num),
+		IsLondon:    c.IsLondonForkEnabled(num),
+		IsEthTxType: c.IsEthTxTypeForkEnabled(num),
+		IsMagma:     c.IsMagmaForkEnabled(num),
+		IsKore:      c.IsKoreForkEnabled(num),
+		IsShanghai:  c.IsShanghaiForkEnabled(num),
+		IsCancun:    c.IsCancunForkEnabled(num),
+		IsRandao:    c.IsRandaoForkEnabled(num),
 	}
 }
 
@@ -565,7 +678,7 @@ func GetDefaultRewardConfigForGenesis() *RewardConfig {
 		MintingAmount:          DefaultMintingAmount,
 		Ratio:                  DefaultRatio,
 		UseGiniCoeff:           DefaultUseGiniCoeff,
-		DeferredTxFee:          DefaultDefferedTxFee,
+		DeferredTxFee:          DefaultDeferredTxFee,
 		StakingUpdateInterval:  DefaultStakeUpdateInterval,
 		ProposerUpdateInterval: DefaultProposerRefreshInterval,
 		MinimumStake:           DefaultMinimumStake,
@@ -578,7 +691,7 @@ func GetDefaultRewardConfig() *RewardConfig {
 		Ratio:                  DefaultRatio,
 		Kip82Ratio:             DefaultKip82Ratio,
 		UseGiniCoeff:           DefaultUseGiniCoeff,
-		DeferredTxFee:          DefaultDefferedTxFee,
+		DeferredTxFee:          DefaultDeferredTxFee,
 		StakingUpdateInterval:  DefaultStakeUpdateInterval,
 		ProposerUpdateInterval: DefaultProposerRefreshInterval,
 		MinimumStake:           DefaultMinimumStake,

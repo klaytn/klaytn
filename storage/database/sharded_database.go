@@ -70,11 +70,21 @@ func newShardedDB(dbc *DBConfig, et DBEntryType, numShards uint) (*shardedDB, er
 	sdbBatchTaskCh := make(chan sdbBatchTask, numShards*2)
 	sdbLevelDBCacheSize := dbc.LevelDBCacheSize / int(numShards)
 	sdbOpenFilesLimit := dbc.OpenFilesLimit / int(numShards)
+	sdbRocksDBCacheSize := GetDefaultRocksDBConfig().CacheSize / uint64(numShards)
+	sdbRocksDBMaxOpenFiles := GetDefaultRocksDBConfig().MaxOpenFiles / int(numShards)
+	if dbc.RocksDBConfig != nil {
+		sdbRocksDBCacheSize = dbc.RocksDBConfig.CacheSize / uint64(numShards)
+		sdbRocksDBMaxOpenFiles = dbc.RocksDBConfig.MaxOpenFiles / int(numShards)
+	}
 	for i := 0; i < int(numShards); i++ {
 		copiedDBC := *dbc
 		copiedDBC.Dir = path.Join(copiedDBC.Dir, strconv.Itoa(i))
 		copiedDBC.LevelDBCacheSize = sdbLevelDBCacheSize
 		copiedDBC.OpenFilesLimit = sdbOpenFilesLimit
+		if copiedDBC.RocksDBConfig != nil {
+			copiedDBC.RocksDBConfig.CacheSize = sdbRocksDBCacheSize
+			copiedDBC.RocksDBConfig.MaxOpenFiles = sdbRocksDBMaxOpenFiles
+		}
 
 		db, err := newDatabase(&copiedDBC, et)
 		if err != nil {
@@ -428,6 +438,23 @@ func (db *shardedDB) Meter(prefix string) {
 	}
 }
 
+func (db *shardedDB) GetProperty(name string) string {
+	var buf bytes.Buffer
+	for index, shard := range db.shards {
+		buf.WriteString(fmt.Sprintf("shard %d: %s\n", index, shard.GetProperty(name)))
+	}
+	return buf.String()
+}
+
+func (db *shardedDB) TryCatchUpWithPrimary() error {
+	for _, shard := range db.shards {
+		if err := shard.TryCatchUpWithPrimary(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 type shardedDBBatch struct {
 	batches    []Batch
 	numBatches uint
@@ -486,6 +513,12 @@ func (sdbBatch *shardedDBBatch) Write() error {
 func (sdbBatch *shardedDBBatch) Reset() {
 	for _, batch := range sdbBatch.batches {
 		batch.Reset()
+	}
+}
+
+func (sdbBatch *shardedDBBatch) Release() {
+	for _, batch := range sdbBatch.batches {
+		batch.Release()
 	}
 }
 

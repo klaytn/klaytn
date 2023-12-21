@@ -42,6 +42,7 @@ const (
 	CallStipend           uint64 = 2300  // Free gas given at beginning of call.                                // G_callstipend
 	Sha3Gas               uint64 = 30    // Once per SHA3 operation.                                                 // G_sha3
 	Sha3WordGas           uint64 = 6     // Once per word of the SHA3 operation's data.                              // G_sha3word
+	InitCodeWordGas       uint64 = 2     // Once per word of the init code when creating a contract.				 // G_InitCodeWord
 	SstoreResetGas        uint64 = 5000  // Once per SSTORE operation if the zeroness changes from zero.             // G_sreset
 	SstoreClearGas        uint64 = 5000  // Once per SSTORE operation if the zeroness doesn't change.                // G_sreset
 	SstoreRefundGas       uint64 = 15000 // Once per SSTORE operation if the zeroness changes to zero.               // R_sclear
@@ -116,18 +117,19 @@ const (
 	IdentityBaseGas     uint64 = 15   // Base price for a data copy operation
 	IdentityPerWordGas  uint64 = 3    // Per-work price for a data copy operation
 
-	Bn256AddGasByzantium             uint64 = 500    // Gas needed for an elliptic curve addition
-	Bn256AddGasIstanbul              uint64 = 150    // Istanbul version of gas needed for an elliptic curve addition
-	Bn256ScalarMulGasByzantium       uint64 = 40000  // Gas needed for an elliptic curve scalar multiplication
-	Bn256ScalarMulGasIstanbul        uint64 = 6000   // Istanbul version of gas needed for an elliptic curve scalar multiplication
-	Bn256PairingBaseGasByzantium     uint64 = 100000 // Base price for an elliptic curve pairing check
-	Bn256PairingBaseGasIstanbul      uint64 = 45000  // Istanbul version of base price for an elliptic curve pairing check
-	Bn256PairingPerPointGasByzantium uint64 = 80000  // Per-point price for an elliptic curve pairing check
-	Bn256PairingPerPointGasIstanbul  uint64 = 34000  // Istanbul version of per-point price for an elliptic curve pairing check
-	VMLogBaseGas                     uint64 = 100    // Base price for a VMLOG operation
-	VMLogPerByteGas                  uint64 = 20     // Per-byte price for a VMLOG operation
-	FeePayerGas                      uint64 = 300    // Gas needed for calculating the fee payer of the transaction in a smart contract.
-	ValidateSenderGas                uint64 = 5000   // Gas needed for validating the signature of a message.
+	Bn256AddGasByzantium               uint64 = 500    // Gas needed for an elliptic curve addition
+	Bn256AddGasIstanbul                uint64 = 150    // Istanbul version of gas needed for an elliptic curve addition
+	Bn256ScalarMulGasByzantium         uint64 = 40000  // Gas needed for an elliptic curve scalar multiplication
+	Bn256ScalarMulGasIstanbul          uint64 = 6000   // Istanbul version of gas needed for an elliptic curve scalar multiplication
+	Bn256PairingBaseGasByzantium       uint64 = 100000 // Base price for an elliptic curve pairing check
+	Bn256PairingBaseGasIstanbul        uint64 = 45000  // Istanbul version of base price for an elliptic curve pairing check
+	Bn256PairingPerPointGasByzantium   uint64 = 80000  // Per-point price for an elliptic curve pairing check
+	Bn256PairingPerPointGasIstanbul    uint64 = 34000  // Istanbul version of per-point price for an elliptic curve pairing check
+	BlobTxPointEvaluationPrecompileGas uint64 = 50000  // Gas price for the point evaluation precompile.
+	VMLogBaseGas                       uint64 = 100    // Base price for a VMLOG operation
+	VMLogPerByteGas                    uint64 = 20     // Per-byte price for a VMLOG operation
+	FeePayerGas                        uint64 = 300    // Gas needed for calculating the fee payer of the transaction in a smart contract.
+	ValidateSenderGas                  uint64 = 5000   // Gas needed for validating the signature of a message.
 
 	// The Refund Quotient is the cap on how much of the used gas can be refunded. Before EIP-3529,
 	// up to half the consumed gas could be refunded. Redefined as 1/5th in EIP-3529
@@ -144,7 +146,9 @@ const (
 	CallCreateDepth uint64 = 1024  // Maximum depth of call/create stack.
 	StackLimit      uint64 = 1024  // Maximum size of VM stack allowed.
 
-	MaxCodeSize = 24576 // Maximum bytecode to permit for a contract
+	// eip-3860: limit and meter initcode (Shanghai)
+	MaxCodeSize     = 24576           // Maximum bytecode to permit for a contract
+	MaxInitCodeSize = 2 * MaxCodeSize // Maximum initcode to permit in a creation transaction and create instructions
 
 	// istanbul BFT
 	BFTMaximumExtraDataSize uint64 = 65 // Maximum size extra data may be after Genesis.
@@ -184,12 +188,15 @@ const (
 )
 
 const (
-	DefaultBlockGenerationInterval    = int64(1) // unit: seconds
-	DefaultBlockGenerationTimeLimit   = 250 * time.Millisecond
-	DefaultOpcodeComputationCostLimit = uint64(100000000)
+	DefaultBlockGenerationInterval  = int64(1) // unit: seconds
+	DefaultBlockGenerationTimeLimit = 250 * time.Millisecond
 )
 
 var (
+	// Dummy Randao fields to be used in a Randao-enabled Genesis block.
+	ZeroRandomReveal = make([]byte, 96)
+	ZeroMixHash      = make([]byte, 32)
+
 	TxGasHumanReadable uint64 = 4000000000 // NOTE: HumanReadable related functions are inactivated now
 
 	// TODO-Klaytn Change the variables used in GXhash to more appropriate values for Klaytn Network
@@ -208,8 +215,6 @@ var (
 	// TODO-Klaytn-Governance Change the following variables to governance items which requires consensus of CCN
 	// Block generation interval in seconds. It should be equal or larger than 1
 	BlockGenerationInterval = DefaultBlockGenerationInterval
-	// Computation cost limit for a tx. For now, it is approximately 100 ms
-	OpcodeComputationCostLimit = DefaultOpcodeComputationCostLimit
 )
 
 // istanbul BFT

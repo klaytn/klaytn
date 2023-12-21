@@ -31,7 +31,7 @@ import (
 	"github.com/klaytn/klaytn/networks/p2p/nat"
 	"github.com/klaytn/klaytn/networks/p2p/netutil"
 	"github.com/klaytn/klaytn/networks/rpc"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 const (
@@ -161,49 +161,11 @@ func splitAndTrim(input string) []string {
 	return result
 }
 
-// checkExclusive verifies that only a single instance of the provided flags was
-// set by the user. Each flag might optionally be followed by a string type to
-// specialize it further.
-func checkExclusive(ctx *cli.Context, args ...interface{}) {
-	set := make([]string, 0, 1)
-	for i := 0; i < len(args); i++ {
-		// Make sure the next argument is a flag and skip if not set
-		flag, ok := args[i].(cli.Flag)
-		if !ok {
-			panic(fmt.Sprintf("invalid argument, not cli.Flag type: %T", args[i]))
-		}
-		// Check if next arg extends current and expand its name if so
-		name := flag.GetName()
-
-		if i+1 < len(args) {
-			switch option := args[i+1].(type) {
-			case string:
-				// Extended flag, expand the name and shift the arguments
-				if ctx.GlobalString(flag.GetName()) == option {
-					name += "=" + option
-				}
-				i++
-
-			case cli.Flag:
-			default:
-				panic(fmt.Sprintf("invalid argument, not cli.Flag or string extension: %T", args[i+1]))
-			}
-		}
-		// Mark the flag if it's set
-		if ctx.GlobalIsSet(flag.GetName()) {
-			set = append(set, "--"+name)
-		}
-	}
-	if len(set) > 1 {
-		log.Fatalf("Flags %v can't be used at the same time", strings.Join(set, ", "))
-	}
-}
-
 func setAuthorizedNodes(ctx *cli.Context, cfg *bootnodeConfig) {
-	if !ctx.GlobalIsSet(utils.AuthorizedNodesFlag.Name) {
+	if !ctx.IsSet(utils.AuthorizedNodesFlag.Name) {
 		return
 	}
-	urls := ctx.GlobalString(utils.AuthorizedNodesFlag.Name)
+	urls := ctx.String(utils.AuthorizedNodesFlag.Name)
 	splitedUrls := strings.Split(urls, ",")
 	cfg.AuthorizedNodes = make([]*discover.Node, 0, len(splitedUrls))
 	for _, url := range splitedUrls {
@@ -219,72 +181,72 @@ func setAuthorizedNodes(ctx *cli.Context, cfg *bootnodeConfig) {
 // setHTTP creates the HTTP RPC listener interface string from the set
 // command line flags, returning empty if the HTTP endpoint is disabled.
 func setHTTP(ctx *cli.Context, cfg *bootnodeConfig) {
-	if ctx.GlobalBool(utils.RPCEnabledFlag.Name) && cfg.HTTPHost == "" {
+	if ctx.Bool(utils.RPCEnabledFlag.Name) && cfg.HTTPHost == "" {
 		cfg.HTTPHost = "127.0.0.1"
-		if ctx.GlobalIsSet(utils.RPCListenAddrFlag.Name) {
-			cfg.HTTPHost = ctx.GlobalString(utils.RPCListenAddrFlag.Name)
+		if ctx.IsSet(utils.RPCListenAddrFlag.Name) {
+			cfg.HTTPHost = ctx.String(utils.RPCListenAddrFlag.Name)
 		}
 	}
 
-	if ctx.GlobalIsSet(utils.RPCPortFlag.Name) {
-		cfg.HTTPPort = ctx.GlobalInt(utils.RPCPortFlag.Name)
+	if ctx.IsSet(utils.RPCPortFlag.Name) {
+		cfg.HTTPPort = ctx.Int(utils.RPCPortFlag.Name)
 	}
-	if ctx.GlobalIsSet(utils.RPCCORSDomainFlag.Name) {
-		cfg.HTTPCors = splitAndTrim(ctx.GlobalString(utils.RPCCORSDomainFlag.Name))
+	if ctx.IsSet(utils.RPCCORSDomainFlag.Name) {
+		cfg.HTTPCors = splitAndTrim(ctx.String(utils.RPCCORSDomainFlag.Name))
 	}
-	if ctx.GlobalIsSet(utils.RPCApiFlag.Name) {
-		cfg.HTTPModules = splitAndTrim(ctx.GlobalString(utils.RPCApiFlag.Name))
+	if ctx.IsSet(utils.RPCApiFlag.Name) {
+		cfg.HTTPModules = splitAndTrim(ctx.String(utils.RPCApiFlag.Name))
 	}
-	if ctx.GlobalIsSet(utils.RPCVirtualHostsFlag.Name) {
-		cfg.HTTPVirtualHosts = splitAndTrim(ctx.GlobalString(utils.RPCVirtualHostsFlag.Name))
+	if ctx.IsSet(utils.RPCVirtualHostsFlag.Name) {
+		cfg.HTTPVirtualHosts = splitAndTrim(ctx.String(utils.RPCVirtualHostsFlag.Name))
 	}
 }
 
 // setWS creates the WebSocket RPC listener interface string from the set
 // command line flags, returning empty if the HTTP endpoint is disabled.
 func setWS(ctx *cli.Context, cfg *bootnodeConfig) {
-	if ctx.GlobalBool(utils.WSEnabledFlag.Name) && cfg.WSHost == "" {
+	if ctx.Bool(utils.WSEnabledFlag.Name) && cfg.WSHost == "" {
 		cfg.WSHost = "127.0.0.1"
-		if ctx.GlobalIsSet(utils.WSListenAddrFlag.Name) {
-			cfg.WSHost = ctx.GlobalString(utils.WSListenAddrFlag.Name)
+		if ctx.IsSet(utils.WSListenAddrFlag.Name) {
+			cfg.WSHost = ctx.String(utils.WSListenAddrFlag.Name)
 		}
 	}
 
-	if ctx.GlobalIsSet(utils.WSPortFlag.Name) {
-		cfg.WSPort = ctx.GlobalInt(utils.WSPortFlag.Name)
+	if ctx.IsSet(utils.WSPortFlag.Name) {
+		cfg.WSPort = ctx.Int(utils.WSPortFlag.Name)
 	}
-	if ctx.GlobalIsSet(utils.WSAllowedOriginsFlag.Name) {
-		cfg.WSOrigins = splitAndTrim(ctx.GlobalString(utils.WSAllowedOriginsFlag.Name))
+	if ctx.IsSet(utils.WSAllowedOriginsFlag.Name) {
+		cfg.WSOrigins = splitAndTrim(ctx.String(utils.WSAllowedOriginsFlag.Name))
 	}
-	if ctx.GlobalIsSet(utils.WSApiFlag.Name) {
-		cfg.WSModules = splitAndTrim(ctx.GlobalString(utils.WSApiFlag.Name))
+	if ctx.IsSet(utils.WSApiFlag.Name) {
+		cfg.WSModules = splitAndTrim(ctx.String(utils.WSApiFlag.Name))
 	}
 }
 
 // setIPC creates an IPC path configuration from the set command line flags,
 // returning an empty string if IPC was explicitly disabled, or the set path.
 func setIPC(ctx *cli.Context, cfg *bootnodeConfig) {
-	checkExclusive(ctx, utils.IPCDisabledFlag, utils.IPCPathFlag)
+	utils.CheckExclusive(ctx, utils.IPCDisabledFlag, utils.IPCPathFlag)
 	switch {
-	case ctx.GlobalBool(utils.IPCDisabledFlag.Name):
+	case ctx.Bool(utils.IPCDisabledFlag.Name):
 		cfg.IPCPath = ""
-	case ctx.GlobalIsSet(utils.IPCPathFlag.Name):
-		cfg.IPCPath = ctx.GlobalString(utils.IPCPathFlag.Name)
+	case ctx.IsSet(utils.IPCPathFlag.Name):
+		cfg.IPCPath = ctx.String(utils.IPCPathFlag.Name)
 	}
 }
 
 // setgRPC creates the gRPC listener interface string from the set
 // command line flags, returning empty if the gRPC endpoint is disabled.
 func setgRPC(ctx *cli.Context, cfg *bootnodeConfig) {
-	if ctx.GlobalBool(utils.GRPCEnabledFlag.Name) && cfg.GRPCHost == "" {
+	if ctx.Bool(utils.GRPCEnabledFlag.Name) && cfg.GRPCHost == "" {
 		cfg.GRPCHost = "127.0.0.1"
-		if ctx.GlobalIsSet(utils.GRPCListenAddrFlag.Name) {
-			cfg.GRPCHost = ctx.GlobalString(utils.GRPCListenAddrFlag.Name)
+		if ctx.IsSet(utils.GRPCListenAddrFlag.Name) {
+			cfg.GRPCHost = ctx.String(utils.GRPCListenAddrFlag.Name)
 		}
 	}
 
-	if ctx.GlobalIsSet(utils.GRPCPortFlag.Name) {
-		cfg.GRPCPort = ctx.GlobalInt(utils.GRPCPortFlag.Name)
+	if ctx.IsSet(utils.GRPCPortFlag.Name) {
+		cfg.GRPCPort = ctx.Int(utils.GRPCPortFlag.Name)
 	}
 }
 

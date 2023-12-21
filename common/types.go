@@ -22,34 +22,54 @@ package common
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"math/big"
 	"math/rand"
 	"reflect"
+	"sync/atomic"
+	"time"
 
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/crypto/sha3"
 )
 
 const (
-	HashLength      = 32
-	AddressLength   = 20
-	SignatureLength = 65
+	HashLength           = 32
+	ExtHashCounterLength = 7
+	ExtHashLength        = HashLength + ExtHashCounterLength
+	AddressLength        = 20
+	SignatureLength      = 65
 )
 
 var (
 	hashT    = reflect.TypeOf(Hash{})
+	extHashT = reflect.TypeOf(ExtHash{})
 	addressT = reflect.TypeOf(Address{})
 )
 
-var lastPrecompiledContractAddressHex = hexutil.MustDecode("0x00000000000000000000000000000000000003FF")
-
 var (
-	errStringLengthExceedsAddressLength = errors.New("the string length exceeds the address length (20)")
-	errEmptyString                      = errors.New("empty string")
+	lastPrecompiledContractAddressHex = hexutil.MustDecode("0x00000000000000000000000000000000000003FF")
+
+	// extHashLastCounter is the counter used to generate the counter for the ExtHash.
+	// It starts off the most significant 7 bytes of the timestamp in nanoseconds at program startup.
+	// It increments every time a new ExtHash counter is generated.
+	//                      [b1 b2 b3 b4 b5 b6 b7 b8] = UnixNano()
+	// extHashLastCounter = [00 b1 b2 b3 b4 b5 b6 b7]
+	// nextCounter        =    [b1 b2 b3 b4 b5 b6 b7]
+	extHashLastCounter = uint64(0)
+	// extHashZeroCounter signifies the trie node referred by the ExtHash is actually
+	// identified by the regular 32-byte Hash.
+	extHashZeroCounter = ExtHashCounter{0, 0, 0, 0, 0, 0, 0}
 )
+
+func init() {
+	extHashLastCounter = uint64(time.Now().UnixNano() >> 8)
+	if extHashLastCounter == 0 {
+		panic("Failed to retrieve current timestamp for ExtHashCounter")
+	}
+}
 
 // Hash represents the 32 byte Keccak256 hash of arbitrary data.
 type Hash [HashLength]byte
@@ -156,6 +176,150 @@ func (h *UnprefixedHash) UnmarshalText(input []byte) error {
 // MarshalText encodes the hash as hex.
 func (h UnprefixedHash) MarshalText() ([]byte, error) {
 	return []byte(hex.EncodeToString(h[:])), nil
+}
+
+/////////// ExtHash
+
+type (
+	// ExtHash is an extended hash composed of a 32 byte Hash and a 7 byte Counter.
+	// ExtHash is used as the reference of Merkle Patricia Trie nodes to enable
+	// the KIP-111 live state database pruning. The Hash component shall represent
+	// the merkle hash of the node and the Counter component shall differentiate
+	// nodes with the same merkle hash.
+	ExtHash        [ExtHashLength]byte
+	ExtHashCounter [ExtHashCounterLength]byte
+)
+
+// BytesToExtHash converts the byte array b to ExtHash.
+// If len(b) is 0 or 32, then b is interpreted as a Hash and zero-extended.
+// If len(b) is 39, then b is interpreted as an ExtHash.
+// Otherwise, this function panics.
+func BytesToExtHash(b []byte) (eh ExtHash) {
+	if len(b) == 0 || len(b) == HashLength {
+		return BytesToHash(b).ExtendZero()
+	} else if len(b) == ExtHashLength {
+		eh.SetBytes(b)
+		return eh
+	} else {
+		logger.Crit("Invalid ExtHash bytes", "data", hexutil.Encode(b))
+		return ExtHash{}
+	}
+}
+
+func BytesToExtHashCounter(b []byte) (counter ExtHashCounter) {
+	if len(b) == ExtHashCounterLength {
+		copy(counter[:], b)
+		return counter
+	} else {
+		logger.Crit("Invalid ExtHashCounter bytes", "data", hexutil.Encode(b))
+		return ExtHashCounter{}
+	}
+}
+
+func HexToExtHash(s string) ExtHash { return BytesToExtHash(FromHex(s)) }
+
+func HexToExtHashCounter(s string) ExtHashCounter { return BytesToExtHashCounter(FromHex(s)) }
+
+func (n ExtHashCounter) Bytes() []byte { return n[:] }
+
+func (n ExtHashCounter) Hex() string { return hexutil.Encode(n[:]) }
+
+func (eh ExtHash) Bytes() []byte { return eh[:] }
+
+func (eh ExtHash) Hex() string { return hexutil.Encode(eh[:]) }
+
+func (eh ExtHash) String() string { return eh.Hex() }
+
+func (eh ExtHash) TerminalString() string {
+	return fmt.Sprintf("%x…%x", eh[:3], eh[29:])
+}
+
+func (eh ExtHash) Format(s fmt.State, c rune) {
+	fmt.Fprintf(s, "%"+string(c), eh[:])
+}
+
+func (eh *ExtHash) UnmarshalText(input []byte) error {
+	return hexutil.UnmarshalFixedText("ExtHash", input, eh[:])
+}
+
+func (eh *ExtHash) UnmarshalJSON(input []byte) error {
+	return hexutil.UnmarshalFixedJSON(extHashT, input, eh[:])
+}
+
+func (eh ExtHash) MarshalText() ([]byte, error) {
+	return hexutil.Bytes(eh[:]).MarshalText()
+}
+
+// SetBytes sets the ExtHash to the value of b.
+// If b is larger than ExtHashLength, b will be cropped from the left.
+// If b is smaller than ExtHashLength, b will be right aligned.
+func (eh *ExtHash) SetBytes(b []byte) {
+	if len(b) > ExtHashLength {
+		b = b[len(b)-ExtHashLength:]
+	}
+
+	copy(eh[ExtHashLength-len(b):], b)
+}
+
+func (eh ExtHash) getShardIndex(shardMask int) int {
+	return eh.Unextend().getShardIndex(shardMask)
+}
+
+func EmptyExtHash(eh ExtHash) bool {
+	return EmptyHash(eh.Unextend())
+}
+
+// Unextend returns the 32 byte Hash component of an ExtHash
+func (eh ExtHash) Unextend() (h Hash) {
+	copy(h[:], eh[:HashLength])
+	return h
+}
+
+// Counter returns the 7 byte counter component of an ExtHash
+func (eh ExtHash) Counter() (counter ExtHashCounter) {
+	copy(counter[:], eh[HashLength:])
+	return counter
+}
+
+// IsZeroExtended returns true if the counter component of an ExtHash is zero.
+// A zero counter signifies that the ExtHash is actually a Hash.
+func (eh ExtHash) IsZeroExtended() bool {
+	return bytes.Equal(eh.Counter().Bytes(), extHashZeroCounter[:])
+}
+
+// ResetExtHashCounterForTest sets the extHashCounter for deterministic testing
+func ResetExtHashCounterForTest(counter uint64) {
+	atomic.StoreUint64(&extHashLastCounter, counter)
+}
+
+func nextExtHashCounter() ExtHashCounter {
+	num := atomic.AddUint64(&extHashLastCounter, 1)
+	bin := make([]byte, 8)
+	binary.BigEndian.PutUint64(bin, num)
+	return BytesToExtHashCounter(bin[1:8])
+}
+
+// extend converts Hash to ExtHash by attaching a given counter
+func (h Hash) extend(counter ExtHashCounter) (eh ExtHash) {
+	copy(eh[:HashLength], h[:HashLength])
+	copy(eh[HashLength:], counter[:])
+	return eh
+}
+
+// Extend converts Hash to ExtHash by attaching an auto-generated counter
+// Auto-generated counters must be different every time
+func (h Hash) Extend() ExtHash {
+	counter := nextExtHashCounter()
+	eh := h.extend(counter)
+	// logger.Trace("extend hash", "exthash", eh.Hex())
+	return eh
+}
+
+// ExtendZero converts Hash to ExtHash by attaching the zero counter.
+// A zero counter is attached to a 32-byte Hash of Trie nodes,
+// later to be unextended back to a Hash.
+func (h Hash) ExtendZero() ExtHash {
+	return h.extend(extHashZeroCounter)
 }
 
 /////////// Address

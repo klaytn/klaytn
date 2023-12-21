@@ -21,7 +21,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 func TestFlagGroups_Duplication(t *testing.T) {
@@ -30,10 +30,10 @@ func TestFlagGroups_Duplication(t *testing.T) {
 
 	for _, group := range testGroups {
 		for _, flag := range group.Flags {
-			if exist[flag.GetName()] == true {
-				t.Error("a flag belong to more than one group", "flag", flag.GetName())
+			if exist[flag.Names()[0]] == true {
+				t.Error("a flag belong to more than one group", "flag", flag.Names()[0])
 			}
-			exist[flag.GetName()] = true
+			exist[flag.Names()[0]] = true
 		}
 	}
 }

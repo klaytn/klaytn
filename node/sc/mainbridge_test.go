@@ -78,10 +78,16 @@ func testBlockChain(t *testing.T) *blockchain.BlockChain {
 	}, db)
 
 	prvKey, _ := crypto.GenerateKey()
-	engine := backend.New(common.Address{}, istanbul.DefaultConfig, prvKey, db, gov, common.CONSENSUSNODE)
+	engine := backend.New(&backend.BackendOpts{
+		IstanbulConfig: istanbul.DefaultConfig,
+		Rewardbase:     common.Address{},
+		PrivateKey:     prvKey,
+		DB:             db,
+		Governance:     gov,
+		NodeType:       common.CONSENSUSNODE,
+	})
 
-	var genesis *blockchain.Genesis
-	genesis = blockchain.DefaultGenesisBlock()
+	genesis := blockchain.DefaultGenesisBlock()
 	genesis.BlockScore = big.NewInt(1)
 	genesis.Config = params.CypressChainConfig.Copy()
 	genesis.Config.Governance = params.GetDefaultGovernanceConfig()

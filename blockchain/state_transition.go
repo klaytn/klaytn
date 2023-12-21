@@ -22,6 +22,7 @@ package blockchain
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -34,10 +35,6 @@ import (
 var (
 	errInsufficientBalanceForGas         = errors.New("insufficient balance of the sender to pay for gas")
 	errInsufficientBalanceForGasFeePayer = errors.New("insufficient balance of the fee payer to pay for gas")
-	errNotProgramAccount                 = errors.New("not a program account")
-	errAccountAlreadyExists              = errors.New("account already exists")
-	errMsgToNil                          = errors.New("msg.To() is nil")
-	errInvalidCodeFormat                 = errors.New("smart contract code format is invalid")
 )
 
 /*
@@ -51,8 +48,10 @@ The state transitioning model does all the necessary work to work out a valid ne
 3) Create a new state object if the recipient is \0*32
 4) Value transfer
 == If contract creation ==
-  4a) Attempt to run transaction data
-  4b) If valid, use result as code for the new state object
+
+	4a) Attempt to run transaction data
+	4b) If valid, use result as code for the new state object
+
 == end ==
 5) Run Script section
 6) Derive new state root
@@ -89,7 +88,6 @@ type Message interface {
 	// 70% will be paid by the sender.
 	FeeRatio() (types.FeeRatio, bool)
 
-	// FromFrontier() (common.Address, error)
 	To() *common.Address
 
 	Hash() common.Hash
@@ -121,24 +119,77 @@ type Message interface {
 
 	// Execute performs execution of the transaction according to the transaction type.
 	Execute(vm types.VM, stateDB types.StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) ([]byte, uint64, error)
+
+	AccessList() types.AccessList
 }
 
-// TODO-Klaytn Later we can merge Err and Status into one uniform error.
-//         This might require changing overall error handling mechanism in Klaytn.
-// Klaytn error type
-// - Status: Indicate status of transaction after execution.
-//           This value will be stored in Receipt if Receipt is available.
-//           Please see getReceiptStatusFromErrTxFailed() how this value is calculated.
-type kerror struct {
-	ErrTxInvalid error
-	Status       uint
+// ExecutionResult includes all output after executing given evm
+// message no matter the execution itself is successful or not.
+type ExecutionResult struct {
+	// Total used gas but include the refunded gas
+	UsedGas uint64
+
+	// Indicate status of transaction after execution. If the execution succeed, the status is 1.
+	// If it fails, its status value indicates any error encountered during the execution (listed in blockchain/vm/errors.go)
+	// This value will be stored in Receipt if Receipt is available.
+	// Please see getReceiptStatusFromErrTxFailed() how the status code is derived.
+	VmExecutionStatus uint
+
+	// Returned data from evm(function result or data supplied with revert opcode)
+	ReturnData []byte
+}
+
+// Unwrap returns the internal evm error which allows us for further
+// analysis outside.
+func (result *ExecutionResult) Unwrap() error {
+	if !result.Failed() {
+		return nil
+	}
+	errTxFailed, ok := receiptstatus2errTxFailed[result.VmExecutionStatus]
+	if !ok {
+		return ErrInvalidReceiptStatus
+	}
+	return errTxFailed
+}
+
+// Failed returns the indicator whether the execution is successful or not
+func (result *ExecutionResult) Failed() bool {
+	return result.VmExecutionStatus != types.ReceiptStatusSuccessful
+}
+
+// Return is a helper function to help caller distinguish between revert reason
+// and function return. Return returns the data after execution if no error occurs.
+func (result *ExecutionResult) Return() []byte {
+	if result.Failed() {
+		return nil
+	}
+	return common.CopyBytes(result.ReturnData)
+}
+
+// Revert returns the concrete revert reason if the execution is aborted by `REVERT`
+// opcode. Note the reason can be nil if no data supplied with revert opcode.
+func (result *ExecutionResult) Revert() []byte {
+	if result.VmExecutionStatus != types.ReceiptStatusErrExecutionReverted {
+		return nil
+	}
+	return common.CopyBytes(result.ReturnData)
+}
+
+// getReceiptStatusFromErrTxFailed returns corresponding ReceiptStatus for VM error.
+func getReceiptStatusFromErrTxFailed(errTxFailed error) (status uint) {
+	status, ok := errTxFailed2receiptstatus[errTxFailed]
+	if !ok {
+		// No corresponding receiptStatus available for errTxFailed
+		status = types.ReceiptStatusErrDefault
+	}
+	return
 }
 
 // NewStateTransition initialises and returns a new state transition object.
 func NewStateTransition(evm *vm.EVM, msg Message) *StateTransition {
-	// before magma hardfork, effectiveGasPrice is  GasPrice of tx
+	// before magma hardfork, effectiveGasPrice is GasPrice of tx
 	// after magma hardfork, effectiveGasPrice is BaseFee
-	effectiveGasPrice := evm.Context.GasPrice
+	effectiveGasPrice := evm.GasPrice
 
 	return &StateTransition{
 		evm:       evm,
@@ -159,7 +210,7 @@ func NewStateTransition(evm *vm.EVM, msg Message) *StateTransition {
 // the gas used (which includes gas refunds) and an error if it failed. An error always
 // indicates a core error meaning that the message would always fail for that particular
 // state and would never be accepted within a block.
-func ApplyMessage(evm *vm.EVM, msg Message) ([]byte, uint64, kerror) {
+func ApplyMessage(evm *vm.EVM, msg Message) (*ExecutionResult, error) {
 	return NewStateTransition(evm, msg).TransitionDb()
 }
 
@@ -169,15 +220,6 @@ func (st *StateTransition) to() common.Address {
 		return common.Address{}
 	}
 	return *st.msg.To()
-}
-
-func (st *StateTransition) useGas(amount uint64) error {
-	if st.gas < amount {
-		return kerrors.ErrOutOfGas
-	}
-	st.gas -= amount
-
-	return nil
 }
 
 func (st *StateTransition) buyGas() error {
@@ -226,6 +268,13 @@ func (st *StateTransition) buyGas() error {
 }
 
 func (st *StateTransition) preCheck() error {
+	// when prefetching, skip the nonce and balance check logic.
+	// however, st.gas still needs to be set whether it's prefetching or not.
+	if st.evm.IsPrefetching() {
+		st.gas = st.msg.Gas()
+		return nil
+	}
+
 	// Make sure this transaction's nonce is correct.
 	if st.msg.CheckNonce() {
 		nonce := st.state.GetNonce(st.msg.ValidatedSender())
@@ -243,50 +292,78 @@ func (st *StateTransition) preCheck() error {
 }
 
 // TransitionDb will transition the state by applying the current message and
-// returning the result including the used gas. It returns an error if failed.
-// An error indicates a consensus issue.
-func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerror) {
-	if st.evm.IsPrefetching() {
-		st.gas = st.msg.Gas()
-	} else {
-		if kerr.ErrTxInvalid = st.preCheck(); kerr.ErrTxInvalid != nil {
-			return
-		}
+// returning the evm execution result with following fields.
+//
+//   - used gas:
+//     total gas used (including gas being refunded)
+//   - returndata:
+//     the returned data from evm
+//   - vm execution status:
+//     indicates the execution result of a transaction. if the execution succeed, the status is 1.
+//     if it fails, the status indicates various **EVM** errors which abort the execution.
+//     e.g. ReceiptStatusErrOutOfGas, ReceiptStatusErrExecutionReverted
+//
+// However if any consensus issue encountered, return the error directly with
+// nil evm execution result.
+func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
+	// First check this message satisfies all consensus rules before
+	// applying the message. The rules include these clauses
+	//
+	// 1. the nonce of the message caller is correct
+	// 2. caller has enough balance to cover transaction fee(gaslimit * gasprice)
+	// 3. the amount of gas required is available in the block
+	// 4. the purchased gas is enough to cover intrinsic usage
+	// 5. there is no overflow when calculating intrinsic gas
+	// 6. caller has enough balance to cover asset transfer for **topmost** call
+
+	// Check clauses 1-3, buy gas if everything is correct
+	if err := st.preCheck(); err != nil {
+		return nil, err
 	}
 
 	msg := st.msg
 
-	// Pay intrinsic gas.
-	if kerr.ErrTxInvalid = st.useGas(msg.ValidatedIntrinsicGas()); kerr.ErrTxInvalid != nil {
-		kerr.Status = getReceiptStatusFromErrTxFailed(nil)
-		return nil, 0, kerr
+	if st.evm.Config.Debug {
+		st.evm.Config.Tracer.CaptureTxStart(st.initialGas)
+		defer func() {
+			st.evm.Config.Tracer.CaptureTxEnd(st.gas)
+		}()
+	}
+
+	// Check clauses 4-5, subtract intrinsic gas if everything is correct
+	amount := msg.ValidatedIntrinsicGas()
+	if st.gas < amount {
+		return nil, ErrIntrinsicGas
+	}
+	st.gas -= amount
+
+	// Check clause 6
+	if msg.Value().Sign() > 0 && !st.evm.Context.CanTransfer(st.state, msg.ValidatedSender(), msg.Value()) {
+		return nil, vm.ErrInsufficientBalance
 	}
 
 	rules := st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber)
-	if rules.IsKore {
-		st.state.PrepareAccessList(msg.ValidatedSender(), msg.ValidatedFeePayer(), msg.To(), vm.ActivePrecompiles(rules))
+
+	// Execute the preparatory steps for state transition which includes:
+	// - prepare accessList(post-berlin)
+	// - reset transient storage(eip 1153)
+	st.state.Prepare(rules, msg.ValidatedSender(), msg.ValidatedFeePayer(), st.evm.Context.Coinbase, msg.To(), vm.ActivePrecompiles(rules), msg.AccessList())
+
+	// Check whether the init code size has been exceeded.
+	if rules.IsShanghai && msg.To() == nil && len(st.data) > params.MaxInitCodeSize {
+		return nil, fmt.Errorf("%w: code size %v limit %v", ErrMaxInitCodeSizeExceeded, len(st.data), params.MaxInitCodeSize)
 	}
-	// vm errors do not effect consensus and are therefor
-	// not assigned to err, except for insufficient balance
-	// error and total time limit reached error.
-	var errTxFailed error
 
-	ret, st.gas, errTxFailed = msg.Execute(st.evm, st.state, st.evm.BlockNumber.Uint64(), st.gas, st.value)
+	var (
+		ret   []byte
+		vmerr error
+	)
+	ret, st.gas, vmerr = msg.Execute(st.evm, st.state, st.evm.Context.BlockNumber.Uint64(), st.gas, st.value)
 
-	if errTxFailed != nil {
-		logger.Debug("VM returned with error", "err", errTxFailed, "txHash", st.msg.Hash().String())
-		// The only possible consensus-error would be if there wasn't
-		// sufficient balance to make the transfer happen. The first
-		// balance transfer may never fail.
-		// Another possible errTxFailed could be a time-limit error that happens
-		// when the EVM is still running while the block proposer's total
-		// execution time of txs for a candidate block reached the predefined
-		// limit.
-		if errTxFailed == vm.ErrInsufficientBalance || errTxFailed == vm.ErrTotalTimeLimitReached {
-			kerr.ErrTxInvalid = errTxFailed
-			kerr.Status = getReceiptStatusFromErrTxFailed(nil)
-			return nil, 0, kerr
-		}
+	// time-limit error is not a vm error. This error is returned when the EVM is still running while the
+	// block proposer's total execution time of txs for a candidate block reached the predefined limit.
+	if vmerr == vm.ErrTotalTimeLimitReached {
+		return nil, vm.ErrTotalTimeLimitReached
 	}
 
 	if rules.IsKore {
@@ -299,13 +376,21 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 
 	// Defer transferring Tx fee when DeferredTxFee is true
 	if st.evm.ChainConfig().Governance == nil || !st.evm.ChainConfig().Governance.DeferredTxFee() {
-		effectiveGasPrice := msg.EffectiveGasPrice(nil)
-		st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), effectiveGasPrice))
+		if rules.IsMagma {
+			effectiveGasPrice := st.gasPrice
+			txFee := getBurnAmountMagma(new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), effectiveGasPrice))
+			st.state.AddBalance(st.evm.Context.Rewardbase, txFee)
+		} else {
+			effectiveGasPrice := msg.EffectiveGasPrice(nil)
+			st.state.AddBalance(st.evm.Context.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), effectiveGasPrice))
+		}
 	}
 
-	kerr.ErrTxInvalid = nil
-	kerr.Status = getReceiptStatusFromErrTxFailed(errTxFailed)
-	return ret, st.gasUsed(), kerr
+	return &ExecutionResult{
+		UsedGas:           st.gasUsed(),
+		VmExecutionStatus: getReceiptStatusFromErrTxFailed(vmerr), // only vm error reach here.
+		ReturnData:        ret,
+	}, nil
 }
 
 var errTxFailed2receiptstatus = map[error]uint{
@@ -373,28 +458,6 @@ var receiptstatus2errTxFailed = map[uint]error{
 	types.ReceiptStatusErrInvalidCodeFormat:                    kerrors.ErrInvalidCodeFormat,
 }
 
-// getReceiptStatusFromErrTxFailed returns corresponding ReceiptStatus for VM error.
-func getReceiptStatusFromErrTxFailed(errTxFailed error) (status uint) {
-	// TODO-Klaytn Add more VM error to ReceiptStatus
-	status, ok := errTxFailed2receiptstatus[errTxFailed]
-	if !ok {
-		// No corresponding receiptStatus available for errTxFailed
-		status = types.ReceiptStatusErrDefault
-	}
-
-	return
-}
-
-// GetVMerrFromReceiptStatus returns VM error according to status of receipt.
-func GetVMerrFromReceiptStatus(status uint) (errTxFailed error) {
-	errTxFailed, ok := receiptstatus2errTxFailed[status]
-	if !ok {
-		return ErrInvalidReceiptStatus
-	}
-
-	return
-}
-
 func (st *StateTransition) refundGas(refundQuotient uint64) {
 	// Apply refund counter, capped a refund quotient
 	refund := st.gasUsed() / refundQuotient
@@ -423,4 +486,8 @@ func (st *StateTransition) refundGas(refundQuotient uint64) {
 // gasUsed returns the amount of gas used up by the state transition.
 func (st *StateTransition) gasUsed() uint64 {
 	return st.initialGas - st.gas
+}
+
+func getBurnAmountMagma(fee *big.Int) *big.Int {
+	return new(big.Int).Div(fee, big.NewInt(2))
 }

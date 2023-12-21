@@ -24,6 +24,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/holiman/uint256"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/params"
@@ -55,18 +56,19 @@ func (*dummyStatedb) GetRefund() uint64 { return 1337 }
 
 func TestStoreCapture(t *testing.T) {
 	var (
-		env      = NewEVM(Context{}, &dummyStatedb{}, params.TestChainConfig, &Config{})
+		env      = NewEVM(BlockContext{}, TxContext{}, &dummyStatedb{}, params.TestChainConfig, &Config{})
 		logger   = NewStructLogger(nil)
 		mem      = NewMemory()
 		stack    = newstack()
 		contract = NewContract(&dummyContractRef{}, &dummyContractRef{}, new(big.Int), 0)
 	)
-	stack.push(big.NewInt(1))
-	stack.push(big.NewInt(0))
+
+	stack.push(uint256.NewInt(1))
+	stack.push(uint256.NewInt(0))
 
 	var index common.Hash
 
-	logger.CaptureState(env, 0, SSTORE, 0, 0, mem, stack, contract, 0, nil)
+	logger.CaptureState(env, 0, SSTORE, 0, 0, &ScopeContext{Memory: mem, Stack: stack, Contract: contract}, 0, nil)
 	if len(logger.changedValues[contract.Address()]) == 0 {
 		t.Fatalf("expected exactly 1 changed value on address %x, got %d", contract.Address(), len(logger.changedValues[contract.Address()]))
 	}

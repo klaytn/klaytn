@@ -23,13 +23,13 @@ package p2p
 import (
 	"errors"
 	"fmt"
-	"math"
 	"math/rand"
 	"net"
 	"reflect"
 	"testing"
 	"time"
 
+	"github.com/klaytn/klaytn/common/math"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -51,9 +51,15 @@ var discard = Protocol{
 }
 
 func testPeer(protos []Protocol) (func(), *conn, *Peer, <-chan error) {
-	fd1, fd2 := net.Pipe()
-	c1 := &conn{fd: fd1, transport: newTestTransport(randomID(), fd1, false)}
-	c2 := &conn{fd: fd2, transport: newTestTransport(randomID(), fd2, false)}
+	var (
+		fd1, fd2   = net.Pipe()
+		id1, id2   = randomID(), randomID()
+		pubkey1, _ = id1.Pubkey()
+		t1         = newTestTransport(id2, fd1, nil, true)
+		t2         = newTestTransport(id1, fd2, pubkey1, true)
+	)
+	c1 := &conn{fd: fd1, transport: t1}
+	c2 := &conn{fd: fd2, transport: t2}
 	for _, p := range protos {
 		c1.caps = append(c1.caps, p.cap())
 		c2.caps = append(c2.caps, p.cap())
@@ -75,9 +81,15 @@ func testPeerWithRWs(protos []Protocol, channelSize int) (func(), []*conn, *Peer
 	peerSideConn := make([]*conn, 0, channelSize)
 
 	for i := 0; i < channelSize; i++ {
-		fd1, fd2 := net.Pipe()
-		c1 := &conn{fd: fd1, transport: newTestTransport(randomID(), fd1, true)}
-		c2 := &conn{fd: fd2, transport: newTestTransport(randomID(), fd2, true)}
+		var (
+			fd1, fd2   = net.Pipe()
+			id1, id2   = randomID(), randomID()
+			pubkey1, _ = id1.Pubkey()
+			t1         = newTestTransport(id2, fd1, nil, true)
+			t2         = newTestTransport(id1, fd2, pubkey1, true)
+		)
+		c1 := &conn{fd: fd1, transport: t1}
+		c2 := &conn{fd: fd2, transport: t2}
 		for _, p := range protos {
 			c1.caps = append(c1.caps, p.cap())
 			c2.caps = append(c2.caps, p.cap())
@@ -170,15 +182,24 @@ func TestPeerPing(t *testing.T) {
 }
 
 func TestPeerDisconnect(t *testing.T) {
-	testData := []DiscReason{DiscQuitting, math.MaxUint}
-	for _, tc := range testData {
+	for _, tc := range []struct {
+		dc    DiscReason
+		error string
+	}{
+		{DiscQuitting, "client quitting"},
+		{DiscSubprotocolError, "subprotocol error"},
+		{17, "unknown disconnect reason 17"},
+		{18, "unknown disconnect reason 18"},
+		{math.MaxUint8, "unknown disconnect reason 255"},
+	} {
 		closer, rw, _, disc := testPeer(nil)
-		if err := SendItems(rw, discMsg, tc); err != nil {
+		if err := SendItems(rw, discMsg, tc.dc); err != nil {
 			t.Fatal(err)
 		}
 		select {
 		case reason := <-disc:
-			assert.Equal(t, tc.Error(), reason.Error())
+			assert.Equal(t, tc.dc, reason)
+			assert.Equal(t, tc.error, reason.Error())
 		case <-time.After(500 * time.Millisecond):
 			t.Error("peer did not return")
 		}

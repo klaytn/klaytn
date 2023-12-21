@@ -78,7 +78,7 @@
     ],
     "from": "0x4cefb5df9a128512c8c5cdfab717ff1dcd10dc7d",
     "gas": "0x65e",
-    "gasUsed": "0x65e",
+    "gasUsed": "0x59f6",
     "input": "0x4d536fe3",
     "output": "0x",
     "to": "0xa3e50f7b8f8df9f8a2044929b4c85dbe05331574",

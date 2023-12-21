@@ -504,6 +504,14 @@ func (db *levelDB) updateLevelStats(s *leveldb.DBStats, lv int) {
 	db.levelDurationsGauge[lv].Update(int64(s.LevelDurations[lv]))
 }
 
+func (db *levelDB) GetProperty(name string) string {
+	return db.GetProperty(name)
+}
+
+func (db *levelDB) TryCatchUpWithPrimary() error {
+	return nil
+}
+
 func (db *levelDB) NewBatch() Batch {
 	return &ldbBatch{b: new(leveldb.Batch), ldb: db}
 }
@@ -554,6 +562,10 @@ func (b *ldbBatch) ValueSize() int {
 func (b *ldbBatch) Reset() {
 	b.b.Reset()
 	b.size = 0
+}
+
+func (b *ldbBatch) Release() {
+	// nothing to do with ldbBatch
 }
 
 // bytesPrefixRange returns key range that satisfy

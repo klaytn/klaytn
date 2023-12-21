@@ -36,8 +36,8 @@ import (
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn"
 	"github.com/klaytn/klaytn/params"
-	"gopkg.in/urfave/cli.v1"
-	"gopkg.in/urfave/cli.v1/altsrc"
+	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v2/altsrc"
 )
 
 // runKlaytnNode is the main entry point into the system if no special subcommand is ran.
@@ -140,7 +140,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 
 	passwords := utils.MakePasswordList(ctx)
-	unlocks := strings.Split(ctx.GlobalString(utils.UnlockedAccountFlag.Name), ",")
+	unlocks := strings.Split(ctx.String(utils.UnlockedAccountFlag.Name), ",")
 	for i, account := range unlocks {
 		if trimmed := strings.TrimSpace(account); trimmed != "" {
 			UnlockAccount(ctx, ks, trimmed, i, passwords)
@@ -187,44 +187,10 @@ func CheckCommands(ctx *cli.Context) error {
 	return nil
 }
 
-func contains(list []cli.Flag, item cli.Flag) bool {
-	for _, flag := range list {
-		if flag.GetName() == item.GetName() {
-			return true
-		}
-	}
-	return false
-}
-
-func union(list1, list2 []cli.Flag) []cli.Flag {
-	for _, item := range list2 {
-		if !contains(list1, item) {
-			list1 = append(list1, item)
-		}
-	}
-	return list1
-}
-
-func allNodeFlags() []cli.Flag {
-	nodeFlags := []cli.Flag{}
-	nodeFlags = append(nodeFlags, CommonNodeFlags...)
-	nodeFlags = append(nodeFlags, CommonRPCFlags...)
-	nodeFlags = append(nodeFlags, ConsoleFlags...)
-	nodeFlags = append(nodeFlags, debug.Flags...)
-	nodeFlags = union(nodeFlags, KCNFlags)
-	nodeFlags = union(nodeFlags, KPNFlags)
-	nodeFlags = union(nodeFlags, KENFlags)
-	nodeFlags = union(nodeFlags, KSCNFlags)
-	nodeFlags = union(nodeFlags, KSPNFlags)
-	nodeFlags = union(nodeFlags, KSENFlags)
-	return nodeFlags
-}
-
-var confFile = "conf" // flag option for yaml file name
-
 func FlagsFromYaml(ctx *cli.Context) error {
+	confFile := "conf" // flag option for yaml file name
 	if ctx.String(confFile) != "" {
-		if err := altsrc.InitInputSourceWithContext(allNodeFlags(), altsrc.NewYamlSourceFromFlagFunc(confFile))(ctx); err != nil {
+		if err := altsrc.InitInputSourceWithContext(utils.AllNodeFlags(), altsrc.NewYamlSourceFromFlagFunc(confFile))(ctx); err != nil {
 			return err
 		}
 	}
@@ -232,11 +198,10 @@ func FlagsFromYaml(ctx *cli.Context) error {
 }
 
 func BeforeRunNode(ctx *cli.Context) error {
-	// TODO-klaytn - yaml bug: doesn't affact global flag whther the flag is set or not
-	// You can enable this code after the bug fix
-	// if err := FlagsFromYaml(ctx); err != nil {
-	// 	return err
-	// }
+	if err := FlagsFromYaml(ctx); err != nil {
+		return err
+	}
+	MigrateGlobalFlags(ctx)
 	if err := CheckCommands(ctx); err != nil {
 		return err
 	}
@@ -251,19 +216,74 @@ func BeforeRunNode(ctx *cli.Context) error {
 	return nil
 }
 
-// SetupNetwork configures the system for either the main net or some test network.
+// setupNetwork configures the system for either the main net or some test network.
 func setupNetwork(ctx *cli.Context) {
-	// TODO(fjl): move target gas limit into config
-	params.TargetGasLimit = ctx.GlobalUint64(utils.TargetGasLimitFlag.Name)
+	params.TargetGasLimit = ctx.Uint64(utils.TargetGasLimitFlag.Name)
 }
 
 func BeforeRunBootnode(ctx *cli.Context) error {
 	if err := FlagsFromYaml(ctx); err != nil {
 		return err
 	}
+	MigrateGlobalFlags(ctx)
 	if err := debug.Setup(ctx); err != nil {
 		return err
 	}
 	metricutils.StartMetricCollectionAndExport(ctx)
 	return nil
+}
+
+var migrationApplied = map[*cli.Command]struct{}{}
+
+// migrateGlobalFlags makes all global flag values available in the
+// context. This should be called as early as possible in app.Before.
+//
+// Example:
+//
+//    ken account new --keystore /tmp/mykeystore --lightkdf
+//
+// is equivalent after calling this method with:
+//
+//    ken --keystore /tmp/mykeystore --lightkdf account new
+//
+// i.e. in the subcommand Action function of 'account new', ctx.Bool("lightkdf)
+// will return true even if --lightkdf is set as a global option.
+//
+// This function may become unnecessary when https://github.com/urfave/cli/pull/1245 is merged.
+func MigrateGlobalFlags(ctx *cli.Context) {
+	var iterate func(cs []*cli.Command, fn func(*cli.Command))
+	iterate = func(cs []*cli.Command, fn func(*cli.Command)) {
+		for _, cmd := range cs {
+			if _, ok := migrationApplied[cmd]; ok {
+				continue
+			}
+			migrationApplied[cmd] = struct{}{}
+			fn(cmd)
+			iterate(cmd.Subcommands, fn)
+		}
+	}
+
+	// This iterates over all commands and wraps their action function.
+	iterate(ctx.App.Commands, func(cmd *cli.Command) {
+		if cmd.Action == nil {
+			return
+		}
+
+		action := cmd.Action
+		cmd.Action = func(ctx *cli.Context) error {
+			doMigrateFlags(ctx)
+			return action(ctx)
+		}
+	})
+}
+
+func doMigrateFlags(ctx *cli.Context) {
+	for _, name := range ctx.FlagNames() {
+		for _, parent := range ctx.Lineage()[1:] {
+			if parent.IsSet(name) {
+				ctx.Set(name, parent.String(name))
+				break
+			}
+		}
+	}
 }

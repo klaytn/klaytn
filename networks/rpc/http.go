@@ -28,7 +28,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime"
 	"net"
 	"net/http"
@@ -48,8 +47,10 @@ const (
 )
 
 // https://www.jsonrpc.org/historical/json-rpc-over-http.html#id13
-var acceptedContentTypes = []string{contentType, "application/json-rpc", "application/jsonrequest"}
-var nullAddr, _ = net.ResolveTCPAddr("tcp", "127.0.0.1:0")
+var (
+	acceptedContentTypes = []string{contentType, "application/json-rpc", "application/jsonrequest"}
+	nullAddr, _          = net.ResolveTCPAddr("tcp", "127.0.0.1:0")
+)
 
 type httpConn struct {
 	client    *http.Client
@@ -202,7 +203,7 @@ func (hc *httpConn) doRequest(ctx context.Context, msg interface{}) (io.ReadClos
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequestWithContext(ctx, "POST", hc.url, ioutil.NopCloser(bytes.NewReader(body)))
+	req, err := http.NewRequestWithContext(ctx, "POST", hc.url, io.NopCloser(bytes.NewReader(body)))
 	if err != nil {
 		return nil, err
 	}
@@ -269,6 +270,20 @@ func NewHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, srv ht
 	// Wrap the CORS-handler within a host-handler
 	handler := newCorsHandler(srv, cors)
 	handler = newVHostHandler(vhosts, handler)
+	handler = http.TimeoutHandler(handler, timeouts.ExecutionTimeout, "timeout")
+
+	// If os environment variables for NewRelic exist, register the NewRelicHTTPHandler
+	nrApp := newNewRelicApp()
+	if nrApp != nil {
+		handler = newNewRelicHTTPHandler(nrApp, handler)
+	}
+
+	// If os environment variables for Datadog exist, register the NewDatadogHTTPHandler
+	ddTracer := newDatadogTracer()
+	if ddTracer != nil {
+		handler = newDatadogHTTPHandler(ddTracer, handler)
+	}
+
 	return &http.Server{
 		Handler:      handler,
 		ReadTimeout:  timeouts.ReadTimeout,
@@ -277,6 +292,9 @@ func NewHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, srv ht
 	}
 }
 
+// NewFastHTTPServer creates a new HTTP RPC server around an API provider based on fasthttp library.
+//
+// Deprecated: fasthttp server type endpoint is no longer supported
 func NewFastHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, srv *Server) *fasthttp.Server {
 	timeouts = sanitizeTimeouts(timeouts)
 	if len(cors) == 0 {
@@ -290,7 +308,6 @@ func NewFastHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, sr
 					IdleTimeout:        timeouts.IdleTimeout,
 					MaxRequestBodySize: common.MaxRequestContentLength,
 					ReduceMemoryUsage:  true,
-					StreamRequestBody:  true,
 				}
 			}
 		}
@@ -323,7 +340,6 @@ func NewFastHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, sr
 		IdleTimeout:        timeouts.IdleTimeout,
 		MaxRequestBodySize: common.MaxRequestContentLength,
 		ReduceMemoryUsage:  true,
-		StreamRequestBody:  true,
 	}
 }
 

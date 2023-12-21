@@ -35,6 +35,8 @@ const (
 	GovernanceIdxCacheLimit = 1000
 	// The prefix for governance cache
 	GovernanceCachePrefix = "governance"
+
+	CheckpointInterval = 1024
 )
 
 const (
@@ -100,7 +102,7 @@ var (
 	DefaultRatio                     = "100/0/0"
 	DefaultKip82Ratio                = "20/80"
 	DefaultUseGiniCoeff              = false
-	DefaultDefferedTxFee             = false
+	DefaultDeferredTxFee             = false
 	DefaultMinimumStake              = big.NewInt(2000000)
 	DefaultStakeUpdateInterval       = uint64(86400) // 1 day
 	DefaultProposerRefreshInterval   = uint64(3600)  // 1 hour
@@ -161,4 +163,8 @@ func SetProposerUpdateInterval(num uint64) {
 func ProposerUpdateInterval() uint64 {
 	ret := atomic.LoadUint64(&proposerUpdateInterval)
 	return ret
+}
+
+func IsCheckpointInterval(blockNum uint64) bool {
+	return blockNum != 0 && blockNum%CheckpointInterval == 0
 }

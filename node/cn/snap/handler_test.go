@@ -58,7 +58,7 @@ type testKV struct {
 func NewTestSnapshotReader(items []*testKV) (*testSnapshotReader, common.Hash) {
 	memdb := database.NewMemoryDBManager()
 	db := state.NewDatabase(memdb)
-	trie, _ := statedb.NewTrie(common.Hash{}, db.TrieDB())
+	trie, _ := statedb.NewTrie(common.Hash{}, db.TrieDB(), nil)
 	for _, kv := range items {
 		trie.Update(kv.k, kv.v)
 	}

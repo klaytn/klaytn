@@ -16,6 +16,14 @@
 
 package database
 
+// HasStakingInfo returns existence of staking information of the given block number from database.
+func (dbm *databaseManager) HasStakingInfo(blockNum uint64) (bool, error) {
+	db := dbm.getDatabase(MiscDB)
+
+	key := makeKey(stakingInfoPrefix, blockNum)
+	return db.Has(key)
+}
+
 // ReadStakingInfo reads staking information from database. It returns
 // (StakingInfo, nil) if it succeeds to read and (nil, error) if it fails.
 // StakingInfo is stored in MiscDB.
@@ -45,4 +53,13 @@ func (dbm *databaseManager) WriteStakingInfo(blockNum uint64, stakingInfo []byte
 
 	key := makeKey(stakingInfoPrefix, blockNum)
 	return db.Put(key, stakingInfo)
+}
+
+func (dbm *databaseManager) DeleteStakingInfo(blockNum uint64) {
+	db := dbm.getDatabase(MiscDB)
+
+	key := makeKey(stakingInfoPrefix, blockNum)
+	if err := db.Delete(key); err != nil {
+		logger.Crit("Failed to delete staking info", "err", err)
+	}
 }

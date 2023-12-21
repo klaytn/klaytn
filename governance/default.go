@@ -130,20 +130,20 @@ var (
 
 var logger = log.NewModuleLogger(log.Governance)
 
-// Governance item set
+// GovernanceSet contains an item set for governance
 type GovernanceSet struct {
 	items map[string]interface{}
 	mu    *sync.RWMutex
 }
 
-// Governance represents vote information given from istanbul.vote()
+// GovernanceVote represents vote information given from istanbul.vote()
 type GovernanceVote struct {
 	Validator common.Address `json:"validator"`
 	Key       string         `json:"key"`
 	Value     interface{}    `json:"value"`
 }
 
-// GovernanceTallies represents a tally for each governance item
+// GovernanceTallyItem represents a tally for each governance item
 type GovernanceTallyItem struct {
 	Key   string      `json:"key"`
 	Value interface{} `json:"value"`
@@ -154,6 +154,7 @@ type GovernanceTallyList struct {
 	items []GovernanceTallyItem
 	mu    *sync.RWMutex
 }
+
 type GovernanceVotes struct {
 	items []GovernanceVote
 	mu    *sync.RWMutex
@@ -177,6 +178,7 @@ type txPool interface {
 }
 
 type Governance struct {
+	ChainConfig *params.ChainConfig // Only exists to keep DB backward compatibility in WriteGovernanceState()
 	// Map used to keep multiple types of votes
 	voteMap VoteMap
 
@@ -417,8 +419,9 @@ func (gs *GovernanceSet) Merge(change map[string]interface{}) {
 }
 
 // NewGovernance creates Governance with the given configuration.
-func NewGovernance(dbm database.DBManager) *Governance {
+func NewGovernance(chainConfig *params.ChainConfig, dbm database.DBManager) *Governance {
 	return &Governance{
+		ChainConfig:              chainConfig,
 		voteMap:                  NewVoteMap(),
 		db:                       dbm,
 		itemCache:                newGovernanceCache(),
@@ -436,7 +439,7 @@ func NewGovernance(dbm database.DBManager) *Governance {
 // NewGovernanceInitialize creates Governance with the given configuration and read governance state from DB.
 // If any items are not stored in DB, it stores governance items of the genesis block to DB.
 func NewGovernanceInitialize(chainConfig *params.ChainConfig, dbm database.DBManager) *Governance {
-	ret := NewGovernance(dbm)
+	ret := NewGovernance(chainConfig, dbm)
 	// nil is for testing or simple function usage
 	if dbm != nil {
 		ret.ReadGovernanceState()
@@ -460,8 +463,8 @@ func (g *Governance) updateGovernanceParams() {
 	params.SetProposerUpdateInterval(g.proposerUpdateInterval())
 
 	// NOTE: HumanReadable related functions are inactivated now
-	if v, ok := g.Params().Get(params.ConstTxGasHumanReadable); ok {
-		params.TxGasHumanReadable = v.(uint64)
+	if txGasHumanReadable, ok := g.currentSet.GetValue(params.ConstTxGasHumanReadable); ok {
+		params.TxGasHumanReadable = txGasHumanReadable.(uint64)
 	}
 }
 
@@ -521,7 +524,7 @@ func (g *Governance) getKey(k string) string {
 	return strings.Trim(strings.ToLower(k), " ")
 }
 
-// RemoveVote remove a vote from the voteMap to prevent repetitive addition of same vote
+// RemoveVote removes a vote from the voteMap to prevent repetitive addition of same vote
 func (g *Governance) RemoveVote(key string, value interface{}, number uint64) {
 	k := GovernanceKeyMap[key]
 	if isEqualValue(k, g.voteMap.GetValue(key).Value, value) {
@@ -544,7 +547,7 @@ func (g *Governance) ClearVotes(num uint64) {
 	logger.Info("Governance votes are cleared", "num", num)
 }
 
-// parseVoteValue parse vote.Value from []uint8, [][]uint8 to appropriate type
+// ParseVoteValue parses vote.Value from []uint8, [][]uint8 to appropriate type
 func (g *Governance) ParseVoteValue(gVote *GovernanceVote) (*GovernanceVote, error) {
 	var val interface{}
 	k, ok := GovernanceKeyMap[gVote.Key]
@@ -737,9 +740,9 @@ func (g *Governance) initializeCache(chainConfig *params.ChainConfig) error {
 	} else {
 		logger.Crit("Error parsing initial ChainConfig", "err", err)
 	}
-	// Reflect g.currentSet -> g.currentParams (for g.Params())
+	// Reflect g.currentSet -> g.currentParams (for g.CurrentParams())
 	// Outside initializeCache, istanbul.CreateSnapshot() will trigger UpdateParams().
-	g.UpdateParams()
+	g.UpdateParams(headBlockNumber)
 	// Reflect g.currentSet -> global params in params/governance_params.go
 	// Outside initializeCache, GovernanceItems[].trigger will reflect changes to globals.
 	g.updateGovernanceParams()
@@ -996,6 +999,7 @@ type governanceJSON struct {
 func (gov *Governance) toJSON(num uint64) ([]byte, error) {
 	ret := &governanceJSON{
 		BlockNumber:     num,
+		ChainConfig:     gov.ChainConfig,
 		VoteMap:         gov.voteMap.Copy(),
 		NodeAddress:     gov.nodeAddress.Load().(common.Address),
 		GovernanceVotes: gov.GovernanceVotes.Copy(),
@@ -1012,6 +1016,7 @@ func (gov *Governance) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &j); err != nil {
 		return err
 	}
+	// gov.ChainConfig is to be updated in MixedEngine. Do not overwrite it here.
 	gov.voteMap.Import(j.VoteMap)
 	gov.nodeAddress.Store(j.NodeAddress)
 	gov.GovernanceVotes.Import(j.GovernanceVotes)
@@ -1021,6 +1026,14 @@ func (gov *Governance) UnmarshalJSON(b []byte) error {
 	atomic.StoreUint64(&gov.lastGovernanceStateBlock, j.BlockNumber)
 
 	return nil
+}
+
+func (gov *Governance) InitGovCache() {
+	gov.initializeCache(gov.ChainConfig)
+}
+
+func (gov *Governance) InitLastGovStateBlkNum() {
+	atomic.StoreUint64(&gov.lastGovernanceStateBlock, 0)
 }
 
 func (gov *Governance) CanWriteGovernanceState(num uint64) bool {
@@ -1204,11 +1217,11 @@ func (gov *Governance) IdxCacheFromDb() []uint64 {
 	return res
 }
 
-// Returns the istanbul epoch. This function works even before loading any params
+// epochWithFallback returns the istanbul epoch. This function works even before loading any params
 // from database. We need epoch to load any param from database.
 func (gov *Governance) epochWithFallback() uint64 {
-	// After UpdateParams() is called at least once, Params() should contain the Epoch
-	if v, ok := gov.Params().Get(params.Epoch); ok {
+	// After UpdateParams() is called at least once, CurrentParams() should contain the Epoch
+	if v, ok := gov.CurrentParams().Get(params.Epoch); ok {
 		return v.(uint64)
 	}
 	// Otherwise after initializeCache() is called, initialParams should contain the Epoch
@@ -1216,18 +1229,30 @@ func (gov *Governance) epochWithFallback() uint64 {
 		return v.(uint64)
 	}
 
-	// now that gov.ChainConfig is gone, we return default instead of gov.ChainConfig.Epoch
-	return params.DefaultEpoch
+	// Otherwise fallback to ChainConfig that is supplied to NewGovernance()
+	if gov.ChainConfig.Istanbul != nil {
+		return gov.ChainConfig.Istanbul.Epoch
+	}
+	// We shouldn't reach here because Governance is only relevant with Istanbul engine.
+	logger.Crit("Failed to read governance. ChainConfig.Istanbul == nil")
+	return params.DefaultEpoch // unreachable. just satisfying compiler.
 }
 
-func (gov *Governance) Params() *params.GovParamSet {
+func (gov *Governance) CurrentParams() *params.GovParamSet {
 	return gov.currentParams
 }
 
-func (gov *Governance) ParamsAt(num uint64) (*params.GovParamSet, error) {
+// EffectiveParams returns the parameter set used for generating the block `num`
+func (gov *Governance) EffectiveParams(num uint64) (*params.GovParamSet, error) {
 	// TODO-Klaytn: Either handle epoch change, or permanently forbid epoch change.
 	epoch := gov.epochWithFallback()
 
+	bignum := new(big.Int).SetUint64(num)
+
+	// Before Kore, ReadGovernance(num - 1) is used to generate block num
+	if !gov.ChainConfig.IsKoreForkEnabled(bignum) && num != 0 {
+		num -= 1
+	}
 	// Should be equivalent to Governance.ReadGovernance(), but without in-memory caches.
 	// Not using in-memory caches to make it stateless, hence less error-prone.
 	_, strMap, err := gov.db.ReadGovernanceAtNumber(num, epoch)
@@ -1243,13 +1268,11 @@ func (gov *Governance) ParamsAt(num uint64) (*params.GovParamSet, error) {
 	return pset, nil
 }
 
-func (gov *Governance) UpdateParams() error {
-	strMap := gov.currentSet.Items()
-	pset, err := params.NewGovParamSetStrMap(strMap)
+func (gov *Governance) UpdateParams(num uint64) error {
+	pset, err := gov.EffectiveParams(num + 1)
 	if err != nil {
 		return err
 	}
-
 	gov.currentParams = pset
 	return nil
 }

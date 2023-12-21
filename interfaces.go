@@ -28,6 +28,7 @@ import (
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/hexutil"
 )
 
 // NotFound is returned by API methods if the requested item does not exist.
@@ -121,6 +122,10 @@ type CallMsg struct {
 	GasPrice *big.Int        // peb <-> gas exchange ratio
 	Value    *big.Int        // amount of peb sent along with the call
 	Data     []byte          // input data, usually an ABI-encoded contract method invocation
+
+	// Introduced by AccessListTxType transaction.
+	AccessList *types.AccessList `json:"accessList,omitempty"`
+	ChainID    *hexutil.Big      `json:"chainId,omitempty"`
 }
 
 // A ContractCaller provides contract calls, essentially transactions that are executed by

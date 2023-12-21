@@ -22,6 +22,7 @@ package api
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"time"
@@ -414,6 +415,11 @@ func signHash(data []byte) []byte {
 	return crypto.Keccak256([]byte(msg))
 }
 
+func ethSignHash(data []byte) []byte {
+	msg := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(data), data)
+	return crypto.Keccak256([]byte(msg))
+}
+
 // sign is a helper function that signs a transaction with the private key of the given address.
 // If the given password isn't able to decrypt the key, it fails.
 func (s *PrivateAccountAPI) sign(addr common.Address, passwd string, tx *types.Transaction) (*types.Transaction, error) {
@@ -485,13 +491,23 @@ func (s *PrivateAccountAPI) EcRecover(ctx context.Context, data, sig hexutil.Byt
 	if sig[crypto.RecoveryIDOffset] != 27 && sig[crypto.RecoveryIDOffset] != 28 {
 		return common.Address{}, fmt.Errorf("invalid Klaytn signature (V is not 27 or 28)")
 	}
-	sig[crypto.RecoveryIDOffset] -= 27 // Transform yellow paper V from 27/28 to 0/1
 
-	rpk, err := crypto.SigToPub(signHash(data), sig)
+	// Transform yellow paper V from 27/28 to 0/1
+	sig[crypto.RecoveryIDOffset] -= 27
+
+	pubkey, err := klayEcRecover(data, sig)
 	if err != nil {
 		return common.Address{}, err
 	}
-	return crypto.PubkeyToAddress(*rpk), nil
+	return crypto.PubkeyToAddress(*pubkey), nil
+}
+
+func klayEcRecover(data, sig hexutil.Bytes) (*ecdsa.PublicKey, error) {
+	return crypto.SigToPub(signHash(data), sig)
+}
+
+func ethEcRecover(data, sig hexutil.Bytes) (*ecdsa.PublicKey, error) {
+	return crypto.SigToPub(ethSignHash(data), sig)
 }
 
 // SignAndSendTransaction was renamed to SendTransaction. This method is deprecated

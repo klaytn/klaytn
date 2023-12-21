@@ -30,14 +30,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/mclock"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/networks/p2p/nat"
 	"github.com/klaytn/klaytn/networks/p2p/netutil"
-
-	"github.com/klaytn/klaytn/common"
 )
 
 const (
@@ -499,10 +498,15 @@ func (srv *MultiChannelServer) SetupConn(fd net.Conn, flags connFlag, dialDest *
 		return errors.New("shutdown")
 	}
 
-	c := &conn{fd: fd, transport: srv.newTransport(fd), flags: flags, conntype: common.ConnTypeUndefined, cont: make(chan error), portOrder: PortOrderUndefined}
+	c := &conn{fd: fd, flags: flags, conntype: common.ConnTypeUndefined, cont: make(chan error), portOrder: PortOrderUndefined}
+
 	if dialDest != nil {
+		// retrieve pubkey. if err occurs, dialPubkey is automatically set as nil
+		dialPubkey, _ := dialDest.ID.Pubkey()
+		c.transport = srv.newTransport(fd, dialPubkey)
 		c.portOrder = PortOrder(dialDest.PortOrder)
 	} else {
+		c.transport = srv.newTransport(fd, nil)
 		for i, addr := range srv.ListenAddrs {
 			s1 := strings.Split(addr, ":")                    // string format example, [::]:30303 or 123.123.123.123:30303
 			s2 := strings.Split(fd.LocalAddr().String(), ":") // string format example, 123.123.123.123:30303
@@ -533,8 +537,8 @@ func (srv *MultiChannelServer) setupConn(c *conn, flags connFlag, dialDest *disc
 		return errServerStopped
 	}
 
-	var err error
 	// Run the connection type handshake
+	var err error
 	if c.conntype, err = c.doConnTypeHandshake(srv.ConnectionType); err != nil {
 		srv.logger.Warn("Failed doConnTypeHandshake", "addr", c.fd.RemoteAddr(), "conn", c.flags,
 			"conntype", c.conntype, "err", err)
@@ -542,12 +546,14 @@ func (srv *MultiChannelServer) setupConn(c *conn, flags connFlag, dialDest *disc
 	}
 	srv.logger.Trace("Connection Type Trace", "addr", c.fd.RemoteAddr(), "conn", c.flags, "ConnType", c.conntype.String())
 
-	// Run the encryption handshake.
-	if c.id, err = c.doEncHandshake(srv.PrivateKey, dialDest); err != nil {
+	// Run the RLPx handshake.
+	remotePubkey, err := c.doEncHandshake(srv.PrivateKey)
+	if err != nil {
 		srv.logger.Trace("Failed RLPx handshake", "addr", c.fd.RemoteAddr(), "conn", c.flags, "err", err)
 		return err
 	}
 
+	c.id = discover.PubkeyID(remotePubkey)
 	clog := srv.logger.NewWith("id", c.id, "addr", c.fd.RemoteAddr(), "conn", c.flags)
 	// For dialed connections, check that the remote public key matches.
 	if dialDest != nil && c.id != dialDest.ID {
@@ -905,7 +911,7 @@ type BaseServer struct {
 
 	// Hooks for testing. These are useful because we can inhibit
 	// the whole protocol stack.
-	newTransport func(net.Conn) transport
+	newTransport func(net.Conn, *ecdsa.PublicKey) transport
 	newPeerHook  func(*Peer)
 
 	lock    sync.Mutex // protects running
@@ -975,7 +981,7 @@ type conn struct {
 type transport interface {
 	doConnTypeHandshake(myConnType common.ConnType) (common.ConnType, error)
 	// The two handshakes.
-	doEncHandshake(prv *ecdsa.PrivateKey, dialDest *discover.Node) (discover.NodeID, error)
+	doEncHandshake(prv *ecdsa.PrivateKey) (*ecdsa.PublicKey, error)
 	doProtoHandshake(our *protoHandshake) (*protoHandshake, error)
 	// The MsgReadWriter can only be used after the encryption
 	// handshake has completed. The code uses conn.id to track this
@@ -1651,7 +1657,16 @@ func (srv *BaseServer) SetupConn(fd net.Conn, flags connFlag, dialDest *discover
 		return errors.New("shutdown")
 	}
 
-	c := &conn{fd: fd, transport: srv.newTransport(fd), flags: flags, conntype: common.ConnTypeUndefined, cont: make(chan error), portOrder: ConnDefault}
+	c := &conn{fd: fd, flags: flags, conntype: common.ConnTypeUndefined, cont: make(chan error), portOrder: ConnDefault}
+
+	// if err occurs, dialPubkey is automatically set as nil
+	if dialDest != nil {
+		dialPubkey, _ := dialDest.ID.Pubkey()
+		c.transport = srv.newTransport(fd, dialPubkey)
+	} else {
+		c.transport = srv.newTransport(fd, nil)
+	}
+
 	err := srv.setupConn(c, flags, dialDest)
 	if err != nil {
 		c.close(err)
@@ -1669,8 +1684,8 @@ func (srv *BaseServer) setupConn(c *conn, flags connFlag, dialDest *discover.Nod
 		return errServerStopped
 	}
 
-	var err error
 	// Run the connection type handshake
+	var err error
 	if c.conntype, err = c.doConnTypeHandshake(srv.ConnectionType); err != nil {
 		srv.logger.Warn("Failed doConnTypeHandshake", "addr", c.fd.RemoteAddr(), "conn", c.flags,
 			"conntype", c.conntype, "err", err)
@@ -1679,11 +1694,13 @@ func (srv *BaseServer) setupConn(c *conn, flags connFlag, dialDest *discover.Nod
 	srv.logger.Trace("Connection Type Trace", "addr", c.fd.RemoteAddr(), "conn", c.flags, "ConnType", c.conntype.String())
 
 	// Run the encryption handshake.
-	if c.id, err = c.doEncHandshake(srv.PrivateKey, dialDest); err != nil {
+	remotePubkey, err := c.doEncHandshake(srv.PrivateKey)
+	if err != nil {
 		srv.logger.Trace("Failed RLPx handshake", "addr", c.fd.RemoteAddr(), "conn", c.flags, "err", err)
 		return err
 	}
 
+	c.id = discover.PubkeyID(remotePubkey)
 	clog := srv.logger.NewWith("id", c.id, "addr", c.fd.RemoteAddr(), "conn", c.flags)
 	// For dialed connections, check that the remote public key matches.
 	if dialDest != nil && c.id != dialDest.ID {

@@ -18,7 +18,6 @@ package tests
 
 import (
 	"crypto/ecdsa"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"testing"
@@ -47,7 +46,7 @@ func TestSimpleBlockchain(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 
 	numAccounts := 12
-	fullNode, node, validator, chainId, workspace := newBlockchain(t)
+	fullNode, node, validator, chainId, workspace := newBlockchain(t, nil, nil)
 	defer os.RemoveAll(workspace)
 
 	// create account
@@ -76,7 +75,7 @@ func TestSimpleBlockchain(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	// start full node with previous db
-	fullNode, node, err := newKlaytnNode(t, workspace, validator, nil)
+	fullNode, node, err := newKlaytnNode(t, workspace, validator, nil, nil)
 	assert.NoError(t, err)
 	if err := node.StartMining(false); err != nil {
 		t.Fatal()
@@ -89,10 +88,10 @@ func TestSimpleBlockchain(t *testing.T) {
 	}
 }
 
-func newBlockchain(t *testing.T) (*node.Node, *cn.CN, *TestAccountType, *big.Int, string) {
+func newBlockchain(t *testing.T, config *params.ChainConfig, genesis *blockchain.Genesis) (*node.Node, *cn.CN, *TestAccountType, *big.Int, string) {
 	t.Log("Create a new blockchain")
 	// Prepare workspace
-	workspace, err := ioutil.TempDir("", "klaytn-test-state")
+	workspace, err := os.MkdirTemp("", "klaytn-test-state")
 	if err != nil {
 		t.Fatalf("failed to create temporary keystore: %v", err)
 	}
@@ -105,35 +104,7 @@ func newBlockchain(t *testing.T) (*node.Node, *cn.CN, *TestAccountType, *big.Int
 	}
 
 	// Create a Klaytn node
-	fullNode, node, err := newKlaytnNode(t, workspace, validator, nil)
-	assert.NoError(t, err)
-	if err := node.StartMining(false); err != nil {
-		t.Fatal()
-	}
-	time.Sleep(2 * time.Second) // wait for initializing mining
-
-	chainId := node.BlockChain().Config().ChainID
-
-	return fullNode, node, validator, chainId, workspace
-}
-
-func newBlockchainWithConfig(t *testing.T, config *params.ChainConfig) (*node.Node, *cn.CN, *TestAccountType, *big.Int, string) {
-	t.Log("Create a new blockchain with config")
-	// Prepare workspace
-	workspace, err := ioutil.TempDir("", "klaytn-test-state")
-	if err != nil {
-		t.Fatalf("failed to create temporary keystore: %v", err)
-	}
-	t.Log("Workspace is ", workspace)
-
-	// Prepare a validator
-	validator, err := createAnonymousAccount(getRandomPrivateKeyString(t))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Create a Klaytn node
-	fullNode, node, err := newKlaytnNode(t, workspace, validator, config)
+	fullNode, node, err := newKlaytnNode(t, workspace, validator, config, genesis)
 	assert.NoError(t, err)
 	if err := node.StartMining(false); err != nil {
 		t.Fatal()
@@ -171,7 +142,7 @@ func createAccount(t *testing.T, numAccounts int, validator *TestAccountType) (*
 }
 
 // newKlaytnNode creates a klaytn node
-func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType, config *params.ChainConfig) (*node.Node, *cn.CN, error) {
+func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType, config *params.ChainConfig, genesis *blockchain.Genesis) (*node.Node, *cn.CN, error) {
 	var klaytnNode *cn.CN
 
 	fullNode, err := node.New(&node.Config{
@@ -192,9 +163,11 @@ func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType, config 
 		t.Fatal(err)
 	}
 
-	genesis := blockchain.DefaultGenesisBlock()
-	genesis.ExtraData = genesis.ExtraData[:types.IstanbulExtraVanity]
-	genesis.ExtraData = append(genesis.ExtraData, istanbulConfData...)
+	if genesis == nil {
+		genesis = blockchain.DefaultGenesisBlock()
+		genesis.ExtraData = genesis.ExtraData[:types.IstanbulExtraVanity]
+		genesis.ExtraData = append(genesis.ExtraData, istanbulConfData...)
+	}
 
 	if config == nil {
 		genesis.Config = params.CypressChainConfig.Copy()
@@ -294,7 +267,9 @@ func deployContractDeployTx(t *testing.T, txpool work.TxPool, chainId *big.Int, 
 	require.Nil(t, err)
 
 	err = txpool.AddLocal(tx)
-	require.True(t, err == nil || err == blockchain.ErrAlreadyNonceExistInPool)
+	if err != nil && err != blockchain.ErrAlreadyNonceExistInPool {
+		t.Fatal(err)
+	}
 
 	contractAddr := crypto.CreateAddress(sender.Addr, sender.Nonce)
 	sender.AddNonce()
@@ -322,7 +297,9 @@ func deployContractExecutionTx(t *testing.T, txpool work.TxPool, chainId *big.In
 	require.Nil(t, err)
 
 	err = txpool.AddLocal(tx)
-	require.True(t, err == nil || err == blockchain.ErrAlreadyNonceExistInPool)
+	if err != nil && err != blockchain.ErrAlreadyNonceExistInPool {
+		t.Fatal(err)
+	}
 
 	sender.AddNonce()
 	return tx
@@ -355,7 +332,7 @@ func waitReceipt(chain *blockchain.BlockChain, txhash common.Hash) *types.Receip
 // Wait until `num` block is mined
 // Returns the header with the number larger or equal to `num`
 // Returns nil after a reasonable timeout
-func waitBlock(chain *blockchain.BlockChain, num uint64) *types.Header {
+func waitBlock(chain work.BlockChain, num uint64) *types.Header {
 	head := chain.CurrentHeader()
 	if head.Number.Uint64() >= num {
 		return head

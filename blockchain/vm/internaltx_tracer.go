@@ -30,16 +30,16 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/holiman/uint256"
 	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 )
 
 var (
-	errEvmExecutionReverted = errors.New("evm: execution reverted")
-	errExecutionReverted    = errors.New("execution reverted")
-	errInternalFailure      = errors.New("internal failure")
-	emptyAddr               = common.Address{}
+	errExecutionReverted = errors.New("execution reverted")
+	errInternalFailure   = errors.New("internal failure")
+	emptyAddr            = common.Address{}
 )
 
 // InternalTxTracer is a full blown transaction tracer that extracts and reports all
@@ -60,6 +60,8 @@ type InternalTxTracer struct {
 
 	interrupt uint32 // Atomic flag to signal execution interruption
 	reason    error  // Textual reason for the interruption
+
+	gasLimit uint64 // Amount of gas bought for the whole tx
 }
 
 // NewInternalTxTracer returns a new InternalTxTracer.
@@ -158,18 +160,17 @@ type RevertedInfo struct {
 }
 
 // CaptureStart implements the Tracer interface to initialize the tracing operation.
-func (this *InternalTxTracer) CaptureStart(from common.Address, to common.Address, create bool, input []byte, gas uint64, value *big.Int) error {
-	this.ctx["type"] = CALL.String()
+func (t *InternalTxTracer) CaptureStart(env *EVM, from common.Address, to common.Address, create bool, input []byte, gas uint64, value *big.Int) {
+	t.ctx["type"] = CALL.String()
 	if create {
-		this.ctx["type"] = CREATE.String()
+		t.ctx["type"] = CREATE.String()
 	}
-	this.ctx["from"] = from
-	this.ctx["to"] = to
-	this.ctx["input"] = hexutil.Encode(input)
-	this.ctx["gas"] = gas
-	this.ctx["value"] = value
-
-	return nil
+	t.ctx["from"] = from
+	t.ctx["to"] = to
+	t.ctx["input"] = hexutil.Encode(input)
+	t.ctx["gas"] = gas
+	t.ctx["gasPrice"] = env.TxContext.GasPrice
+	t.ctx["value"] = value
 }
 
 // tracerLog is used to help comparing codes between this and call_tracer.js
@@ -192,41 +193,40 @@ func wrapError(context string, err error) error {
 }
 
 // Stop terminates execution of the tracer at the first opportune moment.
-func (this *InternalTxTracer) Stop(err error) {
-	this.reason = err
-	atomic.StoreUint32(&this.interrupt, 1)
+func (t *InternalTxTracer) Stop(err error) {
+	t.reason = err
+	atomic.StoreUint32(&t.interrupt, 1)
 }
 
 // CaptureState implements the Tracer interface to trace a single step of VM execution.
-func (this *InternalTxTracer) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost uint64, memory *Memory, logStack *Stack, contract *Contract, depth int, err error) error {
-	if this.err == nil {
+func (t *InternalTxTracer) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost uint64, scope *ScopeContext, depth int, err error) {
+	if t.err == nil {
 		// Initialize the context if it wasn't done yet
-		if !this.initialized {
-			this.ctx["block"] = env.BlockNumber.Uint64()
-			this.initialized = true
+		if !t.initialized {
+			t.ctx["block"] = env.Context.BlockNumber.Uint64()
+			t.initialized = true
 		}
 		// If tracing was interrupted, set the error and stop
-		if atomic.LoadUint32(&this.interrupt) > 0 {
-			this.err = this.reason
-			return nil
+		if atomic.LoadUint32(&t.interrupt) > 0 {
+			t.err = t.reason
+			return
 		}
 
 		log := &tracerLog{
 			env, pc, op, gas, cost,
-			memory, logStack, contract, depth, err,
+			scope.Memory, scope.Stack, scope.Contract, depth, err,
 		}
-		err := this.step(log)
+		err := t.step(log)
 		if err != nil {
-			this.err = wrapError("step", err)
+			t.err = wrapError("step", err)
 		}
 	}
-	return nil
 }
 
-func (this *InternalTxTracer) step(log *tracerLog) error {
+func (t *InternalTxTracer) step(log *tracerLog) error {
 	// Capture any errors immediately
 	if log.err != nil {
-		this.fault(log)
+		t.fault(log)
 		return nil
 	}
 
@@ -236,36 +236,36 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 	// If a new contract is being created, add to the call stack
 	if sysCall && (op == CREATE || op == CREATE2) {
 		inOff := log.stack.Back(1)
-		inEnd := big.NewInt(0).Add(inOff, log.stack.Back(2)).Int64()
+		inEnd := big.NewInt(0).Add(inOff.ToBig(), log.stack.Back(2).ToBig()).Int64()
 
 		// Assemble the internal call report and store for completion
 		fromAddr := log.contract.Address()
 		call := &InternalCall{
 			Type:    op.String(),
 			From:    &fromAddr,
-			Input:   hexutil.Encode(log.memory.Slice(inOff.Int64(), inEnd)),
+			Input:   hexutil.Encode(log.memory.Slice(int64(inOff.Uint64()), inEnd)),
 			GasIn:   log.gas,
 			GasCost: log.cost,
-			Value:   "0x" + log.stack.Peek().Text(16), // '0x' + tracerLog.stack.peek(0).toString(16)
+			Value:   log.stack.peek().Hex(), // '0x' + tracerLog.stack.peek(0).toString(16)
 		}
-		this.callStack = append(this.callStack, call)
-		this.descended = true
+		t.callStack = append(t.callStack, call)
+		t.descended = true
 		return nil
 	}
 	// If a contract is being self destructed, gather that as a subcall too
 	if sysCall && op == SELFDESTRUCT {
-		left := this.callStackLength()
-		if this.callStack[left-1] == nil {
-			this.callStack[left-1] = &InternalCall{}
+		left := t.callStackLength()
+		if t.callStack[left-1] == nil {
+			t.callStack[left-1] = &InternalCall{}
 		}
-		if this.callStack[left-1].Calls == nil {
-			this.callStack[left-1].Calls = []*InternalCall{}
+		if t.callStack[left-1].Calls == nil {
+			t.callStack[left-1].Calls = []*InternalCall{}
 		}
 		contractAddr := log.contract.Address()
-		ret := log.stack.Peek()
-		toAddr := common.HexToAddress(ret.Text(16))
-		this.callStack[left-1].Calls = append(
-			this.callStack[left-1].Calls,
+		ret := log.stack.peek()
+		toAddr := common.HexToAddress(ret.Hex())
+		t.callStack[left-1].Calls = append(
+			t.callStack[left-1].Calls,
 			&InternalCall{
 				Type:    op.String(),
 				From:    &contractAddr,
@@ -281,8 +281,8 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 	if sysCall && (op == CALL || op == CALLCODE || op == DELEGATECALL || op == STATICCALL) {
 
 		// Skip any pre-compile invocations, those are just fancy opcodes
-		toAddr := common.HexToAddress(log.stack.Back(1).Text(16))
-		if _, ok := PrecompiledContractsByzantiumCompatible[toAddr]; ok {
+		toAddr := common.HexToAddress(log.stack.Back(1).Hex())
+		if _, ok := PrecompiledContractsByzantium[toAddr]; ok {
 			return nil
 		}
 
@@ -292,7 +292,7 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 		}
 
 		inOff := log.stack.Back(2 + off)
-		inEnd := big.NewInt(0).Add(inOff, log.stack.Back(3+off)).Int64()
+		inEnd := big.NewInt(0).Add(inOff.ToBig(), log.stack.Back(3+off).ToBig()).Int64()
 
 		// Assemble the internal call report and store for completion
 		fromAddr := log.contract.Address()
@@ -300,59 +300,59 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 			Type:    op.String(),
 			From:    &fromAddr,
 			To:      &toAddr,
-			Input:   hexutil.Encode(log.memory.Slice(inOff.Int64(), inEnd)),
+			Input:   hexutil.Encode(log.memory.Slice(int64(inOff.Uint64()), inEnd)),
 			GasIn:   log.gas,
 			GasCost: log.cost,
-			OutOff:  big.NewInt(log.stack.Back(4 + off).Int64()),
-			OutLen:  big.NewInt(log.stack.Back(5 + off).Int64()),
+			OutOff:  big.NewInt(int64(log.stack.Back(4 + off).Uint64())),
+			OutLen:  big.NewInt(int64(log.stack.Back(5 + off).Uint64())),
 		}
 		if op != DELEGATECALL && op != STATICCALL {
-			call.Value = "0x" + log.stack.Back(2).Text(16)
+			call.Value = log.stack.Back(2).Hex()
 		}
-		this.callStack = append(this.callStack, call)
-		this.descended = true
+		t.callStack = append(t.callStack, call)
+		t.descended = true
 
 		return nil
 	}
 	// If we've just descended into an inner call, retrieve it's true allowance. We
 	// need to extract if from within the call as there may be funky gas dynamics
 	// with regard to requested and actually given gas (2300 stipend, 63/64 rule).
-	if this.descended {
-		if log.depth >= this.callStackLength() {
-			this.callStack[this.callStackLength()-1].Gas = log.gas
+	if t.descended {
+		if log.depth >= t.callStackLength() {
+			t.callStack[t.callStackLength()-1].Gas = log.gas
 		} else {
 			// TODO(karalabe): The call was made to a plain account. We currently don't
 			// have access to the true gas amount inside the call and so any amount will
 			// mostly be wrong since it depends on a lot of input args. Skip gas for now.
 		}
-		this.descended = false
+		t.descended = false
 	}
 	// If an existing call is returning, pop off the call stack
-	if sysCall && op == REVERT && this.callStackLength() > 0 {
-		this.callStack[this.callStackLength()-1].Error = errExecutionReverted
-		if this.revertedContract == emptyAddr {
-			if this.callStack[this.callStackLength()-1].To == nil {
-				this.revertedContract = log.contract.Address()
+	if sysCall && op == REVERT && t.callStackLength() > 0 {
+		t.callStack[t.callStackLength()-1].Error = errExecutionReverted
+		if t.revertedContract == emptyAddr {
+			if t.callStack[t.callStackLength()-1].To == nil {
+				t.revertedContract = log.contract.Address()
 			} else {
-				this.revertedContract = *this.callStack[this.callStackLength()-1].To
+				t.revertedContract = *t.callStack[t.callStackLength()-1].To
 			}
 		}
 		return nil
 	}
-	if log.depth == this.callStackLength()-1 {
+	if log.depth == t.callStackLength()-1 {
 		// Pop off the last call and get the execution results
-		call := this.callStackPop()
+		call := t.callStackPop()
 
 		if call.Type == CREATE.String() || call.Type == CREATE2.String() {
 			// If the call was a CREATE, retrieve the contract address and output code
 			call.GasUsed = call.GasIn - call.GasCost - log.gas
 			call.GasIn, call.GasCost = uint64(0), uint64(0)
 
-			ret := log.stack.Peek()
-			if ret.Cmp(big.NewInt(0)) != 0 {
-				toAddr := common.HexToAddress(ret.Text(16))
+			ret := log.stack.peek()
+			if ret.Cmp(uint256.NewInt(0)) != 0 {
+				toAddr := common.HexToAddress(ret.Hex())
 				call.To = &toAddr
-				call.Output = hexutil.Encode(log.env.StateDB.GetCode(common.HexToAddress(ret.Text(16))))
+				call.Output = hexutil.Encode(log.env.StateDB.GetCode(common.HexToAddress(ret.Hex())))
 			} else if call.Error == nil {
 				call.Error = errInternalFailure // TODO(karalabe): surface these faults somehow
 			}
@@ -361,8 +361,8 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 			if call.Gas != uint64(0) {
 				call.GasUsed = call.GasIn - call.GasCost + call.Gas - log.gas
 			}
-			ret := log.stack.Peek()
-			if ret == nil || ret.Cmp(big.NewInt(0)) != 0 {
+			ret := log.stack.peek()
+			if ret == nil || ret.Cmp(uint256.NewInt(0)) != 0 {
 				callOutOff, callOutLen := call.OutOff.Int64(), call.OutLen.Int64()
 				call.Output = hexutil.Encode(log.memory.Slice(callOutOff, callOutOff+callOutLen))
 			} else if call.Error == nil {
@@ -377,18 +377,18 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 			// call.gas = '0x' + bigInt(call.gas).toString(16);
 		}
 		// Inject the call into the previous one
-		left := this.callStackLength()
+		left := t.callStackLength()
 		if left == 0 {
 			left = 1 // added to avoid index out of range in golang
-			this.callStack = []*InternalCall{{}}
+			t.callStack = []*InternalCall{{}}
 		}
-		if this.callStack[left-1] == nil {
-			this.callStack[left-1] = &InternalCall{}
+		if t.callStack[left-1] == nil {
+			t.callStack[left-1] = &InternalCall{}
 		}
-		if len(this.callStack[left-1].Calls) == 0 {
-			this.callStack[left-1].Calls = []*InternalCall{}
+		if len(t.callStack[left-1].Calls) == 0 {
+			t.callStack[left-1].Calls = []*InternalCall{}
 		}
-		this.callStack[left-1].Calls = append(this.callStack[left-1].Calls, call)
+		t.callStack[left-1].Calls = append(t.callStack[left-1].Calls, call)
 	}
 
 	return nil
@@ -396,149 +396,159 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 
 // CaptureFault implements the Tracer interface to trace an execution fault
 // while running an opcode.
-func (this *InternalTxTracer) CaptureFault(env *EVM, pc uint64, op OpCode, gas, cost uint64, memory *Memory, s *Stack, contract *Contract, depth int, err error) error {
-	if this.err == nil {
+func (t *InternalTxTracer) CaptureFault(env *EVM, pc uint64, op OpCode, gas, cost uint64, scope *ScopeContext, depth int, err error) {
+	if t.err == nil {
 		// Apart from the error, everything matches the previous invocation
-		this.errValue = err.Error()
+		t.errValue = err.Error()
 
 		log := &tracerLog{
 			env, pc, op, gas, cost,
-			memory, s, contract, depth, err,
+			scope.Memory, scope.Stack, scope.Contract, depth, err,
 		}
 		// fault does not return an error
-		this.fault(log)
+		t.fault(log)
 	}
-	return nil
 }
 
 // CaptureEnd is called after the call finishes to finalize the tracing.
-func (this *InternalTxTracer) CaptureEnd(output []byte, gasUsed uint64, t time.Duration, err error) error {
-	this.ctx["output"] = hexutil.Encode(output)
-	this.ctx["gasUsed"] = gasUsed
-	this.ctx["time"] = t
+func (t *InternalTxTracer) CaptureEnd(output []byte, gasUsed uint64, err error) {
+	t.ctx["output"] = hexutil.Encode(output)
+	t.ctx["gasUsed"] = gasUsed
 
 	if err != nil {
-		this.ctx["error"] = err
+		t.ctx["error"] = err
 	}
-	return nil
 }
 
-func (this *InternalTxTracer) GetResult() (*InternalTxTrace, error) {
-	result := this.result()
+func (t *InternalTxTracer) CaptureEnter(typ OpCode, from common.Address, to common.Address, input []byte, gas uint64, value *big.Int) {
+}
+
+func (t *InternalTxTracer) CaptureExit(output []byte, gasUsed uint64, err error) {}
+
+func (t *InternalTxTracer) CaptureTxStart(gasLimit uint64) {
+	t.gasLimit = gasLimit
+}
+
+func (t *InternalTxTracer) CaptureTxEnd(restGas uint64) {
+	t.ctx["gasUsed"] = t.gasLimit - restGas
+}
+
+func (t *InternalTxTracer) GetResult() (*InternalTxTrace, error) {
+	result := t.result()
 	// Clean up the JavaScript environment
-	this.reset()
-	return result, this.err
+	t.reset()
+	return result, t.err
 }
 
 // reset clears data collected during the previous tracing.
 // It should act like calling jst.vm.DestroyHeap() and jst.vm.Destroy() at tracers.Tracer
-func (this *InternalTxTracer) reset() {
-	this.callStack = []*InternalCall{}
-	this.output = nil
+func (t *InternalTxTracer) reset() {
+	t.callStack = []*InternalCall{}
+	t.output = nil
 
-	this.descended = false
-	this.revertedContract = common.Address{}
-	this.initialized = false
-	this.revertString = ""
+	t.descended = false
+	t.revertedContract = common.Address{}
+	t.initialized = false
+	t.revertString = ""
 }
 
 // result is invoked when all the opcodes have been iterated over and returns
 // the final result of the tracing.
-func (this *InternalTxTracer) result() *InternalTxTrace {
-	if _, exist := this.ctx["type"]; !exist {
-		this.ctx["type"] = ""
+func (t *InternalTxTracer) result() *InternalTxTrace {
+	if _, exist := t.ctx["type"]; !exist {
+		t.ctx["type"] = ""
 	}
-	if _, exist := this.ctx["from"]; !exist {
-		this.ctx["from"] = nil
+	if _, exist := t.ctx["from"]; !exist {
+		t.ctx["from"] = nil
 	}
-	if _, exist := this.ctx["to"]; !exist {
-		this.ctx["to"] = nil
+	if _, exist := t.ctx["to"]; !exist {
+		t.ctx["to"] = nil
 	}
-	if _, exist := this.ctx["value"]; !exist {
-		this.ctx["value"] = big.NewInt(0)
+	if _, exist := t.ctx["value"]; !exist {
+		t.ctx["value"] = big.NewInt(0)
 	}
-	if _, exist := this.ctx["gas"]; !exist {
-		this.ctx["gas"] = uint64(0)
+	if _, exist := t.ctx["gas"]; !exist {
+		t.ctx["gas"] = uint64(0)
 	}
-	if _, exist := this.ctx["gasUsed"]; !exist {
-		this.ctx["gasUsed"] = uint64(0)
+	if _, exist := t.ctx["gasUsed"]; !exist {
+		t.ctx["gasUsed"] = uint64(0)
 	}
-	if _, exist := this.ctx["input"]; !exist {
-		this.ctx["input"] = ""
+	if _, exist := t.ctx["input"]; !exist {
+		t.ctx["input"] = ""
 	}
-	if _, exist := this.ctx["output"]; !exist {
-		this.ctx["output"] = ""
+	if _, exist := t.ctx["output"]; !exist {
+		t.ctx["output"] = ""
 	}
-	if _, exist := this.ctx["time"]; !exist {
-		this.ctx["time"] = time.Duration(0)
+	if _, exist := t.ctx["time"]; !exist {
+		t.ctx["time"] = time.Duration(0)
 	}
-	if this.callStackLength() == 0 {
-		this.callStack = []*InternalCall{{}}
+	if t.callStackLength() == 0 {
+		t.callStack = []*InternalCall{{}}
 	}
 	var from, to *common.Address
-	if addr, ok := this.ctx["from"].(common.Address); ok {
+	if addr, ok := t.ctx["from"].(common.Address); ok {
 		from = &addr
 	}
-	if addr, ok := this.ctx["to"].(common.Address); ok {
+	if addr, ok := t.ctx["to"].(common.Address); ok {
 		to = &addr
 	}
 
 	result := &InternalTxTrace{
-		Type:    this.ctx["type"].(string),
+		Type:    t.ctx["type"].(string),
 		From:    from,
 		To:      to,
-		Value:   "0x" + this.ctx["value"].(*big.Int).Text(16),
-		Gas:     this.ctx["gas"].(uint64),
-		GasUsed: this.ctx["gasUsed"].(uint64),
-		Input:   this.ctx["input"].(string),
-		Output:  this.ctx["output"].(string),
-		Time:    this.ctx["time"].(time.Duration),
+		Value:   "0x" + t.ctx["value"].(*big.Int).Text(16),
+		Gas:     t.ctx["gas"].(uint64),
+		GasUsed: t.ctx["gasUsed"].(uint64),
+		Input:   t.ctx["input"].(string),
+		Output:  t.ctx["output"].(string),
+		Time:    t.ctx["time"].(time.Duration),
 	}
 
 	nestedCalls := []*InternalTxTrace{}
-	for _, call := range this.callStack[0].Calls {
+	for _, call := range t.callStack[0].Calls {
 		nestedCalls = append(nestedCalls, call.ToTrace())
 	}
 	result.Calls = nestedCalls
 
-	if this.callStack[0].Error != nil {
-		result.Error = this.callStack[0].Error
-	} else if ctxErr, _ := this.ctx["error"]; ctxErr != nil {
+	if t.callStack[0].Error != nil {
+		result.Error = t.callStack[0].Error
+	} else if ctxErr := t.ctx["error"]; ctxErr != nil {
 		result.Error = ctxErr.(error)
 	}
 	if result.Error != nil && (result.Error.Error() != errExecutionReverted.Error() || result.Output == "0x") {
 		result.Output = "" // delete result.output;
 	}
-	if err := this.ctx["error"]; err != nil && err.(error).Error() == errEvmExecutionReverted.Error() {
-		outputHex := this.ctx["output"].(string) // it is already a hex string
+	if err := t.ctx["error"]; err != nil && err.(error).Error() == ErrExecutionReverted.Error() {
+		outputHex := t.ctx["output"].(string) // it is already a hex string
 
 		if s, err := abi.UnpackRevert(common.FromHex(outputHex)); err == nil {
-			this.revertString = s
+			t.revertString = s
 		} else {
-			this.revertString = ""
+			t.revertString = ""
 		}
 
-		contract := this.revertedContract
-		message := this.revertString
+		contract := t.revertedContract
+		message := t.revertString
 		result.Reverted = &RevertedInfo{Contract: &contract, Message: message}
 	}
 	return result
 }
 
 // InternalTxLogs returns the captured tracerLog entries.
-func (this *InternalTxTracer) InternalTxLogs() []*InternalCall { return this.callStack }
+func (t *InternalTxTracer) InternalTxLogs() []*InternalCall { return t.callStack }
 
 // fault is invoked when the actual execution of an opcode fails.
-func (this *InternalTxTracer) fault(log *tracerLog) {
-	if this.callStackLength() == 0 {
+func (t *InternalTxTracer) fault(log *tracerLog) {
+	if t.callStackLength() == 0 {
 		return
 	}
 	// If the topmost call already reverted, don't handle the additional fault again
-	if this.callStack[this.callStackLength()-1].Error != nil {
+	if t.callStack[t.callStackLength()-1].Error != nil {
 		return
 	}
 	// Pop off the just failed call
-	call := this.callStackPop()
+	call := t.callStackPop()
 	call.Error = log.err
 
 	// Consume all available gas and clean any leftovers
@@ -549,31 +559,31 @@ func (this *InternalTxTracer) fault(log *tracerLog) {
 	call.OutOff, call.OutLen = nil, nil
 
 	// Flatten the failed call into its parent
-	left := this.callStackLength()
+	left := t.callStackLength()
 	if left > 0 {
-		if this.callStack[left-1] == nil {
-			this.callStack[left-1] = &InternalCall{}
+		if t.callStack[left-1] == nil {
+			t.callStack[left-1] = &InternalCall{}
 		}
-		if len(this.callStack[left-1].Calls) == 0 {
-			this.callStack[left-1].Calls = []*InternalCall{}
+		if len(t.callStack[left-1].Calls) == 0 {
+			t.callStack[left-1].Calls = []*InternalCall{}
 		}
-		this.callStack[left-1].Calls = append(this.callStack[left-1].Calls, call)
+		t.callStack[left-1].Calls = append(t.callStack[left-1].Calls, call)
 		return
 	}
 	// Last call failed too, leave it in the stack
-	this.callStack = append(this.callStack, call)
+	t.callStack = append(t.callStack, call)
 }
 
-func (this *InternalTxTracer) callStackLength() int {
-	return len(this.callStack)
+func (t *InternalTxTracer) callStackLength() int {
+	return len(t.callStack)
 }
 
-func (this *InternalTxTracer) callStackPop() *InternalCall {
-	if this.callStackLength() == 0 {
+func (t *InternalTxTracer) callStackPop() *InternalCall {
+	if t.callStackLength() == 0 {
 		return &InternalCall{}
 	}
 
-	topItem := this.callStack[this.callStackLength()-1]
-	this.callStack = this.callStack[:this.callStackLength()-1]
+	topItem := t.callStack[t.callStackLength()-1]
+	t.callStack = t.callStack[:t.callStackLength()-1]
 	return topItem
 }

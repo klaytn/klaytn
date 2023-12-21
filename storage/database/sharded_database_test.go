@@ -18,7 +18,6 @@ package database
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"sort"
@@ -26,7 +25,6 @@ import (
 	"testing"
 
 	"github.com/klaytn/klaytn/common"
-
 	"github.com/stretchr/testify/assert"
 )
 
@@ -43,7 +41,7 @@ func testIterator(t *testing.T, checkOrder bool, entryNums []uint, dbConfig []*D
 
 		// create DB and write data for testing
 		for i, config := range dbConfig {
-			config.Dir, _ = ioutil.TempDir(os.TempDir(), "test-shardedDB-iterator")
+			config.Dir, _ = os.MkdirTemp(os.TempDir(), "test-shardedDB-iterator")
 			defer func(dir string) {
 				if err := os.RemoveAll(dir); err != nil {
 					t.Fatalf("fail to delete file %v", err)
@@ -179,7 +177,7 @@ func testShardedIterator_Release(t *testing.T, entryNum int, checkFunc func(db s
 
 	// create DB and write data for testing
 	for _, config := range ShardedDBConfig {
-		config.Dir, _ = ioutil.TempDir(os.TempDir(), "test-shardedDB-iterator")
+		config.Dir, _ = os.MkdirTemp(os.TempDir(), "test-shardedDB-iterator")
 		defer func(dir string) {
 			if err := os.RemoveAll(dir); err != nil {
 				t.Fatalf("fail to delete file %v", err)

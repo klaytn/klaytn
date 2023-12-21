@@ -21,7 +21,6 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"path"
@@ -32,7 +31,7 @@ import (
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 type validatorInfo struct {
@@ -47,16 +46,16 @@ const (
 
 var (
 	logger   = log.NewModuleLogger(log.CMDKGEN)
-	fileFlag = cli.BoolFlag{
+	fileFlag = &cli.BoolFlag{
 		Name:  "file",
 		Usage: `Generate a nodekey and a Klaytn node information as files`,
 	}
-	portFlag = cli.IntFlag{
+	portFlag = &cli.IntFlag{
 		Name:  "port",
 		Usage: `Specify a tcp port number`,
 		Value: 32323,
 	}
-	ipFlag = cli.StringFlag{
+	ipFlag = &cli.StringFlag{
 		Name:  "ip",
 		Usage: `Specify an ip address`,
 		Value: "0.0.0.0",
@@ -72,14 +71,14 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "kgen"
 	app.Usage = "The command line interface to generate nodekey information for Klaytn"
-	app.Copyright = "Copyright 2018-2019 The klaytn Authors"
+	app.Copyright = "Copyright 2018-2023 The klaytn Authors"
 	app.Action = genNodeKey
 	app.Flags = []cli.Flag{
 		fileFlag,
 		ipFlag,
 		portFlag,
 	}
-	app.Commands = []cli.Command{
+	app.Commands = []*cli.Command{
 		nodecmd.VersionCommand,
 	}
 	app.HideVersion = true
@@ -100,7 +99,7 @@ func writeNodeKeyInfoToFile(validator *validatorInfo, parentDir string, nodekey 
 	}
 
 	nodeKeyFilePath := path.Join(parentPath, "nodekey")
-	if err = ioutil.WriteFile(nodeKeyFilePath, []byte(nodekey), os.ModePerm); err != nil {
+	if err = os.WriteFile(nodeKeyFilePath, []byte(nodekey), os.ModePerm); err != nil {
 		return err
 	}
 	fmt.Println("Created : ", nodeKeyFilePath)
@@ -110,7 +109,7 @@ func writeNodeKeyInfoToFile(validator *validatorInfo, parentDir string, nodekey 
 		return err
 	}
 	validatorInfoFilePath := path.Join(parentPath, "node_info.json")
-	if err = ioutil.WriteFile(validatorInfoFilePath, []byte(str), os.ModePerm); err != nil {
+	if err = os.WriteFile(validatorInfoFilePath, []byte(str), os.ModePerm); err != nil {
 		return err
 	}
 

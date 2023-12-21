@@ -72,17 +72,14 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		processStats     ProcessStats
 	)
 
-	// Enable the opcode computation cost limit
-	cfg.UseOpcodeComputationCost = true
-
 	// Extract author from the header
 	author, _ := p.bc.Engine().Author(header) // Ignore error, we're past header validation
 
 	processStats.BeforeApplyTxs = time.Now()
 	// Iterate over and process the individual transactions
 	for i, tx := range block.Transactions() {
-		statedb.Prepare(tx.Hash(), block.Hash(), i)
-		receipt, _, internalTxTrace, err := p.bc.ApplyTransaction(p.config, &author, statedb, header, tx, usedGas, &cfg)
+		statedb.SetTxContext(tx.Hash(), block.Hash(), i)
+		receipt, internalTxTrace, err := p.bc.ApplyTransaction(p.config, &author, statedb, header, tx, usedGas, &cfg)
 		if err != nil {
 			return nil, nil, 0, nil, processStats, err
 		}

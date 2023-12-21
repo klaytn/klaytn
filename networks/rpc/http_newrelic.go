@@ -3,7 +3,7 @@ package rpc
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 
@@ -127,14 +127,14 @@ func newNewRelicHTTPHandler(nrApp *newrelic.Application, handler http.Handler) h
 // It returns a slice of RPC request, an indication if these requests are in batch, and an error.
 // Ethereum returns []*jsonrpcMessage, which replaces []rpcRequest
 func getRPCRequests(r *http.Request) ([]*jsonrpcMessage, bool, error) {
-	reqBody, err := ioutil.ReadAll(r.Body)
+	reqBody, err := io.ReadAll(r.Body)
 	if err != nil {
 		logger.Error("cannot read a request body", "err", err)
 		return nil, false, err
 	}
 
-	r.Body = ioutil.NopCloser(bytes.NewReader(reqBody))
-	conn := &httpServerConn{Reader: ioutil.NopCloser(bytes.NewReader(reqBody)), Writer: bytes.NewBufferString(""), r: r}
+	r.Body = io.NopCloser(bytes.NewReader(reqBody))
+	conn := &httpServerConn{Reader: io.NopCloser(bytes.NewReader(reqBody)), Writer: bytes.NewBufferString(""), r: r}
 
 	codec := NewCodec(conn)
 

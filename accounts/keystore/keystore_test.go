@@ -22,7 +22,6 @@ package keystore
 
 import (
 	"crypto/ecdsa"
-	"io/ioutil"
 	"math/big"
 	"math/rand"
 	"os"
@@ -388,7 +387,7 @@ func checkEvents(t *testing.T, want []walletEvent, have []walletEvent) {
 }
 
 func tmpKeyStore(t *testing.T, encrypted bool) (string, *KeyStore) {
-	d, err := ioutil.TempDir("", "klay-keystore-test")
+	d, err := os.MkdirTemp("", "klay-keystore-test")
 	if err != nil {
 		t.Fatal(err)
 	}

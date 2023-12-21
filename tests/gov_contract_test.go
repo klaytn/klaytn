@@ -39,7 +39,7 @@ import (
 )
 
 // TestGovernance_Engines tests MixedEngine, ContractEngine, and their
-// (1) Params() and (2) ParamsAt() results.
+// (1) CurrentParams() and (2) EffectiveParams() results.
 func TestGovernance_Engines(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlDebug)
 
@@ -59,7 +59,7 @@ func TestGovernance_Engines(t *testing.T) {
 	config.Governance.GovParamContract = common.Address{}
 	config.Governance.GovernanceMode = "none"
 
-	fullNode, node, validator, chainId, workspace := newBlockchainWithConfig(t, config)
+	fullNode, node, validator, chainId, workspace := newBlockchain(t, config, nil)
 	defer os.RemoveAll(workspace)
 	defer fullNode.Stop()
 
@@ -86,6 +86,10 @@ func TestGovernance_Engines(t *testing.T) {
 	go func() {
 		deployGovParamTx_constructor(t, node, owner, chainId)
 
+		// Give some time for txpool to recognize the contract, because otherwise
+		// the txpool may reject the setParam tx with 'not a program account'
+		time.Sleep(2 * time.Second)
+
 		deployGovParamTx_setParamIn(t, node, owner, chainId, contractAddr, paramName, paramBytes)
 
 		node.Governance().AddVote("governance.govparamcontract", contractAddr)
@@ -95,29 +99,29 @@ func TestGovernance_Engines(t *testing.T) {
 	mixedEngine := node.Governance()
 	contractEngine := node.Governance().ContractGov()
 
-	// Validate current params from mixedEngine.Params() & contractEngine.Params(),
+	// Validate current params from mixedEngine.CurrentParams() & contractEngine.CurrentParams(),
 	// alongside block processing.
-	// At block #N, Params() returns the parameters to be used when building
+	// At block #N, CurrentParams() returns the parameters to be used when building
 	// block #N+1 (i.e. pending block).
 	chainEventCh := make(chan blockchain.ChainEvent)
 	subscription := chain.SubscribeChainEvent(chainEventCh)
 	defer subscription.Unsubscribe()
 
-	// 1. test Params() while subscribing new blocks
+	// 1. test CurrentParams() while subscribing new blocks
 	for {
 		ev := <-chainEventCh
 		time.Sleep(100 * time.Millisecond) // wait for tx sender thread to set deployBlock, etc.
 
 		num := ev.Block.Number().Uint64()
-		mixedEngine.UpdateParams()
+		mixedEngine.UpdateParams(num)
 
-		mixedVal, _ := mixedEngine.Params().Get(params.CommitteeSize)
-		contractVal, _ := contractEngine.Params().Get(params.CommitteeSize)
+		mixedVal, _ := mixedEngine.CurrentParams().Get(params.CommitteeSize)
+		contractVal, _ := contractEngine.CurrentParams().Get(params.CommitteeSize)
 
 		if len(ev.Block.Header().Governance) > 0 {
 			govBlock = num
 			// stopBlock is the epoch block, so we stop when receiving it
-			// otherwise, ParamsAt(stopBlock) may fail
+			// otherwise, EffectiveParams(stopBlock) may fail
 			stopBlock = govBlock + 5
 			stopBlock = stopBlock - (stopBlock % config.Istanbul.Epoch)
 			t.Logf("Governance at block=%2d, stopBlock=%2d", num, stopBlock)
@@ -140,13 +144,13 @@ func TestGovernance_Engines(t *testing.T) {
 		}
 	}
 
-	// 2. test ParamsAt():  Validate historic params from both Engines
+	// 2. test EffectiveParams():  Validate historic params from both Engines
 	for num := uint64(0); num < stopBlock; num++ {
-		mixedpset, err := mixedEngine.ParamsAt(num)
+		mixedpset, err := mixedEngine.EffectiveParams(num)
 		assert.Nil(t, err)
 		mixedVal, _ := mixedpset.Get(params.CommitteeSize)
 
-		contractpset, err := contractEngine.ParamsAt(num)
+		contractpset, err := contractEngine.EffectiveParams(num)
 		assert.Nil(t, err)
 
 		if num <= govBlock+1 { // ContractEngine disabled

@@ -30,11 +30,16 @@ import (
 	"github.com/klaytn/klaytn/rlp"
 )
 
+// type SmartContractAccount:                 Primary in-memory representation. storageRoot is ExtHash
+// type smartContractAccountSerializable:     RLP encoding spec. StorageRoot is Hash
+// type smartContractAccountSerializableExt:  RLP encoding spec. StorageRoot is ExtHash
+// type smartContractAccountSerializableJSON: JSON encoding spec. StorageRoot is Hash
+
 // SmartContractAccount represents a smart contract account containing
 // storage root and code hash.
 type SmartContractAccount struct {
 	*AccountCommon
-	storageRoot common.Hash // merkle root of the storage trie
+	storageRoot common.ExtHash // merkle root plus optional sequence of the storage trie
 	codeHash    []byte
 	codeInfo    params.CodeInfo // consists of two information, vmVersion and codeFormat
 }
@@ -44,6 +49,16 @@ type SmartContractAccount struct {
 type smartContractAccountSerializable struct {
 	CommonSerializable *accountCommonSerializable
 	StorageRoot        common.Hash
+	CodeHash           []byte
+	CodeInfo           params.CodeInfo
+}
+
+// smartContractAccountSerializableExt is an internal data structure for RLP serialization.
+// This structure inherits accountCommonSerializable.
+// nolint: maligned  // Because it is a temporary struct, memory footprint is not important.
+type smartContractAccountSerializableExt struct {
+	CommonSerializable *accountCommonSerializable
+	StorageRoot        common.ExtHash
 	CodeHash           []byte
 	CodeInfo           params.CodeInfo
 }
@@ -62,7 +77,7 @@ type smartContractAccountSerializableJSON struct {
 func newSmartContractAccount() *SmartContractAccount {
 	return &SmartContractAccount{
 		newAccountCommon(),
-		common.Hash{},
+		common.ExtHash{},
 		emptyCodeHash,
 		params.CodeInfo(0),
 	}
@@ -71,12 +86,15 @@ func newSmartContractAccount() *SmartContractAccount {
 func newSmartContractAccountWithMap(values map[AccountValueKeyType]interface{}) *SmartContractAccount {
 	sca := &SmartContractAccount{
 		newAccountCommonWithMap(values),
-		common.Hash{},
+		common.ExtHash{},
 		emptyCodeHash,
 		params.CodeInfo(0),
 	}
 
 	if v, ok := values[AccountValueKeyStorageRoot].(common.Hash); ok {
+		sca.storageRoot = v.ExtendZero()
+	}
+	if v, ok := values[AccountValueKeyStorageRoot].(common.ExtHash); ok {
 		sca.storageRoot = v
 	}
 
@@ -91,14 +109,17 @@ func newSmartContractAccountWithMap(values map[AccountValueKeyType]interface{}) 
 	return sca
 }
 
-func newSmartContractAccountSerializable() *smartContractAccountSerializable {
+func (sca *SmartContractAccount) toSerializable() *smartContractAccountSerializable {
 	return &smartContractAccountSerializable{
-		CommonSerializable: newAccountCommonSerializable(),
+		CommonSerializable: sca.AccountCommon.toSerializable(),
+		StorageRoot:        sca.storageRoot.Unextend(),
+		CodeHash:           sca.codeHash,
+		CodeInfo:           sca.codeInfo,
 	}
 }
 
-func (sca *SmartContractAccount) toSerializable() *smartContractAccountSerializable {
-	return &smartContractAccountSerializable{
+func (sca *SmartContractAccount) toSerializableExt() *smartContractAccountSerializableExt {
+	return &smartContractAccountSerializableExt{
 		CommonSerializable: sca.AccountCommon.toSerializable(),
 		StorageRoot:        sca.storageRoot,
 		CodeHash:           sca.codeHash,
@@ -107,6 +128,13 @@ func (sca *SmartContractAccount) toSerializable() *smartContractAccountSerializa
 }
 
 func (sca *SmartContractAccount) fromSerializable(o *smartContractAccountSerializable) {
+	sca.AccountCommon.fromSerializable(o.CommonSerializable)
+	sca.storageRoot = o.StorageRoot.ExtendZero()
+	sca.codeHash = o.CodeHash
+	sca.codeInfo = o.CodeInfo
+}
+
+func (sca *SmartContractAccount) fromSerializableExt(o *smartContractAccountSerializableExt) {
 	sca.AccountCommon.fromSerializable(o.CommonSerializable)
 	sca.storageRoot = o.StorageRoot
 	sca.codeHash = o.CodeHash
@@ -117,21 +145,43 @@ func (sca *SmartContractAccount) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, sca.toSerializable())
 }
 
-func (sca *SmartContractAccount) DecodeRLP(s *rlp.Stream) error {
-	serialized := &smartContractAccountSerializable{
-		newAccountCommonSerializable(),
-		common.Hash{},
-		[]byte{},
-		params.CodeInfo(0),
+func (sca *SmartContractAccount) EncodeRLPExt(w io.Writer) error {
+	if sca.storageRoot.IsZeroExtended() {
+		return rlp.Encode(w, sca.toSerializable())
+	} else {
+		return rlp.Encode(w, sca.toSerializableExt())
 	}
+}
 
-	if err := s.Decode(serialized); err != nil {
+func (sca *SmartContractAccount) DecodeRLP(s *rlp.Stream) error {
+	savedStream, err := s.Raw()
+	if err != nil {
 		return err
 	}
 
-	sca.fromSerializable(serialized)
+	// s.Raw() has consumed the stream. Refill with original data.
+	s.Reset(bytes.NewReader(savedStream), 0)
+	// Try decode into smartContractAccountSerializableExt
+	serializedExt := &smartContractAccountSerializableExt{
+		CommonSerializable: newAccountCommonSerializable(),
+	}
+	if err := s.Decode(serializedExt); err == nil {
+		sca.fromSerializableExt(serializedExt)
+		return nil
+	}
 
-	return nil
+	// s.Decode() may have consumed the stream. Refill with original data.
+	s.Reset(bytes.NewReader(savedStream), 0)
+	// Retry with smartContractAccountSerializable
+	serialized := &smartContractAccountSerializable{
+		CommonSerializable: newAccountCommonSerializable(),
+	}
+	if err := s.Decode(serialized); err == nil {
+		sca.fromSerializable(serialized)
+		return nil
+	} else {
+		return err
+	}
 }
 
 func (sca *SmartContractAccount) MarshalJSON() ([]byte, error) {
@@ -140,7 +190,7 @@ func (sca *SmartContractAccount) MarshalJSON() ([]byte, error) {
 		Balance:       (*hexutil.Big)(sca.balance),
 		HumanReadable: sca.humanReadable,
 		Key:           accountkey.NewAccountKeySerializerWithAccountKey(sca.key),
-		StorageRoot:   sca.storageRoot,
+		StorageRoot:   sca.storageRoot.Unextend(), // Unextend for API compatibility
 		CodeHash:      sca.codeHash,
 		CodeFormat:    sca.codeInfo.GetCodeFormat(),
 		VmVersion:     sca.codeInfo.GetVmVersion(),
@@ -158,7 +208,7 @@ func (sca *SmartContractAccount) UnmarshalJSON(b []byte) error {
 	sca.balance = (*big.Int)(serialized.Balance)
 	sca.humanReadable = serialized.HumanReadable
 	sca.key = serialized.Key.GetKey()
-	sca.storageRoot = serialized.StorageRoot
+	sca.storageRoot = serialized.StorageRoot.ExtendZero() // API inputs should contain merkle hash
 	sca.codeHash = serialized.CodeHash
 	sca.codeInfo = params.NewCodeInfo(serialized.CodeFormat, serialized.VmVersion)
 
@@ -169,7 +219,7 @@ func (sca *SmartContractAccount) Type() AccountType {
 	return SmartContractAccountType
 }
 
-func (sca *SmartContractAccount) GetStorageRoot() common.Hash {
+func (sca *SmartContractAccount) GetStorageRoot() common.ExtHash {
 	return sca.storageRoot
 }
 
@@ -185,7 +235,7 @@ func (sca *SmartContractAccount) GetVmVersion() params.VmVersion {
 	return sca.codeInfo.GetVmVersion()
 }
 
-func (sca *SmartContractAccount) SetStorageRoot(h common.Hash) {
+func (sca *SmartContractAccount) SetStorageRoot(h common.ExtHash) {
 	sca.storageRoot = h
 }
 

@@ -24,7 +24,6 @@ import (
 	"encoding/json"
 	"io"
 	"math/big"
-	"time"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/math"
@@ -41,12 +40,14 @@ func NewJSONLogger(cfg *LogConfig, writer io.Writer) *JSONLogger {
 	return &JSONLogger{json.NewEncoder(writer), cfg}
 }
 
-func (l *JSONLogger) CaptureStart(from common.Address, to common.Address, create bool, input []byte, gas uint64, value *big.Int) error {
-	return nil
+func (l *JSONLogger) CaptureStart(env *EVM, from common.Address, to common.Address, create bool, input []byte, gas uint64, value *big.Int) {
 }
 
 // CaptureState outputs state information on the logger.
-func (l *JSONLogger) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost uint64, memory *Memory, stack *Stack, contract *Contract, depth int, err error) error {
+// TODO: Add rData (return data) later
+func (l *JSONLogger) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost uint64, scope *ScopeContext, depth int, err error) {
+	memory := scope.Memory
+	stack := scope.Stack
 	log := StructLog{
 		Pc:            pc,
 		Op:            op,
@@ -62,26 +63,40 @@ func (l *JSONLogger) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost uint
 		log.Memory = memory.Data()
 	}
 	if !l.cfg.DisableStack {
-		log.Stack = stack.Data()
+		// TODO-Klaytn: residual porting PR -> https://github.com/ethereum/go-ethereum/pull/23016/files
+		logstack := make([]*big.Int, len(stack.Data()))
+		for i, item := range stack.Data() {
+			logstack[i] = item.ToBig()
+		}
+		log.Stack = logstack
 	}
-	return l.encoder.Encode(log)
+	l.encoder.Encode(log)
 }
 
 // CaptureFault outputs state information on the logger.
-func (l *JSONLogger) CaptureFault(env *EVM, pc uint64, op OpCode, gas, cost uint64, memory *Memory, stack *Stack, contract *Contract, depth int, err error) error {
-	return nil
+func (l *JSONLogger) CaptureFault(env *EVM, pc uint64, op OpCode, gas, cost uint64, scope *ScopeContext, depth int, err error) {
+	l.CaptureState(env, pc, op, gas, cost, scope, depth, err)
 }
 
 // CaptureEnd is triggered at end of execution.
-func (l *JSONLogger) CaptureEnd(output []byte, gasUsed uint64, t time.Duration, err error) error {
+func (l *JSONLogger) CaptureEnd(output []byte, gasUsed uint64, err error) {
 	type endLog struct {
 		Output  string              `json:"output"`
 		GasUsed math.HexOrDecimal64 `json:"gasUsed"`
-		Time    time.Duration       `json:"time"`
 		Err     string              `json:"error,omitempty"`
 	}
+	var errMsg string
 	if err != nil {
-		return l.encoder.Encode(endLog{common.Bytes2Hex(output), math.HexOrDecimal64(gasUsed), t, err.Error()})
+		errMsg = err.Error()
 	}
-	return l.encoder.Encode(endLog{common.Bytes2Hex(output), math.HexOrDecimal64(gasUsed), t, ""})
+	l.encoder.Encode(endLog{common.Bytes2Hex(output), math.HexOrDecimal64(gasUsed), errMsg})
 }
+
+func (l *JSONLogger) CaptureEnter(typ OpCode, from common.Address, to common.Address, input []byte, gas uint64, value *big.Int) {
+}
+
+func (l *JSONLogger) CaptureExit(output []byte, gasUsed uint64, err error) {}
+
+func (l *JSONLogger) CaptureTxStart(gasLimit uint64) {}
+
+func (l *JSONLogger) CaptureTxEnd(restGas uint64) {}

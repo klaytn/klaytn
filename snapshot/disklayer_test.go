@@ -22,7 +22,6 @@ package snapshot
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -523,7 +522,7 @@ func TestDiskSeek(t *testing.T) {
 	// Create some accounts in the disk layer
 	var db database.DBManager
 
-	if dir, err := ioutil.TempDir("", "disklayer-test"); err != nil {
+	if dir, err := os.MkdirTemp("", "disklayer-test"); err != nil {
 		t.Fatal(err)
 	} else {
 		defer os.RemoveAll(dir)

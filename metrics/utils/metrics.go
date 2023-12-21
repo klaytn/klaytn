@@ -18,7 +18,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rcrowley/go-metrics"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 // Enabled is checked by the constructor functions for all of the
@@ -68,7 +68,7 @@ func StartMetricCollectionAndExport(ctx *cli.Context) {
 				"", prometheus.DefaultRegisterer, metricsCollectionInterval)
 			go pClient.UpdatePrometheusMetrics()
 			http.Handle("/metrics", promhttp.Handler())
-			port := ctx.GlobalInt(PrometheusExporterPortFlag)
+			port := ctx.Int(PrometheusExporterPortFlag)
 
 			go func() {
 				err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil)

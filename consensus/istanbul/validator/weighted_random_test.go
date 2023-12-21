@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/fork"
@@ -91,6 +92,7 @@ var (
 		0, 0, 0,
 	}
 	testPrevHash = common.HexToHash("0xf99eb1626cfa6db435c0836235942d7ccaa935f1ae247d3f1c21e495685f903a")
+	testMixHash  = hexutil.MustDecode("0xf99eb1626cfa6db435c0836235942d7ccaa935f1ae247d3f1c21e495685f903a")
 
 	testExpectedProposers = []common.Address{
 		common.HexToAddress("0x8704Ffb473a16638ea42c7704995d6505102a4Ca"),
@@ -243,6 +245,11 @@ func TestDefaultSet_IsProposer(t *testing.T) {
 }
 
 func TestWeightedCouncil_RefreshWithZeroWeight(t *testing.T) {
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{
+		IstanbulCompatibleBlock: big.NewInt(5),
+	})
+	defer fork.ClearHardForkBlockNumberConfig()
+
 	validators := makeTestValidators(testZeroWeights)
 
 	valSet := makeTestWeightedCouncil(testZeroWeights)
@@ -537,26 +544,117 @@ func TestWeightedCouncil_SubListWithProposer(t *testing.T) {
 	}
 }
 
-func TestWeightedCouncil_Copy(t *testing.T) {
-	valSet := makeTestWeightedCouncil(testNonZeroWeights)
+func TestWeightedCouncil_Randao(t *testing.T) {
+	var (
+		forkNum    = uint64(5)
+		validators = makeTestWeightedCouncil(nil).List()
+		valSize    = uint64(len(validators))
+	)
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{
+		RandaoCompatibleBlock: big.NewInt(int64(forkNum)),
+	})
+	defer fork.ClearHardForkBlockNumberConfig()
+	valSet := makeTestWeightedCouncil(nil)
 
-	copiedValSet := valSet.Copy().(*weightedCouncil)
-
-	// check each variable is same except selector(function)
-	if valSet.blockNum != copiedValSet.blockNum || valSet.GetProposer() != copiedValSet.GetProposer() ||
-		valSet.subSize != copiedValSet.subSize || valSet.policy != copiedValSet.policy ||
-		valSet.proposersBlockNum != copiedValSet.proposersBlockNum ||
-		!reflect.DeepEqual(valSet.validators, copiedValSet.validators) ||
-		!reflect.DeepEqual(valSet.proposers, copiedValSet.proposers) ||
-		!reflect.DeepEqual(valSet.stakingInfo, copiedValSet.stakingInfo) {
-		t.Errorf("copied weightedCouncil is different from original.")
-		t.Errorf("block number. original : %v, Copied : %v", valSet.blockNum, copiedValSet.blockNum)
-		t.Errorf("proposer. original : %v, Copied : %v", valSet.GetProposer(), copiedValSet.GetProposer())
-		t.Errorf("subSize. original : %v, Copied : %v", valSet.subSize, copiedValSet.subSize)
-		t.Errorf("policy. original : %v, Copied : %v", valSet.policy, copiedValSet.policy)
-		t.Errorf("proposersBlockNum. original : %v, Copied : %v", valSet.proposersBlockNum, copiedValSet.proposersBlockNum)
-		t.Errorf("validators. original : %v, Copied : %v", valSet.validators, copiedValSet.validators)
-		t.Errorf("proposers. original : %v, Copied : %v", valSet.proposers, copiedValSet.proposers)
-		t.Errorf("staking. original : %v, Copied : %v", valSet.stakingInfo, copiedValSet.stakingInfo)
+	testcases := []struct {
+		blockNum          uint64
+		round             uint64
+		committeeSize     uint64
+		mixHash           []byte
+		expectedProposer  istanbul.Validator
+		expectedCommittee []istanbul.Validator
+	}{
+		{ // Before fork
+			blockNum:          forkNum - 2,
+			round:             0,
+			committeeSize:     valSize + 1,
+			mixHash:           testMixHash,
+			expectedProposer:  validators[forkNum-2],
+			expectedCommittee: validators,
+		},
+		{ // After fork
+			blockNum:          forkNum - 1,
+			round:             0,
+			committeeSize:     valSize + 1,
+			mixHash:           testMixHash,
+			expectedProposer:  SelectRandaoCommittee(validators, valSize+1, testMixHash)[0],
+			expectedCommittee: validators,
+		},
+		{ // nil MixHash
+			blockNum:          forkNum + 10, // expect log "no mixHash  number=(forkNum+10)"
+			round:             0,
+			committeeSize:     valSize - 1,
+			mixHash:           nil,
+			expectedProposer:  validators[0], // fall back to roundRobinProposer
+			expectedCommittee: nil,           // SubList fails.
+		},
+		{ // IsSubset() == true
+			blockNum:          forkNum,
+			round:             0,
+			committeeSize:     valSize - 1,
+			mixHash:           testMixHash,
+			expectedProposer:  SelectRandaoCommittee(validators, valSize-1, testMixHash)[0],
+			expectedCommittee: SelectRandaoCommittee(validators, valSize-1, testMixHash),
+		},
+		{ // IsSubset() == false
+			blockNum:          forkNum,
+			round:             0,
+			committeeSize:     valSize + 1,
+			mixHash:           testMixHash,
+			expectedProposer:  SelectRandaoCommittee(validators, valSize+1, testMixHash)[0],
+			expectedCommittee: validators,
+		},
+		{ // Nonzero round
+			blockNum:          forkNum,
+			round:             2,
+			committeeSize:     valSize - 1,
+			mixHash:           testMixHash,
+			expectedProposer:  SelectRandaoCommittee(validators, valSize-1, testMixHash)[2],
+			expectedCommittee: SelectRandaoCommittee(validators, valSize-1, testMixHash),
+		},
 	}
+
+	for i, tc := range testcases {
+		valSet.SetBlockNum(tc.blockNum)
+		valSet.SetSubGroupSize(tc.committeeSize)
+		valSet.SetMixHash(tc.mixHash)
+
+		view := &istanbul.View{
+			Sequence: big.NewInt(int64(tc.blockNum)),
+			Round:    big.NewInt(int64(tc.round)),
+		}
+
+		// The lastProposer is ignored by weightedRandomProposer
+		// but it is used by roundRobinProposer. If lastProposer = 0x0,
+		// then roundRobinProposer returns validators[round].
+		valSet.CalcProposer(common.Address{}, uint64(tc.round))
+		proposer := valSet.GetProposer()
+		assert.Equal(t, tc.expectedProposer, proposer, "tc[%d]", i)
+
+		committee := valSet.SubList(testPrevHash, view)
+		assert.Equal(t, tc.expectedCommittee, committee, "tc[%d]", i)
+	}
+}
+
+func TestWeightedCouncil_Copy(t *testing.T) {
+	a := makeTestWeightedCouncil(testNonZeroWeights)
+	a.SetSubGroupSize(21)
+	a.SetBlockNum(1234)
+	a.SetMixHash(testMixHash)
+
+	b := a.Copy().(*weightedCouncil)
+
+	assert.Equal(t, a.subSize, b.subSize)
+	assert.Equal(t, a.demotedValidators, b.demotedValidators)
+	assert.Equal(t, a.validators, b.validators)
+	assert.Equal(t, a.policy, b.policy)
+
+	assert.Equal(t, a.proposer, b.proposer)
+	assert.Equal(t, a.proposers, b.proposers)
+	assert.Equal(t, a.proposersBlockNum, b.proposersBlockNum)
+	assert.Equal(t, a.stakingInfo, b.stakingInfo)
+	assert.Equal(t, a.blockNum, b.blockNum)
+	assert.Equal(t, a.mixHash, b.mixHash)
+
+	assert.Equal(t, a.GetProposer(), b.GetProposer())
 }

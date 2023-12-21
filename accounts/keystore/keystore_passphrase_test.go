@@ -22,7 +22,7 @@ package keystore
 
 import (
 	"crypto/ecdsa"
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/klaytn/klaytn/crypto"
@@ -39,7 +39,7 @@ const (
 
 // Tests that a json key file can be decrypted and encrypted in multiple rounds.
 func TestKeyEncryptDecrypt(t *testing.T) {
-	keyjson, err := ioutil.ReadFile("testdata/very-light-scrypt.json")
+	keyjson, err := os.ReadFile("testdata/very-light-scrypt.json")
 	if err != nil {
 		t.Fatal(err)
 	}

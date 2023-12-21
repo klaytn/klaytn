@@ -68,13 +68,13 @@ type DBManager interface {
 	GetStateTrieMigrationDB() Database
 	GetMiscDB() Database
 	GetSnapshotDB() Database
+	GetProperty(dt DBEntryType, name string) string
 
 	// from accessors_chain.go
 	ReadCanonicalHash(number uint64) common.Hash
 	WriteCanonicalHash(hash common.Hash, number uint64)
 	DeleteCanonicalHash(number uint64)
 
-	ReadAllHashes(number uint64) []common.Hash
 	ReadHeadHeaderHash() common.Hash
 	WriteHeadHeaderHash(hash common.Hash)
 
@@ -133,6 +133,7 @@ type DBManager interface {
 
 	ReadIstanbulSnapshot(hash common.Hash) ([]byte, error)
 	WriteIstanbulSnapshot(hash common.Hash, blob []byte) error
+	DeleteIstanbulSnapshot(hash common.Hash)
 
 	WriteMerkleProof(key, value []byte)
 
@@ -140,34 +141,45 @@ type DBManager interface {
 	ReadCode(hash common.Hash) []byte
 	ReadCodeWithPrefix(hash common.Hash) []byte
 	WriteCode(hash common.Hash, code []byte)
+	PutCodeToBatch(batch Batch, hash common.Hash, code []byte)
 	DeleteCode(hash common.Hash)
 	HasCode(hash common.Hash) bool
 
 	// State Trie Database related operations
-	ReadCachedTrieNode(hash common.Hash) ([]byte, error)
-	ReadCachedTrieNodePreimage(secureKey []byte) ([]byte, error)
-	ReadStateTrieNode(key []byte) ([]byte, error)
-	HasStateTrieNode(key []byte) (bool, error)
+	ReadTrieNode(hash common.ExtHash) ([]byte, error)
+	HasTrieNode(hash common.ExtHash) (bool, error)
 	HasCodeWithPrefix(hash common.Hash) bool
 	ReadPreimage(hash common.Hash) []byte
 
 	// Read StateTrie from new DB
-	ReadCachedTrieNodeFromNew(hash common.Hash) ([]byte, error)
-	ReadCachedTrieNodePreimageFromNew(secureKey []byte) ([]byte, error)
-	ReadStateTrieNodeFromNew(key []byte) ([]byte, error)
-	HasStateTrieNodeFromNew(key []byte) (bool, error)
+	ReadTrieNodeFromNew(hash common.ExtHash) ([]byte, error)
+	HasTrieNodeFromNew(hash common.ExtHash) (bool, error)
 	HasCodeWithPrefixFromNew(hash common.Hash) bool
 	ReadPreimageFromNew(hash common.Hash) []byte
 
 	// Read StateTrie from old DB
-	ReadCachedTrieNodeFromOld(hash common.Hash) ([]byte, error)
-	ReadCachedTrieNodePreimageFromOld(secureKey []byte) ([]byte, error)
-	ReadStateTrieNodeFromOld(key []byte) ([]byte, error)
-	HasStateTrieNodeFromOld(key []byte) (bool, error)
+	ReadTrieNodeFromOld(hash common.ExtHash) ([]byte, error)
+	HasTrieNodeFromOld(hash common.ExtHash) (bool, error)
 	HasCodeWithPrefixFromOld(hash common.Hash) bool
 	ReadPreimageFromOld(hash common.Hash) []byte
 
+	// Write StateTrie
+	WriteTrieNode(hash common.ExtHash, node []byte)
+	PutTrieNodeToBatch(batch Batch, hash common.ExtHash, node []byte)
+	DeleteTrieNode(hash common.ExtHash)
 	WritePreimages(number uint64, preimages map[common.Hash][]byte)
+
+	// Trie pruning
+	ReadPruningEnabled() bool
+	WritePruningEnabled()
+	DeletePruningEnabled()
+
+	WritePruningMarks(marks []PruningMark)
+	ReadPruningMarks(startNumber, endNumber uint64) []PruningMark
+	DeletePruningMarks(marks []PruningMark)
+	PruneTrieNodes(marks []PruningMark)
+	WriteLastPrunedBlockNumber(blockNumber uint64)
+	ReadLastPrunedBlockNumber() (uint64, error)
 
 	// from accessors_indexes.go
 	ReadTxLookupEntry(hash common.Hash) (common.Hash, uint64, uint64)
@@ -277,11 +289,14 @@ type DBManager interface {
 	ReadGovernanceAtNumber(num uint64, epoch uint64) (uint64, map[string]interface{}, error)
 	WriteGovernanceState(b []byte) error
 	ReadGovernanceState() ([]byte, error)
+	DeleteGovernance(num uint64)
 	// TODO-Klaytn implement governance DB deletion methods.
 
 	// StakingInfo related functions
 	ReadStakingInfo(blockNum uint64) ([]byte, error)
 	WriteStakingInfo(blockNum uint64, stakingInfo []byte) error
+	HasStakingInfo(blockNum uint64) (bool, error)
+	DeleteStakingInfo(blockNum uint64)
 
 	// DB migration related function
 	StartDBMigration(DBManager) error
@@ -289,6 +304,8 @@ type DBManager interface {
 	// ChainDataFetcher checkpoint function
 	WriteChainDataFetcherCheckpoint(checkpoint uint64) error
 	ReadChainDataFetcherCheckpoint() (uint64, error)
+
+	TryCatchUpWithPrimary() error
 }
 
 type DBEntryType uint8
@@ -390,6 +407,13 @@ func getDBEntryConfig(originalDBC *DBConfig, i DBEntryType, dbDir string) *DBCon
 		newDBC.DynamoDBConfig = &newDynamoDBConfig
 	}
 
+	if newDBC.RocksDBConfig != nil {
+		newRocksDBConfig := *originalDBC.RocksDBConfig
+		newRocksDBConfig.CacheSize = originalDBC.RocksDBConfig.CacheSize * uint64(ratio) / 100
+		newRocksDBConfig.MaxOpenFiles = originalDBC.RocksDBConfig.MaxOpenFiles * ratio / 100
+		newDBC.RocksDBConfig = &newRocksDBConfig
+	}
+
 	return &newDBC
 }
 
@@ -433,6 +457,9 @@ type DBConfig struct {
 	LevelDBCacheSize   int // LevelDBCacheSize = BlockCacheCapacity + WriteBuffer
 	LevelDBCompression LevelDBCompressionType
 	LevelDBBufferPool  bool
+
+	// RocksDB related configurations
+	RocksDBConfig *RocksDBConfig
 
 	// DynamoDB related configurations
 	DynamoDBConfig *DynamoDBConfig
@@ -518,6 +545,8 @@ func newDatabase(dbc *DBConfig, entryType DBEntryType) (Database, error) {
 	switch dbc.DBType {
 	case LevelDB:
 		return NewLevelDB(dbc, entryType)
+	case RocksDB:
+		return NewRocksDB(dbc.Dir, dbc.RocksDBConfig)
 	case BadgerDB:
 		return NewBadgerDB(dbc.Dir)
 	case MemoryDB:
@@ -658,6 +687,12 @@ func (stdBatch *stateTrieDBBatch) Write() error {
 func (stdBatch *stateTrieDBBatch) Reset() {
 	for _, batch := range stdBatch.batches {
 		batch.Reset()
+	}
+}
+
+func (stdBatch *stateTrieDBBatch) Release() {
+	for _, batch := range stdBatch.batches {
+		batch.Release()
 	}
 }
 
@@ -832,6 +867,21 @@ func (dbm *databaseManager) GetSnapshotDB() Database {
 	return dbm.getDatabase(SnapshotDB)
 }
 
+func (dbm *databaseManager) GetProperty(dt DBEntryType, name string) string {
+	return dbm.getDatabase(dt).GetProperty(name)
+}
+
+func (dbm *databaseManager) TryCatchUpWithPrimary() error {
+	for _, db := range dbm.dbs {
+		if db != nil {
+			if err := db.TryCatchUpWithPrimary(); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func (dbm *databaseManager) GetMemDB() *MemDB {
 	if dbm.config.DBType == MemoryDB {
 		if memDB, ok := dbm.dbs[0].(*MemDB); ok {
@@ -908,24 +958,6 @@ func (dbm *databaseManager) DeleteCanonicalHash(number uint64) {
 		logger.Crit("Failed to delete number to hash mapping", "err", err)
 	}
 	dbm.cm.writeCanonicalHashCache(number, common.Hash{})
-}
-
-// ReadAllHashes retrieves all the hashes assigned to blocks at a certain heights,
-// both canonical and reorged forks included.
-func (dbm *databaseManager) ReadAllHashes(number uint64) []common.Hash {
-	db := dbm.getDatabase(headerDB)
-	prefix := headerKeyPrefix(number)
-
-	hashes := make([]common.Hash, 0, 1)
-	it := db.NewIterator(prefix, nil)
-	defer it.Release()
-
-	for it.Next() {
-		if key := it.Key(); len(key) == len(prefix)+32 {
-			hashes = append(hashes, common.BytesToHash(key[len(key)-32:]))
-		}
-	}
-	return hashes
 }
 
 // Head Header Hash operations.
@@ -1664,6 +1696,13 @@ func (dbm *databaseManager) WriteIstanbulSnapshot(hash common.Hash, blob []byte)
 	return db.Put(snapshotKey(hash), blob)
 }
 
+func (dbm *databaseManager) DeleteIstanbulSnapshot(hash common.Hash) {
+	db := dbm.getDatabase(MiscDB)
+	if err := db.Delete(snapshotKey(hash)); err != nil {
+		logger.Crit("Failed to delete snpahost", "err", err)
+	}
+}
+
 // Merkle Proof operation.
 func (dbm *databaseManager) WriteMerkleProof(key, value []byte) {
 	db := dbm.getDatabase(MiscDB)
@@ -1735,6 +1774,12 @@ func (dbm *databaseManager) WriteCode(hash common.Hash, code []byte) {
 	}
 }
 
+func (dbm *databaseManager) PutCodeToBatch(batch Batch, hash common.Hash, code []byte) {
+	if err := batch.Put(CodeKey(hash), code); err != nil {
+		logger.Crit("Failed to store contract code", "err", err)
+	}
+}
+
 // DeleteCode deletes the specified contract code from the database.
 func (dbm *databaseManager) DeleteCode(hash common.Hash) {
 	db := dbm.getDatabase(StateTrieDB)
@@ -1743,20 +1788,19 @@ func (dbm *databaseManager) DeleteCode(hash common.Hash) {
 	}
 }
 
-// Cached Trie Node operation.
-func (dbm *databaseManager) ReadCachedTrieNode(hash common.Hash) ([]byte, error) {
+func (dbm *databaseManager) ReadTrieNode(hash common.ExtHash) ([]byte, error) {
 	dbm.lockInMigration.RLock()
 	defer dbm.lockInMigration.RUnlock()
 
 	if dbm.inMigration {
-		if val, err := dbm.GetStateTrieMigrationDB().Get(hash[:]); err == nil {
+		if val, err := dbm.ReadTrieNodeFromNew(hash); err == nil {
 			return val, nil
 		} else if err != dataNotFoundErr {
 			// TODO-Klaytn-Database Need to be properly handled
 			logger.Error("Unexpected error while reading cached trie node from state migration database", "err", err)
 		}
 	}
-	val, err := dbm.ReadCachedTrieNodeFromOld(hash)
+	val, err := dbm.ReadTrieNodeFromOld(hash)
 	if err != nil && err != dataNotFoundErr {
 		// TODO-Klaytn-Database Need to be properly handled
 		logger.Error("Unexpected error while reading cached trie node", "err", err)
@@ -1764,38 +1808,13 @@ func (dbm *databaseManager) ReadCachedTrieNode(hash common.Hash) ([]byte, error)
 	return val, err
 }
 
-// Cached Trie Node Preimage operation.
-func (dbm *databaseManager) ReadCachedTrieNodePreimage(secureKey []byte) ([]byte, error) {
-	dbm.lockInMigration.RLock()
-	defer dbm.lockInMigration.RUnlock()
-
-	if dbm.inMigration {
-		if val, err := dbm.GetStateTrieMigrationDB().Get(secureKey); err == nil {
-			return val, nil
-		}
-	}
-	return dbm.ReadCachedTrieNodePreimageFromOld(secureKey)
-}
-
-// State Trie Related operations.
-func (dbm *databaseManager) ReadStateTrieNode(key []byte) ([]byte, error) {
-	dbm.lockInMigration.RLock()
-	defer dbm.lockInMigration.RUnlock()
-
-	if dbm.inMigration {
-		if val, err := dbm.GetStateTrieMigrationDB().Get(key); err == nil {
-			return val, nil
-		}
-	}
-	return dbm.ReadStateTrieNodeFromOld(key)
-}
-
-func (dbm *databaseManager) HasStateTrieNode(key []byte) (bool, error) {
-	val, err := dbm.ReadStateTrieNode(key)
+func (dbm *databaseManager) HasTrieNode(hash common.ExtHash) (bool, error) {
+	val, err := dbm.ReadTrieNode(hash)
 	if val == nil || err != nil {
 		return false, err
+	} else {
+		return true, nil
 	}
-	return true, nil
 }
 
 // ReadPreimage retrieves a single preimage of the provided hash.
@@ -1811,27 +1830,17 @@ func (dbm *databaseManager) ReadPreimage(hash common.Hash) []byte {
 	return dbm.ReadPreimageFromOld(hash)
 }
 
-// Cached Trie Node operation.
-func (dbm *databaseManager) ReadCachedTrieNodeFromNew(hash common.Hash) ([]byte, error) {
-	return dbm.GetStateTrieMigrationDB().Get(hash[:])
+func (dbm *databaseManager) ReadTrieNodeFromNew(hash common.ExtHash) ([]byte, error) {
+	return dbm.GetStateTrieMigrationDB().Get(TrieNodeKey(hash))
 }
 
-// Cached Trie Node Preimage operation.
-func (dbm *databaseManager) ReadCachedTrieNodePreimageFromNew(secureKey []byte) ([]byte, error) {
-	return dbm.GetStateTrieMigrationDB().Get(secureKey)
-}
-
-// State Trie Related operations.
-func (dbm *databaseManager) ReadStateTrieNodeFromNew(key []byte) ([]byte, error) {
-	return dbm.GetStateTrieMigrationDB().Get(key)
-}
-
-func (dbm *databaseManager) HasStateTrieNodeFromNew(key []byte) (bool, error) {
-	val, err := dbm.GetStateTrieMigrationDB().Get(key)
+func (dbm *databaseManager) HasTrieNodeFromNew(hash common.ExtHash) (bool, error) {
+	val, err := dbm.ReadTrieNodeFromNew(hash)
 	if val == nil || err != nil {
 		return false, err
+	} else {
+		return true, nil
 	}
-	return true, nil
 }
 
 func (dbm *databaseManager) HasCodeWithPrefixFromNew(hash common.Hash) bool {
@@ -1846,29 +1855,18 @@ func (dbm *databaseManager) ReadPreimageFromNew(hash common.Hash) []byte {
 	return data
 }
 
-func (dbm *databaseManager) ReadCachedTrieNodeFromOld(hash common.Hash) ([]byte, error) {
+func (dbm *databaseManager) ReadTrieNodeFromOld(hash common.ExtHash) ([]byte, error) {
 	db := dbm.getDatabase(StateTrieDB)
-	return db.Get(hash[:])
+	return db.Get(TrieNodeKey(hash))
 }
 
-// Cached Trie Node Preimage operation.
-func (dbm *databaseManager) ReadCachedTrieNodePreimageFromOld(secureKey []byte) ([]byte, error) {
-	db := dbm.getDatabase(StateTrieDB)
-	return db.Get(secureKey)
-}
-
-// State Trie Related operations.
-func (dbm *databaseManager) ReadStateTrieNodeFromOld(key []byte) ([]byte, error) {
-	db := dbm.getDatabase(StateTrieDB)
-	return db.Get(key)
-}
-
-func (dbm *databaseManager) HasStateTrieNodeFromOld(key []byte) (bool, error) {
-	val, err := dbm.ReadStateTrieNodeFromOld(key)
+func (dbm *databaseManager) HasTrieNodeFromOld(hash common.ExtHash) (bool, error) {
+	val, err := dbm.ReadTrieNodeFromOld(hash)
 	if val == nil || err != nil {
 		return false, err
+	} else {
+		return true, nil
 	}
-	return true, nil
 }
 
 func (dbm *databaseManager) HasCodeWithPrefixFromOld(hash common.Hash) bool {
@@ -1884,12 +1882,43 @@ func (dbm *databaseManager) ReadPreimageFromOld(hash common.Hash) []byte {
 	return data
 }
 
+func (dbm *databaseManager) WriteTrieNode(hash common.ExtHash, node []byte) {
+	dbm.lockInMigration.RLock()
+	defer dbm.lockInMigration.RUnlock()
+
+	if dbm.inMigration {
+		if err := dbm.getDatabase(StateTrieMigrationDB).Put(TrieNodeKey(hash), node); err != nil {
+			logger.Crit("Failed to store trie node", "err", err)
+		}
+	}
+	if err := dbm.getDatabase(StateTrieDB).Put(TrieNodeKey(hash), node); err != nil {
+		logger.Crit("Failed to store trie node", "err", err)
+	}
+}
+
+func (dbm *databaseManager) PutTrieNodeToBatch(batch Batch, hash common.ExtHash, node []byte) {
+	if err := batch.Put(TrieNodeKey(hash), node); err != nil {
+		logger.Crit("Failed to store trie node", "err", err)
+	}
+}
+
+// DeleteTrieNode deletes a trie node having a specific hash. It is used only for testing.
+func (dbm *databaseManager) DeleteTrieNode(hash common.ExtHash) {
+	if err := dbm.getDatabase(StateTrieDB).Delete(TrieNodeKey(hash)); err != nil {
+		logger.Crit("Failed to delete trie node", "err", err)
+	}
+}
+
 // WritePreimages writes the provided set of preimages to the database. `number` is the
 // current block number, and is used for debug messages only.
 func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.Hash][]byte) {
 	batch := dbm.NewBatch(StateTrieDB)
+	defer batch.Release()
 	for hash, preimage := range preimages {
 		if err := batch.Put(preimageKey(hash), preimage); err != nil {
+			logger.Crit("Failed to store trie preimage", "err", err)
+		}
+		if _, err := WriteBatchesOverThreshold(batch); err != nil {
 			logger.Crit("Failed to store trie preimage", "err", err)
 		}
 	}
@@ -1898,6 +1927,115 @@ func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.H
 	}
 	preimageCounter.Inc(int64(len(preimages)))
 	preimageHitCounter.Inc(int64(len(preimages)))
+}
+
+// ReadPruningEnabled reads if the live pruning flag is stored in database.
+func (dbm *databaseManager) ReadPruningEnabled() bool {
+	ok, _ := dbm.getDatabase(MiscDB).Has(pruningEnabledKey)
+	return ok
+}
+
+// WritePruningEnabled writes the live pruning flag to the database.
+func (dbm *databaseManager) WritePruningEnabled() {
+	if err := dbm.getDatabase(MiscDB).Put(pruningEnabledKey, []byte("42")); err != nil {
+		logger.Crit("Failed to store pruning enabled flag", "err", err)
+	}
+}
+
+// DeletePruningEnabled deletes the live pruning flag. It is used only for testing.
+func (dbm *databaseManager) DeletePruningEnabled() {
+	if err := dbm.getDatabase(MiscDB).Delete(pruningEnabledKey); err != nil {
+		logger.Crit("Failed to remove pruning enabled flag", "err", err)
+	}
+}
+
+// WritePruningMarks writes the provided set of pruning marks to the database.
+func (dbm *databaseManager) WritePruningMarks(marks []PruningMark) {
+	batch := dbm.NewBatch(MiscDB)
+	defer batch.Release()
+	for _, mark := range marks {
+		if err := batch.Put(pruningMarkKey(mark), pruningMarkValue); err != nil {
+			logger.Crit("Failed to store trie pruning mark", "err", err)
+		}
+		if _, err := WriteBatchesOverThreshold(batch); err != nil {
+			logger.Crit("Failed to store trie pruning mark", "err", err)
+		}
+	}
+	if err := batch.Write(); err != nil {
+		logger.Crit("Failed to batch write pruning mark", "err", err)
+	}
+}
+
+// ReadPruningMarks reads the pruning marks in the block number range [startNumber, endNumber).
+func (dbm *databaseManager) ReadPruningMarks(startNumber, endNumber uint64) []PruningMark {
+	prefix := pruningMarkPrefix
+	startKey := pruningMarkKey(PruningMark{startNumber, common.ExtHash{}})
+	it := dbm.getDatabase(MiscDB).NewIterator(prefix, startKey[len(prefix):])
+	defer it.Release()
+
+	var marks []PruningMark
+	for it.Next() {
+		mark := parsePruningMarkKey(it.Key())
+		if endNumber != 0 && mark.Number >= endNumber {
+			break
+		}
+		marks = append(marks, mark)
+	}
+	return marks
+}
+
+// DeletePruningMarks deletes the provided set of pruning marks from the database.
+// Note that trie nodes are not deleted by this function. To prune trie nodes, use
+// the PruneTrieNodes or DeleteTrieNode functions.
+func (dbm *databaseManager) DeletePruningMarks(marks []PruningMark) {
+	batch := dbm.NewBatch(MiscDB)
+	defer batch.Release()
+	for _, mark := range marks {
+		if err := batch.Delete(pruningMarkKey(mark)); err != nil {
+			logger.Crit("Failed to delete trie pruning mark", "err", err)
+		}
+		if _, err := WriteBatchesOverThreshold(batch); err != nil {
+			logger.Crit("Failed to delete trie pruning mark", "err", err)
+		}
+	}
+	if err := batch.Write(); err != nil {
+		logger.Crit("Failed to batch delete pruning mark", "err", err)
+	}
+}
+
+// PruneTrieNodes deletes the trie nodes according to the provided set of pruning marks.
+func (dbm *databaseManager) PruneTrieNodes(marks []PruningMark) {
+	batch := dbm.NewBatch(StateTrieDB)
+	defer batch.Release()
+	for _, mark := range marks {
+		if err := batch.Delete(TrieNodeKey(mark.Hash)); err != nil {
+			logger.Crit("Failed to prune trie node", "err", err)
+		}
+		if _, err := WriteBatchesOverThreshold(batch); err != nil {
+			logger.Crit("Failed to prune trie node", "err", err)
+		}
+	}
+	if err := batch.Write(); err != nil {
+		logger.Crit("Failed to batch prune trie node", "err", err)
+	}
+}
+
+// WriteLastPrunedBlockNumber records a block number of the most recent pruning block
+func (dbm *databaseManager) WriteLastPrunedBlockNumber(blockNumber uint64) {
+	db := dbm.getDatabase(MiscDB)
+	if err := db.Put(lastPrunedBlockNumberKey, common.Int64ToByteLittleEndian(blockNumber)); err != nil {
+		logger.Crit("Failed to store the last pruned block number", "err", err)
+	}
+}
+
+// ReadLastPrunedBlockNumber reads a block number of the most recent pruning block
+func (dbm *databaseManager) ReadLastPrunedBlockNumber() (uint64, error) {
+	db := dbm.getDatabase(MiscDB)
+	lastPruned, err := db.Get(lastPrunedBlockNumberKey)
+	if err != nil {
+		return 0, err
+	}
+	return binary.LittleEndian.Uint64(lastPruned), nil
 }
 
 // ReadTxLookupEntry retrieves the positional metadata associated with a transaction
@@ -1925,6 +2063,7 @@ func (dbm *databaseManager) WriteTxLookupEntries(block *types.Block) {
 
 func (dbm *databaseManager) WriteAndCacheTxLookupEntries(block *types.Block) error {
 	batch := dbm.NewBatch(TxLookUpEntryDB)
+	defer batch.Release()
 	for i, tx := range block.Transactions() {
 		entry := TxLookupEntry{
 			BlockHash:  block.Hash(),
@@ -1993,7 +2132,7 @@ func (dbm *databaseManager) ReadTxAndLookupInfo(hash common.Hash) (*types.Transa
 
 // NewSenderTxHashToTxHashBatch returns a batch to write senderTxHash to txHash mapping information.
 func (dbm *databaseManager) NewSenderTxHashToTxHashBatch() Batch {
-	return dbm.NewBatch(MiscDB)
+	return dbm.NewBatch(MiscDB) // batch.Release should be called from caller
 }
 
 // PutSenderTxHashToTxHashToBatch 1) puts the given senderTxHash and txHash to the given batch and
@@ -2544,6 +2683,16 @@ func (dbm *databaseManager) WriteGovernance(data map[string]interface{}, num uin
 	return db.Put(makeKey(governancePrefix, num), b)
 }
 
+func (dbm *databaseManager) DeleteGovernance(num uint64) {
+	db := dbm.getDatabase(MiscDB)
+	if err := dbm.deleteLastGovernance(num); err != nil {
+		logger.Crit("Failed to delete Governance index", "err", err)
+	}
+	if err := db.Delete(makeKey(governancePrefix, num)); err != nil {
+		logger.Crit("Failed to delete Governance", "err", err)
+	}
+}
+
 func (dbm *databaseManager) WriteGovernanceIdx(num uint64) error {
 	db := dbm.getDatabase(MiscDB)
 	newSlice := make([]uint64, 0)
@@ -2563,6 +2712,24 @@ func (dbm *databaseManager) WriteGovernanceIdx(num uint64) error {
 	newSlice = append(newSlice, num)
 
 	data, err := json.Marshal(newSlice)
+	if err != nil {
+		return err
+	}
+	return db.Put(governanceHistoryKey, data)
+}
+
+// deleteLastGovernance deletes the last governanceIdx only if it is equal to `num`
+func (dbm *databaseManager) deleteLastGovernance(num uint64) error {
+	db := dbm.getDatabase(MiscDB)
+	idxHistory, err := dbm.ReadRecentGovernanceIdx(0)
+	if err != nil {
+		return nil // Do nothing and return nil if no recent index found
+	}
+	end := len(idxHistory)
+	if idxHistory[end-1] != num {
+		return nil // Do nothing and return nil if the target number does not match the tip number
+	}
+	data, err := json.Marshal(idxHistory[0 : end-1])
 	if err != nil {
 		return err
 	}

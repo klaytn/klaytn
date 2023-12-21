@@ -17,15 +17,13 @@
 package statedb
 
 import (
-	"io/ioutil"
 	"os"
 	"reflect"
 	"runtime"
 	"testing"
 
 	"github.com/klaytn/klaytn/common"
-
-	"github.com/docker/docker/pkg/testutil/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 // TestNewTrieNodeCache tests creating all kinds of supported trie node caches.
@@ -50,7 +48,7 @@ func TestNewTrieNodeCache(t *testing.T) {
 
 func TestFastCache_SaveAndLoad(t *testing.T) {
 	// Create test directory
-	dirName, err := ioutil.TempDir(os.TempDir(), "fastcache_saveandload")
+	dirName, err := os.MkdirTemp(os.TempDir(), "fastcache_saveandload")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,16 +68,16 @@ func TestFastCache_SaveAndLoad(t *testing.T) {
 	// Create a fastcache from the file and save the data to the cache
 	fastCache := newFastCache(config)
 	for idx, key := range keys {
-		assert.DeepEqual(t, fastCache.Get(key), []byte(nil))
+		assert.Equal(t, fastCache.Get(key), []byte(nil))
 		fastCache.Set(key, vals[idx])
-		assert.DeepEqual(t, fastCache.Get(key), vals[idx])
+		assert.Equal(t, fastCache.Get(key), vals[idx])
 	}
 	// Save the cache to the file
-	assert.NilError(t, fastCache.SaveToFile(dirName, runtime.NumCPU()))
+	assert.NoError(t, fastCache.SaveToFile(dirName, runtime.NumCPU()))
 
 	// Create a fastcache from the file and check if the data exists
 	fastCacheFromFile := newFastCache(config)
 	for idx, key := range keys {
-		assert.DeepEqual(t, fastCacheFromFile.Get(key), vals[idx])
+		assert.Equal(t, fastCacheFromFile.Get(key), vals[idx])
 	}
 }

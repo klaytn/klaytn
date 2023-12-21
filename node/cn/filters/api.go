@@ -41,7 +41,7 @@ import (
 )
 
 var (
-	deadline = 5 * time.Minute // consider a filter inactive if it has not been polled for within deadline
+	defaultFilterDeadline = 5 * time.Minute // consider a filter inactive if it has not been polled for within deadline
 
 	getLogsCxtKeyMaxItems = "maxItems"       // the value of the context key should have the type of GetLogsMaxItems
 	GetLogsDeadline       = 10 * time.Second // execution deadlines for getLogs and getFilterLogs APIs
@@ -69,6 +69,9 @@ type PublicFilterAPI struct {
 	events    *EventSystem
 	filtersMu sync.Mutex
 	filters   map[rpc.ID]*filter
+
+	// this field is for test. it makes the filter timeout more flexible when testing
+	timeout time.Duration
 }
 
 // NewPublicFilterAPI returns a new PublicFilterAPI instance.
@@ -79,6 +82,7 @@ func NewPublicFilterAPI(backend Backend, lightMode bool) *PublicFilterAPI {
 		chainDB: backend.ChainDB(),
 		events:  NewEventSystem(backend.EventMux(), backend, lightMode),
 		filters: make(map[rpc.ID]*filter),
+		timeout: defaultFilterDeadline,
 	}
 	go api.timeoutLoop()
 
@@ -88,20 +92,30 @@ func NewPublicFilterAPI(backend Backend, lightMode bool) *PublicFilterAPI {
 // timeoutLoop runs every 5 minutes and deletes filters that have not been recently used.
 // Tt is started when the api is created.
 func (api *PublicFilterAPI) timeoutLoop() {
-	ticker := time.NewTicker(5 * time.Minute)
+	var toUninstall []*Subscription
+	ticker := time.NewTicker(api.timeout)
+	defer ticker.Stop()
 	for {
 		<-ticker.C
 		api.filtersMu.Lock()
 		for id, f := range api.filters {
 			select {
 			case <-f.deadline.C:
-				f.s.Unsubscribe()
+				toUninstall = append(toUninstall, f.s)
 				delete(api.filters, id)
 			default:
 				continue
 			}
 		}
 		api.filtersMu.Unlock()
+
+		// Unsubscribes are processed outside the lock to avoid the following scenario:
+		// event loop attempts broadcasting events to still active filters while
+		// Unsubscribe is waiting for it to process the uninstall request.
+		for _, s := range toUninstall {
+			s.Unsubscribe()
+		}
+		toUninstall = nil
 	}
 }
 
@@ -117,7 +131,7 @@ func (api *PublicFilterAPI) NewPendingTransactionFilter() rpc.ID {
 	)
 
 	api.filtersMu.Lock()
-	api.filters[pendingTxSub.ID] = &filter{typ: PendingTransactionsSubscription, deadline: time.NewTimer(deadline), hashes: make([]common.Hash, 0), s: pendingTxSub}
+	api.filters[pendingTxSub.ID] = &filter{typ: PendingTransactionsSubscription, deadline: time.NewTimer(api.timeout), hashes: make([]common.Hash, 0), s: pendingTxSub}
 	api.filtersMu.Unlock()
 
 	go func() {
@@ -185,7 +199,7 @@ func (api *PublicFilterAPI) NewBlockFilter() rpc.ID {
 	)
 
 	api.filtersMu.Lock()
-	api.filters[headerSub.ID] = &filter{typ: BlocksSubscription, deadline: time.NewTimer(deadline), hashes: make([]common.Hash, 0), s: headerSub}
+	api.filters[headerSub.ID] = &filter{typ: BlocksSubscription, deadline: time.NewTimer(api.timeout), hashes: make([]common.Hash, 0), s: headerSub}
 	api.filtersMu.Unlock()
 
 	go func() {
@@ -209,8 +223,9 @@ func (api *PublicFilterAPI) NewBlockFilter() rpc.ID {
 	return headerSub.ID
 }
 
-// RPCMarshalHeader converts the given header to the RPC output that includes the baseFeePerGas field.
-func RPCMarshalHeader(head *types.Header, isEnabledEthTxTypeFork bool) map[string]interface{} {
+// RPCMarshalHeader converts the given header to the RPC output that includes Klaytn-specific fields.
+// For klay_getHeaderByNumber and klay_getHeaderByHash APIs.
+func RPCMarshalHeader(head *types.Header, rules params.Rules) map[string]interface{} {
 	result := map[string]interface{}{
 		"parentHash":       head.ParentHash,
 		"reward":           head.Rewardbase,
@@ -229,12 +244,16 @@ func RPCMarshalHeader(head *types.Header, isEnabledEthTxTypeFork bool) map[strin
 		"hash":             head.Hash(),
 	}
 
-	if isEnabledEthTxTypeFork {
+	if rules.IsEthTxType {
 		if head.BaseFee == nil {
 			result["baseFeePerGas"] = (*hexutil.Big)(new(big.Int).SetUint64(params.ZeroBaseFee))
 		} else {
 			result["baseFeePerGas"] = (*hexutil.Big)(head.BaseFee)
 		}
+	}
+	if rules.IsRandao {
+		result["randomReveal"] = hexutil.Bytes(head.RandomReveal)
+		result["mixhash"] = hexutil.Bytes(head.MixHash)
 	}
 
 	return result
@@ -256,7 +275,7 @@ func (api *PublicFilterAPI) NewHeads(ctx context.Context) (*rpc.Subscription, er
 		for {
 			select {
 			case h := <-headers:
-				header := RPCMarshalHeader(h, api.backend.ChainConfig().IsEthTxTypeForkEnabled(h.Number))
+				header := RPCMarshalHeader(h, api.backend.ChainConfig().Rules(h.Number))
 				notifier.Notify(rpcSub.ID, header)
 			case <-rpcSub.Err():
 				headersSub.Unsubscribe()
@@ -331,7 +350,7 @@ func (api *PublicFilterAPI) NewFilter(crit FilterCriteria) (rpc.ID, error) {
 	}
 
 	api.filtersMu.Lock()
-	api.filters[logsSub.ID] = &filter{typ: LogsSubscription, crit: crit, deadline: time.NewTimer(deadline), logs: make([]*types.Log, 0), s: logsSub}
+	api.filters[logsSub.ID] = &filter{typ: LogsSubscription, crit: crit, deadline: time.NewTimer(api.timeout), logs: make([]*types.Log, 0), s: logsSub}
 	api.filtersMu.Unlock()
 
 	go func() {
@@ -450,7 +469,7 @@ func (api *PublicFilterAPI) GetFilterChanges(id rpc.ID) (interface{}, error) {
 			// receive timer value and reset timer
 			<-f.deadline.C
 		}
-		f.deadline.Reset(deadline)
+		f.deadline.Reset(api.timeout)
 
 		switch f.typ {
 		case PendingTransactionsSubscription, BlocksSubscription:

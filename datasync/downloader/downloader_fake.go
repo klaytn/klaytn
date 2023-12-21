@@ -58,4 +58,6 @@ func (*FakeDownloader) Synchronise(id string, head common.Hash, td *big.Int, mod
 func (*FakeDownloader) Progress() klaytn.SyncProgress { return klaytn.SyncProgress{} }
 func (*FakeDownloader) Cancel()                       {}
 
-func (*FakeDownloader) GetSnapSyncer() *snap.Syncer { return nil }
+func (*FakeDownloader) GetSnapSyncer() *snap.Syncer                      { return nil }
+func (*FakeDownloader) SyncStakingInfo(id string, from, to uint64) error { return nil }
+func (*FakeDownloader) SyncStakingInfoStatus() *SyncingStatus            { return nil }

@@ -61,7 +61,7 @@ func makeBenchConfig() *BenchConfig {
 	// EVMConfig   vm.Config
 
 	memDBManager := database.NewMemoryDBManager()
-	cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(memDBManager), nil)
+	cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(memDBManager), nil, nil)
 	cfg.GetHashFn = func(n uint64) common.Hash {
 		return common.BytesToHash(crypto.Keccak256([]byte(new(big.Int).SetUint64(n).String())))
 	}
@@ -69,23 +69,24 @@ func makeBenchConfig() *BenchConfig {
 	return cfg
 }
 
-func prepareInterpreterAndContract(code []byte) (*vm.Interpreter, *vm.Contract) {
+func prepareInterpreterAndContract(code []byte) (*vm.EVMInterpreter, *vm.Contract) {
 	// runtime.go:Execute()
 	cfg := makeBenchConfig()
-	context := vm.Context{
+	txContext := vm.TxContext{
+		Origin:   cfg.Origin,
+		GasPrice: cfg.GasPrice,
+	}
+	blockContext := vm.BlockContext{
 		CanTransfer: blockchain.CanTransfer,
 		Transfer:    blockchain.Transfer,
 		GetHash:     func(uint64) common.Hash { return common.Hash{} },
 
-		Origin:      cfg.Origin,
 		BlockNumber: cfg.BlockNumber,
 		Time:        cfg.Time,
 		BlockScore:  cfg.BlockScore,
 		GasLimit:    cfg.GasLimit,
-		GasPrice:    cfg.GasPrice,
 	}
-
-	evm := vm.NewEVM(context, cfg.State, cfg.ChainConfig, &cfg.EVMConfig)
+	evm := vm.NewEVM(blockContext, txContext, cfg.State, cfg.ChainConfig, &cfg.EVMConfig)
 
 	address := common.BytesToAddress([]byte("contract"))
 	sender := vm.AccountRef(cfg.Origin)

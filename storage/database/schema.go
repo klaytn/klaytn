@@ -25,6 +25,7 @@ import (
 	"encoding/binary"
 
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/rcrowley/go-metrics"
 )
 
@@ -92,6 +93,12 @@ var (
 	preimagePrefix = []byte("secure-key-")  // preimagePrefix + hash -> preimage
 	configPrefix   = []byte("klay-config-") // config prefix for the db
 
+	pruningEnabledKey        = []byte("PruningEnabled")
+	pruningMarkPrefix        = []byte("Pruning-")                                // KIP-111 pruning markings
+	pruningMarkValue         = []byte{0x01}                                      // A nonempty value to store a pruning mark
+	pruningMarkKeyLen        = len(pruningMarkPrefix) + 8 + common.ExtHashLength // prefix + num (uint64) + node hash
+	lastPrunedBlockNumberKey = []byte("lastPrunedBlockNumber")
+
 	// Chain index prefixes (use `i` + single byte to avoid mixing data types).
 	BloomBitsIndexPrefix = []byte("iB") // BloomBitsIndexPrefix is the data table of a chain indexer to track its progress
 
@@ -131,18 +138,6 @@ type TxLookupEntry struct {
 	BlockHash  common.Hash
 	BlockIndex uint64
 	Index      uint64
-}
-
-// encodeBlockNumber encodes a block number as big endian uint64
-func encodeBlockNumber(number uint64) []byte {
-	enc := make([]byte, 8)
-	binary.BigEndian.PutUint64(enc, number)
-	return enc
-}
-
-// headerKeyPrefix = headerPrefix + num (uint64 big endian)
-func headerKeyPrefix(number uint64) []byte {
-	return append(headerPrefix, common.Int64ToByteBigEndian(number)...)
 }
 
 // headerKey = headerPrefix + num (uint64 big endian) + hash
@@ -232,7 +227,7 @@ func snapshotKey(hash common.Hash) []byte {
 }
 
 func childChainTxHashKey(ccBlockHash common.Hash) []byte {
-	return append(append(childChainTxHashPrefix, ccBlockHash.Bytes()...))
+	return append(childChainTxHashPrefix, ccBlockHash.Bytes()...)
 }
 
 func receiptFromParentChainKey(blockHash common.Hash) []byte {
@@ -260,4 +255,41 @@ func makeKey(prefix []byte, num uint64) []byte {
 
 func databaseDirKey(dbEntryType uint64) []byte {
 	return append(databaseDirPrefix, common.Int64ToByteBigEndian(dbEntryType)...)
+}
+
+// TrieNodeKey = if Legacy, hash32. Otherwise, exthash
+func TrieNodeKey(hash common.ExtHash) []byte {
+	if hash.IsZeroExtended() {
+		return hash.Unextend().Bytes()
+	} else {
+		return hash.Bytes()
+	}
+}
+
+type PruningMark struct {
+	Number uint64
+	Hash   common.ExtHash
+}
+
+// TriePruningMarkKey = prefix + number + hash
+// Block number comes first to sort the entries by block numbers.
+// Later we can iterate through the marks and extract any given block number range.
+func pruningMarkKey(mark PruningMark) []byte {
+	bNumber := make([]byte, 8)
+	binary.BigEndian.PutUint64(bNumber, mark.Number)
+	bHash := mark.Hash.Bytes()
+	return append(append(pruningMarkPrefix, bNumber...), bHash...)
+}
+
+func parsePruningMarkKey(key []byte) PruningMark {
+	if len(key) != pruningMarkKeyLen {
+		logger.Crit("Invalid pruningMarkKey", "key", hexutil.Encode(key))
+	}
+	prefixLen := len(pruningMarkPrefix)
+	bNumber := key[prefixLen : prefixLen+8]
+	bHash := key[prefixLen+8:]
+	return PruningMark{
+		Number: binary.BigEndian.Uint64(bNumber),
+		Hash:   common.BytesToExtHash(bHash),
+	}
 }

@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/governance"
 
@@ -20,10 +21,13 @@ import (
 	mock_accounts "github.com/klaytn/klaytn/accounts/mocks"
 	mock_api "github.com/klaytn/klaytn/api/mocks"
 	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
+	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/klaytn/klaytn/consensus/gxhash"
 	"github.com/klaytn/klaytn/consensus/mocks"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
@@ -39,6 +43,34 @@ var dummyChainConfigForEthereumAPITest = &params.ChainConfig{
 	EthTxTypeCompatibleBlock: new(big.Int).SetUint64(0),
 	UnitPrice:                25000000000, // 25 ston
 }
+
+var (
+	testLondonConfig = &params.ChainConfig{
+		ChainID:                 new(big.Int).SetUint64(111111),
+		IstanbulCompatibleBlock: common.Big0,
+		LondonCompatibleBlock:   common.Big0,
+		UnitPrice:               25000000000,
+	}
+	testEthTxTypeConfig = &params.ChainConfig{
+		ChainID:                  new(big.Int).SetUint64(111111),
+		IstanbulCompatibleBlock:  common.Big0,
+		LondonCompatibleBlock:    common.Big0,
+		EthTxTypeCompatibleBlock: common.Big0,
+		UnitPrice:                25000000000, // 25 ston
+	}
+	testRandaoConfig = &params.ChainConfig{
+		ChainID:                  new(big.Int).SetUint64(111111),
+		IstanbulCompatibleBlock:  common.Big0,
+		LondonCompatibleBlock:    common.Big0,
+		EthTxTypeCompatibleBlock: common.Big0,
+		MagmaCompatibleBlock:     common.Big0,
+		KoreCompatibleBlock:      common.Big0,
+		ShanghaiCompatibleBlock:  common.Big0,
+		CancunCompatibleBlock:    common.Big0,
+		RandaoCompatibleBlock:    common.Big0,
+		UnitPrice:                25000000000, // 25 ston
+	}
+)
 
 // TestEthereumAPI_Etherbase tests Etherbase.
 func TestEthereumAPI_Etherbase(t *testing.T) {
@@ -60,7 +92,7 @@ func testNodeAddress(t *testing.T, testAPIName string) {
 	nodeAddress := crypto.PubkeyToAddress(key.PublicKey)
 	gov.SetNodeAddress(nodeAddress)
 
-	api := EthereumAPI{publicGovernanceAPI: governance.NewGovernanceAPI(gov)}
+	api := EthereumAPI{governanceAPI: governance.NewGovernanceAPI(gov)}
 	results := reflect.ValueOf(&api).MethodByName(testAPIName).Call([]reflect.Value{})
 	result, ok := results[0].Interface().(common.Address)
 	assert.True(t, ok)
@@ -166,45 +198,28 @@ func TestTestEthereumAPI_GetUncleCountByBlockHash(t *testing.T) {
 
 // TestEthereumAPI_GetHeaderByNumber tests GetHeaderByNumber.
 func TestEthereumAPI_GetHeaderByNumber(t *testing.T) {
-	testGetHeader(t, "GetHeaderByNumber", true)
+	testGetHeader(t, "GetHeaderByNumber", testLondonConfig)
+	testGetHeader(t, "GetHeaderByNumber", testEthTxTypeConfig)
+	testGetHeader(t, "GetHeaderByNumber", testRandaoConfig)
 }
 
 // TestEthereumAPI_GetHeaderByHash tests GetHeaderByNumber.
 func TestEthereumAPI_GetHeaderByHash(t *testing.T) {
-	testGetHeader(t, "GetHeaderByHash", true)
-}
-
-// TestEthereumAPI_GetHeaderByNumber tests GetHeaderByNumber.
-func TestEthereumAPI_GetHeaderByNumber_BeforeEnableFork(t *testing.T) {
-	testGetHeader(t, "GetHeaderByNumber", false)
-}
-
-// TestEthereumAPI_GetHeaderByHash tests GetHeaderByNumber.
-func TestEthereumAPI_GetHeaderByHash_BeforeEnableFork(t *testing.T) {
-	testGetHeader(t, "GetHeaderByHash", false)
+	testGetHeader(t, "GetHeaderByHash", testLondonConfig)
+	testGetHeader(t, "GetHeaderByHash", testEthTxTypeConfig)
+	testGetHeader(t, "GetHeaderByHash", testRandaoConfig)
 }
 
 // testGetHeader generates data to test GetHeader related functions in EthereumAPI
 // and actually tests the API function passed as a parameter.
-func testGetHeader(t *testing.T, testAPIName string, forkEnabled bool) {
+func testGetHeader(t *testing.T, testAPIName string, config *params.ChainConfig) {
 	mockCtrl, mockBackend, api := testInitForEthApi(t)
 
 	// Creates a MockEngine.
 	mockEngine := mocks.NewMockEngine(mockCtrl)
 	// GetHeader APIs calls internally below methods.
 	mockBackend.EXPECT().Engine().Return(mockEngine)
-	if forkEnabled {
-		mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthereumAPITest)
-	} else {
-		chainConfigForNotCompatibleEthBlock := &params.ChainConfig{
-			ChainID:                  dummyChainConfigForEthereumAPITest.ChainID,
-			IstanbulCompatibleBlock:  dummyChainConfigForEthereumAPITest.IstanbulCompatibleBlock,
-			LondonCompatibleBlock:    dummyChainConfigForEthereumAPITest.LondonCompatibleBlock,
-			EthTxTypeCompatibleBlock: nil,
-			UnitPrice:                dummyChainConfigForEthereumAPITest.UnitPrice,
-		}
-		mockBackend.EXPECT().ChainConfig().Return(chainConfigForNotCompatibleEthBlock)
-	}
+	mockBackend.EXPECT().ChainConfig().Return(config).AnyTimes()
 
 	// Author is called when calculates miner field of Header.
 	dummyMiner := common.HexToAddress("0x9712f943b296758aaae79944ec975884188d3a96")
@@ -229,6 +244,10 @@ func testGetHeader(t *testing.T, testAPIName string, forkEnabled bool) {
 		Governance:  []byte{},
 		Vote:        []byte{},
 	})
+	if config.IsRandaoForkEnabled(common.Big0) {
+		header.RandomReveal = hexutil.MustDecode("0x94516a8bc695b5bf43aa077cd682d9475a3a6bed39a633395b78ed8f276e7c5bb00bb26a77825013c6718579f1b3ee2275b158801705ea77989e3acc849ee9c524bd1822bde3cba7be2aae04347f0d91508b7b7ce2f11ec36cbf763173421ae7")
+		header.MixHash = hexutil.MustDecode("0xdf117d1245dceaae0a47f05371b23cd0d0db963ff9d5c8ba768dc989f4c31883")
+	}
 
 	var blockParam interface{}
 	switch testAPIName {
@@ -250,15 +269,11 @@ func testGetHeader(t *testing.T, testAPIName string, forkEnabled bool) {
 	assert.Equal(t, true, ok)
 	assert.NotEqual(t, ethHeader, nil)
 
-	// TODO-klaytn size set to 0x214
 	// We can get a real mashaled data by using real backend instance, not mock
 	// Mock just return a header instance, not rlp decoded json data
 	expected := make(map[string]interface{})
 	assert.NoError(t, json.Unmarshal([]byte(`
 	{
-	  "jsonrpc": "2.0",
-	  "id": 1,
-	  "result": {
 		"difficulty": "0x1",
 		"extraData": "0x",
 		"gasLimit": "0xe8d4a50fff",
@@ -272,18 +287,23 @@ func testGetHeader(t *testing.T, testAPIName string, forkEnabled bool) {
 		"parentHash": "0xc8036293065bacdfce87debec0094a71dbbe40345b078d21dcc47adb4513f348",
 		"receiptsRoot": "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470",
 		"sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
-		"size": "0x214",
+		"size": "0x244",
 		"stateRoot": "0xad31c32942fa033166e4ef588ab973dbe26657c594de4ba98192108becf0fec9",
 		"timestamp": "0x61d53854",
 		"totalDifficulty": "0x5",
 		"transactionsRoot": "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
-	  }
-	}
-    `), &expected))
-	if forkEnabled {
+	}`), &expected))
+
+	if config.IsEthTxTypeForkEnabled(common.Big0) {
 		expected["baseFeePerGas"] = "0x0"
 	}
-	checkEthereumBlockOrHeaderFormat(t, expected, ethHeader)
+	if config.IsRandaoForkEnabled(common.Big0) {
+		expected["randomReveal"] = "0x94516a8bc695b5bf43aa077cd682d9475a3a6bed39a633395b78ed8f276e7c5bb00bb26a77825013c6718579f1b3ee2275b158801705ea77989e3acc849ee9c524bd1822bde3cba7be2aae04347f0d91508b7b7ce2f11ec36cbf763173421ae7"
+		expected["mixHash"] = "0xdf117d1245dceaae0a47f05371b23cd0d0db963ff9d5c8ba768dc989f4c31883"
+		expected["hash"] = "0x4179dd7e323cde164e287045857cbc930892f92479d8c375d5d622ddde59f912"
+		expected["size"] = "0x2c4"
+	}
+	assert.Equal(t, stringifyMap(expected), stringifyMap(ethHeader))
 }
 
 // TestEthereumAPI_GetBlockByNumber tests GetBlockByNumber.
@@ -307,7 +327,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
 	mockEngine := mocks.NewMockEngine(mockCtrl)
 	// GetHeader APIs calls internally below methods.
 	mockBackend.EXPECT().Engine().Return(mockEngine)
-	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthereumAPITest)
+	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthereumAPITest).AnyTimes()
 	// Author is called when calculates miner field of Header.
 	dummyMiner := common.HexToAddress("0x9712f943b296758aaae79944ec975884188d3a96")
 	mockEngine.EXPECT().Author(gomock.Any()).Return(dummyMiner, nil)
@@ -355,9 +375,6 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
 	if fullTxs {
 		assert.NoError(t, json.Unmarshal([]byte(`
     {
-      "jsonrpc": "2.0",
-      "id": 1,
-      "result": {
         "baseFeePerGas": "0x0",
         "difficulty": "0x1",
         "extraData": "0x",
@@ -754,16 +771,12 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
         ],
         "transactionsRoot": "0x0a83e34ab7302f42f4a9203e8295f545517645989da6555d8cbdc1e9599df85b",
         "uncles": []
-      }
     }
     `,
 		), &expected))
 	} else {
 		assert.NoError(t, json.Unmarshal([]byte(`
     {
-      "jsonrpc": "2.0",
-      "id": 1,
-      "result": {
         "baseFeePerGas": "0x0",
         "difficulty": "0x1",
         "extraData": "0x",
@@ -808,38 +821,19 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
         ],
         "transactionsRoot": "0x0a83e34ab7302f42f4a9203e8295f545517645989da6555d8cbdc1e9599df85b",
         "uncles": []
-      }
     }
     `,
 		), &expected))
 	}
-	checkEthereumBlockOrHeaderFormat(t, expected, ethBlock)
+	assert.Equal(t, stringifyMap(expected), stringifyMap(ethBlock))
 }
 
-// checkEthereumHeaderFormat checks that ethBlockOrHeader returned from
-// GetHeader or GetBlock APIs have all keys of the Ethereum data structure and
-// also checks the immutable values are well-defined or not.
-func checkEthereumBlockOrHeaderFormat(
-	t *testing.T,
-	expected map[string]interface{},
-	actual map[string]interface{},
-) {
-	marshaledActual, err := json.Marshal(actual)
-	assert.NoError(t, err)
-	actualResult := make(map[string]interface{})
-	assert.NoError(t, json.Unmarshal(marshaledActual, &actualResult))
-
-	expectedResult, ok := expected["result"].(map[string]interface{})
-	assert.True(t, ok)
-	marshaledExpectedResult, err := json.Marshal(expectedResult)
-	assert.NoError(t, err)
-	t.Logf("expectedResult: %s\n", marshaledExpectedResult)
-	t.Logf("actualResult: %s\n", marshaledActual)
-	// Because the order of key in map is not guaranteed in Go, comparing the maps
-	// by iterating keys is reasonable approach.
-	for key := range expectedResult {
-		assert.Equal(t, expectedResult[key], actualResult[key])
-	}
+// marshal and unmarshal to stringify map fields.
+func stringifyMap(m map[string]interface{}) map[string]interface{} {
+	marshaled, _ := json.Marshal(m)
+	var unmarshaled map[string]interface{}
+	json.Unmarshal(marshaled, &unmarshaled)
+	return unmarshaled
 }
 
 // TestEthereumAPI_GetTransactionByBlockNumberAndIndex tests GetTransactionByBlockNumberAndIndex.
@@ -2430,4 +2424,173 @@ func TestEthereumAPI_GetRawTransactionByBlockNumberAndIndex(t *testing.T) {
 	}
 
 	mockCtrl.Finish()
+}
+
+type testChainContext struct {
+	header *types.Header
+}
+
+func (mc *testChainContext) Engine() consensus.Engine {
+	return gxhash.NewFaker()
+}
+
+func (mc *testChainContext) GetHeader(common.Hash, uint64) *types.Header {
+	return mc.header
+}
+
+// Contract C { constructor() { revert("hello"); } }
+var codeRevertHello = "0x6080604052348015600f57600080fd5b5060405162461bcd60e51b815260206004820152600560248201526468656c6c6f60d81b604482015260640160405180910390fdfe"
+
+func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimateGas func(EthTransactionArgs) (hexutil.Uint64, error)) {
+	chainConfig := &params.ChainConfig{}
+	chainConfig.IstanbulCompatibleBlock = common.Big0
+	chainConfig.LondonCompatibleBlock = common.Big0
+	chainConfig.EthTxTypeCompatibleBlock = common.Big0
+	chainConfig.MagmaCompatibleBlock = common.Big0
+	var (
+		// genesis
+		account1 = common.HexToAddress("0xaaaa")
+		account2 = common.HexToAddress("0xbbbb")
+		account3 = common.HexToAddress("0xcccc")
+		gspec    = &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
+			account1: {Balance: big.NewInt(params.KLAY * 2)},
+			account2: {Balance: common.Big0},
+			account3: {Balance: common.Big0, Code: hexutil.MustDecode(codeRevertHello)},
+		}, Config: chainConfig}
+
+		// blockchain
+		dbm    = database.NewMemoryDBManager()
+		db     = state.NewDatabase(dbm)
+		block  = gspec.MustCommit(dbm)
+		header = block.Header()
+		chain  = &testChainContext{header: header}
+
+		// tx arguments
+		KLAY     = hexutil.Big(*big.NewInt(params.KLAY))
+		mKLAY    = hexutil.Big(*big.NewInt(params.KLAY / 1000))
+		KLAY2_1  = hexutil.Big(*big.NewInt(params.KLAY*2 + 1))
+		gas1000  = hexutil.Uint64(1000)
+		gas40000 = hexutil.Uint64(40000)
+		baddata  = hexutil.Bytes(hexutil.MustDecode("0xdeadbeef"))
+	)
+
+	any := gomock.Any()
+	getStateAndHeader := func(...interface{}) (*state.StateDB, *types.Header, error) {
+		// Return a new state for each call because the state is modified by EstimateGas.
+		state, err := state.New(block.Root(), db, nil, nil)
+		return state, header, err
+	}
+	getEVM := func(_ context.Context, msg blockchain.Message, state *state.StateDB, header *types.Header, vmConfig vm.Config) (*vm.EVM, func() error, error) {
+		// Taken from node/cn/api_backend.go
+		vmError := func() error { return nil }
+		txContext := blockchain.NewEVMTxContext(msg, header)
+		blockContext := blockchain.NewEVMBlockContext(header, chain, nil)
+		return vm.NewEVM(blockContext, txContext, state, chainConfig, &vmConfig), vmError, nil
+	}
+	mockBackend.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
+	mockBackend.EXPECT().RPCGasCap().Return(common.Big0).AnyTimes()
+	mockBackend.EXPECT().StateAndHeaderByNumber(any, any).DoAndReturn(getStateAndHeader).AnyTimes()
+	mockBackend.EXPECT().StateAndHeaderByNumberOrHash(any, any).DoAndReturn(getStateAndHeader).AnyTimes()
+	mockBackend.EXPECT().GetEVM(any, any, any, any, any).DoAndReturn(getEVM).AnyTimes()
+
+	testcases := []struct {
+		args      EthTransactionArgs
+		expectErr string
+		expectGas uint64
+	}{
+		{ // simple transfer
+			args: EthTransactionArgs{
+				From:  &account1,
+				To:    &account2,
+				Value: &KLAY,
+			},
+			expectGas: 21000,
+		},
+		{ // simple transfer with insufficient funds with zero gasPrice
+			args: EthTransactionArgs{
+				From:  &account2, // sender has 0 KLAY
+				To:    &account1,
+				Value: &KLAY, // transfer 1 KLAY
+			},
+			expectErr: "insufficient balance for transfer",
+		},
+		{ // simple transfer with slightly insufficient funds with zero gasPrice
+			// this testcase is to check whether the gas prefunded in EthDoCall is not too much
+			args: EthTransactionArgs{
+				From:  &account1, // sender has 2 KLAY
+				To:    &account2,
+				Value: &KLAY2_1, // transfer 2.0000...1 KLAY
+			},
+			expectErr: "insufficient balance for transfer",
+		},
+		{ // simple transfer with insufficient funds with nonzero gasPrice
+			args: EthTransactionArgs{
+				From:     &account2, // sender has 0 KLAY
+				To:       &account1,
+				Value:    &KLAY, // transfer 1 KLAY
+				GasPrice: &mKLAY,
+			},
+			expectErr: "insufficient funds for transfer",
+		},
+		{ // simple transfer too high gasPrice
+			args: EthTransactionArgs{
+				From:     &account1, // sender has 2 KLAY
+				To:       &account2,
+				Value:    &KLAY,  // transfer 1 KLAY
+				GasPrice: &mKLAY, // allowance = (2 - 1) / 0.001 = 1000 gas
+			},
+			expectErr: "gas required exceeds allowance",
+		},
+		{ // empty create
+			args:      EthTransactionArgs{},
+			expectGas: 53000,
+		},
+		{ // ignore too small gasLimit
+			args: EthTransactionArgs{
+				Gas: &gas1000,
+			},
+			expectGas: 53000,
+		},
+		{ // capped by gasLimit
+			args: EthTransactionArgs{
+				Gas: &gas40000,
+			},
+			expectErr: "gas required exceeds allowance",
+		},
+		{ // fails with VM error
+			args: EthTransactionArgs{
+				From: &account1,
+				Data: &baddata,
+			},
+			expectErr: "VM error occurs while running smart contract",
+		},
+		{ // fails with contract revert
+			args: EthTransactionArgs{
+				From: &account1,
+				To:   &account3,
+			},
+			expectErr: "execution reverted: hello",
+		},
+	}
+
+	for i, tc := range testcases {
+		gas, err := fnEstimateGas(tc.args)
+		t.Logf("tc[%02d] = %d %v", i, gas, err)
+		if len(tc.expectErr) > 0 {
+			require.NotNil(t, err)
+			assert.Contains(t, err.Error(), tc.expectErr, i)
+		} else {
+			assert.Nil(t, err)
+			assert.Equal(t, tc.expectGas, uint64(gas), i)
+		}
+	}
+}
+
+func TestEthereumAPI_EstimateGas(t *testing.T) {
+	mockCtrl, mockBackend, api := testInitForEthApi(t)
+	defer mockCtrl.Finish()
+
+	testEstimateGas(t, mockBackend, func(args EthTransactionArgs) (hexutil.Uint64, error) {
+		return api.EstimateGas(context.Background(), args, nil)
+	})
 }

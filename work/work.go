@@ -271,9 +271,11 @@ type BlockChain interface {
 	Processor() blockchain.Processor
 	BadBlocks() ([]blockchain.BadBlockArgs, error)
 	StateAt(root common.Hash) (*state.StateDB, error)
+	PrunableStateAt(root common.Hash, num uint64) (*state.StateDB, error)
 	StateAtWithPersistent(root common.Hash) (*state.StateDB, error)
 	StateAtWithGCLock(root common.Hash) (*state.StateDB, error)
 	Export(w io.Writer) error
+	ExportN(w io.Writer, first, last uint64) error
 	Engine() consensus.Engine
 	GetTxLookupInfoAndReceipt(txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, *types.Receipt)
 	GetTxAndLookupInfoInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
@@ -286,7 +288,7 @@ type BlockChain interface {
 	HasBadBlock(hash common.Hash) bool
 	WriteBlockWithState(block *types.Block, receipts []*types.Receipt, stateDB *state.StateDB) (blockchain.WriteResult, error)
 	PostChainEvents(events []interface{}, logs []*types.Log)
-	ApplyTransaction(config *params.ChainConfig, author *common.Address, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, cfg *vm.Config) (*types.Receipt, uint64, *vm.InternalTxTrace, error)
+	ApplyTransaction(config *params.ChainConfig, author *common.Address, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, cfg *vm.Config) (*types.Receipt, *vm.InternalTxTrace, error)
 
 	// State Migration
 	PrepareStateMigration() error
@@ -295,13 +297,13 @@ type BlockChain interface {
 	StateMigrationStatus() (bool, uint64, int, int, int, float64, error)
 
 	// Warm up
-	StartWarmUp() error
-	StartContractWarmUp(contractAddr common.Address) error
+	StartWarmUp(minLoad uint) error
+	StartContractWarmUp(contractAddr common.Address, minLoad uint) error
 	StopWarmUp() error
 
 	// Collect state/storage trie statistics
 	StartCollectingTrieStats(contractAddr common.Address) error
-	GetContractStorageRoot(block *types.Block, db state.Database, contractAddr common.Address) (common.Hash, error)
+	GetContractStorageRoot(block *types.Block, db state.Database, contractAddr common.Address) (common.ExtHash, error)
 
 	// Save trie node cache to this
 	SaveTrieNodeCacheToDisk() error
@@ -309,6 +311,9 @@ type BlockChain interface {
 	// KES
 	BlockSubscriptionLoop(pool *blockchain.TxPool)
 	CloseBlockSubscriptionLoop()
+
+	// read-only mode
+	CurrentBlockUpdateLoop(pool *blockchain.TxPool)
 
 	// Snapshot
 	Snapshots() *snapshot.Tree

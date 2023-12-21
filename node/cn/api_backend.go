@@ -24,6 +24,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts"
@@ -35,10 +36,13 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/event"
+	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node/cn/gasprice"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/storage/database"
+	"github.com/klaytn/klaytn/work"
 )
 
 // CNAPIBackend implements api.Backend for full nodes
@@ -75,17 +79,34 @@ func (b *CNAPIBackend) CurrentBlock() *types.Block {
 	return b.cn.blockchain.CurrentBlock()
 }
 
-func (b *CNAPIBackend) SetHead(number uint64) {
+func doSetHead(bc work.BlockChain, cn consensus.Engine, gov governance.Engine, targetBlkNum uint64) error {
+	if err := bc.SetHead(targetBlkNum); err != nil {
+		return err
+	}
+	// Initialize snapshot cache, staking info cache, and governance cache
+	cn.InitSnapshot()
+	if reward.GetStakingManager() != nil {
+		reward.PurgeStakingInfoCache()
+	}
+	gov.InitGovCache()
+	gov.InitLastGovStateBlkNum()
+	return nil
+}
+
+func (b *CNAPIBackend) SetHead(number uint64) error {
 	b.cn.protocolManager.Downloader().Cancel()
 	b.cn.protocolManager.SetSyncStop(true)
-	b.cn.blockchain.SetHead(number)
-	b.cn.protocolManager.SetSyncStop(false)
+	defer b.cn.protocolManager.SetSyncStop(false)
+	return doSetHead(b.cn.blockchain, b.cn.engine, b.cn.governance, number)
 }
 
 func (b *CNAPIBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error) {
 	// Pending block is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
 		block := b.cn.miner.PendingBlock()
+		if block == nil {
+			return nil, fmt.Errorf("pending block is not prepared yet")
+		}
 		return block.Header(), nil
 	}
 	// Otherwise resolve and return the block
@@ -124,6 +145,9 @@ func (b *CNAPIBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumbe
 	// Pending block is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
 		block := b.cn.miner.PendingBlock()
+		if block == nil {
+			return nil, fmt.Errorf("pending block is not prepared yet")
+		}
 		return block, nil
 	}
 	// Otherwise resolve and return the block
@@ -155,6 +179,9 @@ func (b *CNAPIBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.B
 	// Pending state is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
 		block, state := b.cn.miner.Pending()
+		if block == nil || state == nil {
+			return nil, nil, fmt.Errorf("pending block is not prepared yet")
+		}
 		return state, block.Header(), nil
 	}
 	// Otherwise resolve the block number and return its state
@@ -210,8 +237,10 @@ func (b *CNAPIBackend) GetTd(blockHash common.Hash) *big.Int {
 func (b *CNAPIBackend) GetEVM(ctx context.Context, msg blockchain.Message, state *state.StateDB, header *types.Header, vmCfg vm.Config) (*vm.EVM, func() error, error) {
 	vmError := func() error { return nil }
 
-	context := blockchain.NewEVMContext(msg, header, b.cn.BlockChain(), nil)
-	return vm.NewEVM(context, state, b.cn.chainConfig, &vmCfg), vmError, nil
+	txContext := blockchain.NewEVMTxContext(msg, header)
+	blockContext := blockchain.NewEVMBlockContext(header, b.cn.BlockChain(), nil)
+
+	return vm.NewEVM(blockContext, txContext, state, b.cn.chainConfig, &vmCfg), vmError, nil
 }
 
 func (b *CNAPIBackend) SubscribeRemovedLogsEvent(ch chan<- blockchain.RemovedLogsEvent) event.Subscription {
@@ -284,19 +313,35 @@ func (b *CNAPIBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {
 	return b.gpo.SuggestPrice(ctx)
 }
 
+// SuggestTipCap returns the baseFee if the current block is magma hard forked.
+// Other cases, it returns the unitPrice.
+func (b *CNAPIBackend) SuggestTipCap(ctx context.Context) (*big.Int, error) {
+	return b.gpo.SuggestTipCap(ctx)
+}
+
 func (b *CNAPIBackend) UpperBoundGasPrice(ctx context.Context) *big.Int {
-	if b.cn.chainConfig.IsMagmaForkEnabled(b.CurrentBlock().Number()) {
-		return new(big.Int).SetUint64(b.cn.governance.Params().UpperBoundBaseFee())
+	bignum := b.CurrentBlock().Number()
+	pset, err := b.cn.governance.EffectiveParams(bignum.Uint64() + 1)
+	if err != nil {
+		return nil
+	}
+	if b.cn.chainConfig.IsMagmaForkEnabled(bignum) {
+		return new(big.Int).SetUint64(pset.UpperBoundBaseFee())
 	} else {
-		return new(big.Int).SetUint64(b.cn.governance.Params().UnitPrice())
+		return new(big.Int).SetUint64(pset.UnitPrice())
 	}
 }
 
 func (b *CNAPIBackend) LowerBoundGasPrice(ctx context.Context) *big.Int {
-	if b.cn.chainConfig.IsMagmaForkEnabled(b.CurrentBlock().Number()) {
-		return new(big.Int).SetUint64(b.cn.governance.Params().LowerBoundBaseFee())
+	bignum := b.CurrentBlock().Number()
+	pset, err := b.cn.governance.EffectiveParams(bignum.Uint64() + 1)
+	if err != nil {
+		return nil
+	}
+	if b.cn.chainConfig.IsMagmaForkEnabled(bignum) {
+		return new(big.Int).SetUint64(pset.LowerBoundBaseFee())
 	} else {
-		return new(big.Int).SetUint64(b.cn.governance.Params().UnitPrice())
+		return new(big.Int).SetUint64(pset.UnitPrice())
 	}
 }
 
@@ -335,6 +380,10 @@ func (b *CNAPIBackend) RPCGasCap() *big.Int {
 	return b.cn.config.RPCGasCap
 }
 
+func (b *CNAPIBackend) RPCEVMTimeout() time.Duration {
+	return b.cn.config.RPCEVMTimeout
+}
+
 func (b *CNAPIBackend) RPCTxFeeCap() float64 {
 	return b.cn.config.RPCTxFeeCap
 }
@@ -347,7 +396,7 @@ func (b *CNAPIBackend) StateAtBlock(ctx context.Context, block *types.Block, ree
 	return b.cn.stateAtBlock(block, reexec, base, checkLive, preferDisk)
 }
 
-func (b *CNAPIBackend) StateAtTransaction(ctx context.Context, block *types.Block, txIndex int, reexec uint64) (blockchain.Message, vm.Context, *state.StateDB, error) {
+func (b *CNAPIBackend) StateAtTransaction(ctx context.Context, block *types.Block, txIndex int, reexec uint64) (blockchain.Message, vm.BlockContext, vm.TxContext, *state.StateDB, error) {
 	return b.cn.stateAtTransaction(block, txIndex, reexec)
 }
 

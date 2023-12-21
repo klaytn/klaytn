@@ -36,7 +36,7 @@ Following keys can be handled as of 7/20/2019.
   - "istanbul.epoch"              : To change Epoch, the period to gather votes
   - "istanbul.committeesize"      : To change the size of the committee
   - "reward.mintingamount"        : To change the amount of block generation reward
-  - "reward.ratio"                : To change the ratio used to distribute the reward between block proposer node, PoC and KIR
+  - "reward.ratio"                : To change the ratio used to distribute the reward between block proposer node, KFF and KCF
   - "reward.useginicoeff"         : To change the application of gini coefficient to reduce gap between CCOs
   - "reward.deferredtxfee"        : To change the way of distributing tx fee
   - "reward.minimumstake"         : To change the minimum amount of stake to participate in the governance council

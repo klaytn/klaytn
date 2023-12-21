@@ -61,7 +61,7 @@ func (p *statePrefetcher) Prefetch(block *types.Block, stateDB *state.StateDB, c
 			return
 		}
 		// Block precaching permitted to continue, execute the transaction
-		stateDB.Prepare(tx.Hash(), block.Hash(), i)
+		stateDB.SetTxContext(tx.Hash(), block.Hash(), i)
 		if err := precacheTransaction(p.config, p.bc, nil, stateDB, header, tx, cfg); err != nil {
 			return // Ugh, something went horribly wrong, bail out
 		}
@@ -84,7 +84,7 @@ func (p *statePrefetcher) PrefetchTx(block *types.Block, ti int, stateDB *state.
 	}
 
 	// Block precaching permitted to continue, execute the transaction
-	stateDB.Prepare(tx.Hash(), block.Hash(), ti)
+	stateDB.SetTxContext(tx.Hash(), block.Hash(), ti)
 	if err := precacheTransaction(p.config, p.bc, nil, stateDB, header, tx, cfg); err != nil {
 		return // Ugh, something went horribly wrong, bail out
 	}
@@ -100,9 +100,10 @@ func precacheTransaction(config *params.ChainConfig, bc ChainContext, author *co
 		return err
 	}
 	// Create the EVM and execute the transaction
-	context := NewEVMContext(msg, header, bc, author)
-	vm := vm.NewEVM(context, statedb, config, &cfg)
+	blockContext := NewEVMBlockContext(header, bc, author)
+	txContext := NewEVMTxContext(msg, header)
+	vm := vm.NewEVM(blockContext, txContext, statedb, config, &cfg)
 
-	_, _, kerr := ApplyMessage(vm, msg)
-	return kerr.ErrTxInvalid
+	_, err = ApplyMessage(vm, msg)
+	return err
 }

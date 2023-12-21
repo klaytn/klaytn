@@ -37,6 +37,7 @@ import (
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/storage/database"
 )
 
@@ -807,7 +808,7 @@ func newTestBackend() (b *backend) {
 }
 
 func newTestBackendWithConfig(chainConfig *params.ChainConfig, blockPeriod uint64, key *ecdsa.PrivateKey) (b *backend) {
-	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
+	dbm := database.NewMemoryDBManager()
 	if key == nil {
 		// if key is nil, generate new key for a test account
 		key, _ = crypto.GenerateKey()
@@ -823,8 +824,15 @@ func newTestBackendWithConfig(chainConfig *params.ChainConfig, blockPeriod uint6
 	istanbulConfig.Epoch = chainConfig.Istanbul.Epoch
 	istanbulConfig.SubGroupSize = chainConfig.Istanbul.SubGroupSize
 
-	backend := New(getTestRewards()[0], istanbulConfig, key, dbm, gov, common.CONSENSUSNODE).(*backend)
-	gov.SetNodeAddress(crypto.PubkeyToAddress(key.PublicKey))
+	backend := New(&BackendOpts{
+		IstanbulConfig: istanbulConfig,
+		Rewardbase:     getTestRewards()[0],
+		PrivateKey:     key,
+		DB:             dbm,
+		Governance:     gov,
+		NodeType:       common.CONSENSUSNODE,
+	}).(*backend)
+	gov.SetNodeAddress(backend.Address())
 	return backend
 }
 
@@ -928,6 +936,8 @@ func TestCheckValidatorSignature(t *testing.T) {
 
 func TestCommit(t *testing.T) {
 	backend := newTestBackend()
+	oldStakingManager := setTestStakingInfo(nil)
+	defer reward.SetTestStakingManager(oldStakingManager)
 
 	commitCh := make(chan *types.Block)
 	// Case: it's a proposer, so the backend.commit will receive channel result from backend.Commit function
@@ -945,7 +955,7 @@ func TestCommit(t *testing.T) {
 				defer engine.Stop()
 
 				block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
-				expectedBlock, _ := engine.updateBlock(engine.chain.GetHeader(block.ParentHash(), block.NumberU64()-1), block)
+				expectedBlock, _ := engine.updateBlock(block)
 				return expectedBlock
 			},
 		},
@@ -958,7 +968,7 @@ func TestCommit(t *testing.T) {
 				defer engine.Stop()
 
 				block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
-				expectedBlock, _ := engine.updateBlock(engine.chain.GetHeader(block.ParentHash(), block.NumberU64()-1), block)
+				expectedBlock, _ := engine.updateBlock(block)
 				return expectedBlock
 			},
 		},
@@ -998,6 +1008,8 @@ func TestCommit(t *testing.T) {
 func TestGetProposer(t *testing.T) {
 	chain, engine := newBlockChain(1)
 	defer engine.Stop()
+	oldStakingManager := setTestStakingInfo(nil)
+	defer reward.SetTestStakingManager(oldStakingManager)
 
 	block := makeBlock(chain, engine, chain.Genesis())
 	_, err := chain.InsertChain(types.Blocks{block})

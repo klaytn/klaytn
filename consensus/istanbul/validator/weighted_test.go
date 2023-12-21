@@ -17,6 +17,7 @@
 package validator
 
 import (
+	"math/big"
 	"reflect"
 	"strings"
 	"testing"
@@ -25,6 +26,8 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/fork"
+	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -68,6 +71,11 @@ func TestNewWeightedCouncil(t *testing.T) {
 }
 
 func TestNormalWeightedCouncil(t *testing.T) {
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{
+		IstanbulCompatibleBlock: big.NewInt(5),
+	})
+	defer fork.ClearHardForkBlockNumberConfig()
+
 	b1 := common.Hex2Bytes(testAddress)
 	b2 := common.Hex2Bytes(testAddress2)
 	addr1 := common.BytesToAddress(b1)

@@ -106,6 +106,8 @@ func TestGasCalculation(t *testing.T) {
 	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
 	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
 	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().KoreCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().ShanghaiCompatibleBlock = big.NewInt(0)
 	prof.Profile("main_init_blockchain", time.Now().Sub(start))
 
 	defer bcdata.Shutdown()
@@ -279,12 +281,12 @@ func TestGasCalculation(t *testing.T) {
 }
 
 func testGasValidation(t *testing.T, bcdata *BCData, tx *types.Transaction, validationGas uint64) {
-	receipt, gas, err := applyTransaction(t, bcdata, tx)
+	receipt, err := applyTransaction(t, bcdata, tx)
 	assert.Equal(t, nil, err)
 
 	assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
 
-	assert.Equal(t, validationGas, gas)
+	assert.Equal(t, validationGas, receipt.GasUsed)
 }
 
 func genLegacyTransaction(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
@@ -819,7 +821,7 @@ func genMapForDeploy(from TestAccount, to TestAccount, gasPrice *big.Int, txType
 	intrinsicGas := getIntrinsicGas(txType)
 	intrinsicGas += uint64(0x175fd)
 
-	gasPayloadWithGas, err := types.IntrinsicGasPayload(intrinsicGas, common.FromHex(code))
+	gasPayloadWithGas, err := types.IntrinsicGasPayload(intrinsicGas, common.FromHex(code), true, params.Rules{IsShanghai: true})
 	if err != nil {
 		return nil, 0
 	}
@@ -854,7 +856,7 @@ func genMapForExecution(from TestAccount, to TestAccount, gasPrice *big.Int, txT
 	intrinsicGas := getIntrinsicGas(txType)
 	intrinsicGas += uint64(0x9ec4)
 
-	gasPayloadWithGas, err := types.IntrinsicGasPayload(intrinsicGas, data)
+	gasPayloadWithGas, err := types.IntrinsicGasPayload(intrinsicGas, data, false, params.Rules{IsShanghai: false})
 	if err != nil {
 		return nil, 0
 	}

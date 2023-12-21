@@ -23,21 +23,22 @@ package database
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
 
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
 
-func newTestLDB() (Database, func()) {
-	dirName, err := ioutil.TempDir(os.TempDir(), "klay_leveldb_test_")
+func newTestLDB() (Database, func(), string) {
+	dirName, err := os.MkdirTemp(os.TempDir(), "klay_leveldb_test_")
 	if err != nil {
 		panic("failed to create test file: " + err.Error())
 	}
@@ -49,11 +50,11 @@ func newTestLDB() (Database, func()) {
 	return db, func() {
 		db.Close()
 		os.RemoveAll(dirName)
-	}
+	}, "ldb"
 }
 
-func newTestBadgerDB() (Database, func()) {
-	dirName, err := ioutil.TempDir(os.TempDir(), "klay_badgerdb_test_")
+func newTestBadgerDB() (Database, func(), string) {
+	dirName, err := os.MkdirTemp(os.TempDir(), "klay_badgerdb_test_")
 	if err != nil {
 		panic("failed to create test file: " + err.Error())
 	}
@@ -65,14 +66,17 @@ func newTestBadgerDB() (Database, func()) {
 	return db, func() {
 		db.Close()
 		os.RemoveAll(dirName)
-	}
+	}, "badger"
 }
 
-func newTestMemDB() (Database, func()) {
-	return NewMemDB(), func() {}
+func newTestMemDB() (Database, func(), string) {
+	db := NewMemDB()
+	return db, func() {
+		db.Close()
+	}, "memdb"
 }
 
-func newTestDynamoS3DB() (Database, func()) {
+func newTestDynamoS3DB() (Database, func(), string) {
 	// to start test with DynamoDB singletons
 	oldDynamoDBClient := dynamoDBClient
 	dynamoDBClient = nil
@@ -96,25 +100,39 @@ func newTestDynamoS3DB() (Database, func()) {
 		dynamoDBClient = oldDynamoDBClient
 		dynamoOnceWorker = oldDynamoOnceWorker
 		dynamoWriteCh = oldDynamoWriteCh
-	}
+	}, "dynamos3db"
 }
 
 type commonDatabaseTestSuite struct {
 	suite.Suite
+	newFn    func() (Database, func(), string)
+	removeFn func()
 	database Database
 }
+
+var testDatabases []func() (Database, func(), string)
 
 func TestDatabaseTestSuite(t *testing.T) {
 	// If you want to include dynamo test, use below line
 	// var testDatabases = []func() (Database, func()){newTestLDB, newTestBadgerDB, newTestMemDB, newTestDynamoS3DB}
 
 	// TODO-Klaytn-Database Need to add DynamoDB to the below list.
-	testDatabases := []func() (Database, func()){newTestLDB, newTestBadgerDB, newTestMemDB}
+	testDatabases = append(testDatabases, newTestLDB, newTestBadgerDB, newTestMemDB)
 	for _, newFn := range testDatabases {
-		db, remove := newFn()
-		suite.Run(t, &commonDatabaseTestSuite{database: db})
-		remove()
+		suite.Run(t, &commonDatabaseTestSuite{newFn: newFn})
 	}
+}
+
+func (ts *commonDatabaseTestSuite) BeforeTest(suiteName, testName string) {
+	var dbname string
+	ts.database, ts.removeFn, dbname = ts.newFn()
+	ts.T().Logf("before test - dbname: %v, suiteName: %v, testName: %v", dbname, suiteName, testName)
+}
+
+func (ts *commonDatabaseTestSuite) AfterTest(suiteName, testName string) {
+	ts.T().Logf("after test - suiteName: %v, testName: %v", suiteName, testName)
+	ts.removeFn()
+	ts.database, ts.removeFn = nil, nil
 }
 
 // TestNilValue checks if all database write/read nil value in the same way.
@@ -350,5 +368,253 @@ func TestDBEntryLengthCheck(t *testing.T) {
 
 	if dbRatioSum != 100 {
 		t.Fatalf("Sum of database configuration ratio should be 100! actual: %v", dbRatioSum)
+	}
+}
+
+type testData struct {
+	k, v []byte
+}
+
+type testDataSlice []*testData
+
+func (d testDataSlice) Len() int {
+	return len(d)
+}
+
+func (d testDataSlice) Swap(i, j int) {
+	d[i], d[j] = d[j], d[i]
+}
+
+func (d testDataSlice) Less(i, j int) bool {
+	return bytes.Compare(d[i].k, d[j].k) < 0
+}
+
+func insertRandomData(db KeyValueWriter, prefix []byte, num int) (testDataSlice, error) {
+	ret := testDataSlice{}
+	for i := 0; i < num; i++ {
+		key := common.MakeRandomBytes(32)
+		val := append(key, key...)
+		if len(prefix) > 0 {
+			key = append(prefix, key...)
+		}
+		ret = append(ret, &testData{k: key, v: val})
+
+		if err := db.Put(key, val); err != nil {
+			return nil, err
+		}
+	}
+
+	return ret, nil
+}
+
+func (ts *commonDatabaseTestSuite) Test_Put() {
+	num := 100
+
+	// test put
+	data, err := insertRandomData(ts.database, nil, num)
+	assert.NoError(ts.T(), err)
+	assert.Equal(ts.T(), num, len(data))
+}
+
+func (ts *commonDatabaseTestSuite) Test_Get() {
+	num, db := 100, ts.database
+
+	data, _ := insertRandomData(ts.database, nil, num)
+
+	for idx := range data {
+		actual, err := db.Get(data[idx].k)
+		assert.NoError(ts.T(), err)
+		assert.Equal(ts.T(), data[idx].v, actual)
+	}
+
+	notExistKey := []byte{0x1}
+	actual, err := db.Get(notExistKey)
+	assert.Equal(ts.T(), dataNotFoundErr, err)
+	assert.Nil(ts.T(), actual)
+}
+
+func (ts *commonDatabaseTestSuite) Test_Has() {
+	num, db := 100, ts.database
+
+	data, _ := insertRandomData(ts.database, nil, num)
+
+	for idx := range data {
+		has, err := db.Has(data[idx].k)
+		assert.NoError(ts.T(), err)
+		assert.True(ts.T(), has)
+	}
+
+	notExistKey := []byte{0x1}
+	has, err := db.Has(notExistKey)
+	assert.NoError(ts.T(), err)
+	assert.False(ts.T(), has)
+}
+
+func (ts *commonDatabaseTestSuite) Test_Delete() {
+	num, db := 100, ts.database
+
+	data, _ := insertRandomData(ts.database, nil, num)
+
+	for idx := range data {
+		if idx%2 == 0 {
+			err := db.Delete(data[idx].k)
+			assert.NoError(ts.T(), err)
+		}
+	}
+
+	for idx := range data {
+		has, _ := db.Has(data[idx].k)
+		if idx%2 == 0 {
+			assert.False(ts.T(), has)
+		} else {
+			assert.True(ts.T(), has)
+		}
+	}
+}
+
+func (ts *commonDatabaseTestSuite) Test_Iterator_NoData() {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+	db := ts.database
+	if _, ok := db.(*badgerDB); ok {
+		ts.T().Skip()
+	}
+
+	// testing iterator without prefix nor specific-starting key
+	it := db.NewIterator(nil, nil)
+	defer it.Release()
+
+	assert.False(ts.T(), it.Next())
+}
+
+func (ts *commonDatabaseTestSuite) Test_Iterator_WithoutPrefixAndStart() {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+	num, db := 100, ts.database
+	if _, ok := db.(*badgerDB); ok {
+		ts.T().Skip()
+	}
+
+	data, _ := insertRandomData(ts.database, nil, num)
+	sort.Sort(data)
+
+	// testing iterator without prefix nor specific-starting key
+	it := db.NewIterator(nil, nil)
+	defer it.Release()
+
+	idx := 0
+	for it.Next() {
+		key, val := it.Key(), it.Value()
+		assert.Equal(ts.T(), data[idx].k, key)
+		assert.Equal(ts.T(), data[idx].v, val)
+		idx++
+	}
+	assert.Equal(ts.T(), len(data), idx)
+}
+
+func (ts *commonDatabaseTestSuite) Test_Iterator_WithPrefix() {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+	num, prefix, db := 10, common.Hex2Bytes("deaddeaf"), ts.database
+	if _, ok := db.(*badgerDB); ok {
+		ts.T().Skip()
+	}
+
+	insertRandomData(ts.database, nil, num)
+	prefixData, _ := insertRandomData(ts.database, prefix, num)
+	sort.Sort(prefixData)
+
+	// testing iterator with key-prefix
+	it := db.NewIterator(prefix, nil)
+	defer it.Release()
+	assert.Nil(ts.T(), it.Key())
+	assert.Nil(ts.T(), it.Value())
+
+	idx := 0
+	for it.Next() {
+		key, val := it.Key(), it.Value()
+		assert.Equal(ts.T(), prefixData[idx].k, key)
+		assert.Equal(ts.T(), prefixData[idx].v, val)
+		idx++
+	}
+	assert.Equal(ts.T(), len(prefixData), idx)
+}
+
+func (ts *commonDatabaseTestSuite) Test_Iterator_WithStart() {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+	num, db := 100, ts.database
+	if _, ok := db.(*badgerDB); ok {
+		ts.T().Skip()
+	}
+
+	data, _ := insertRandomData(ts.database, nil, num)
+	sort.Sort(data)
+
+	startIdx := len(data) / 3
+
+	// testing iterator with specific starting key
+	it := db.NewIterator(nil, data[startIdx].k)
+	defer it.Release()
+	assert.Nil(ts.T(), it.Key())
+	assert.Nil(ts.T(), it.Value())
+
+	idx := startIdx
+	for it.Next() {
+		key, val := it.Key(), it.Value()
+		assert.Equal(ts.T(), data[idx].k, key)
+		assert.Equal(ts.T(), data[idx].v, val)
+		idx++
+	}
+	assert.Equal(ts.T(), len(data), idx)
+}
+
+func (ts *commonDatabaseTestSuite) Test_Iterator_WithPrefixAndStart() {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+	num, prefix, db := 10, common.Hex2Bytes("deaddeaf"), ts.database
+	if _, ok := db.(*badgerDB); ok {
+		ts.T().Skip()
+	}
+
+	insertRandomData(ts.database, common.Hex2Bytes("aaaabbbb"), num)
+	data, _ := insertRandomData(ts.database, prefix, num)
+	sort.Sort(data)
+
+	startIdx := len(data) / 3
+
+	// testing iterator with prefix and specific-starting key
+	it := db.NewIterator(prefix, data[startIdx].k[4:])
+	defer it.Release()
+	assert.Nil(ts.T(), it.Key())
+	assert.Nil(ts.T(), it.Value())
+
+	idx := startIdx
+	for it.Next() {
+		key, val := it.Key(), it.Value()
+		assert.Equal(ts.T(), data[idx].k, key)
+		assert.Equal(ts.T(), data[idx].v, val)
+		idx++
+	}
+	assert.Equal(ts.T(), len(data), idx)
+}
+
+func (ts *commonDatabaseTestSuite) Test_BatchWrite() {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+	numData, numIter, db := 1000, 100, ts.database
+	if _, ok := db.(*badgerDB); ok {
+		ts.T().Skip()
+	}
+
+	batch := db.NewBatch()
+	defer batch.Release()
+	data := testDataSlice{}
+	for i := 0; i < numIter; i++ {
+		inserted, _ := insertRandomData(batch, nil, numData)
+		batch.Write()
+		batch.Reset()
+		data = append(data, inserted...)
+	}
+
+	assert.Equal(ts.T(), numData*numIter, len(data))
+	for _, d := range data {
+		actual, err := db.Get(d.k)
+		assert.NoError(ts.T(), err)
+		assert.Equal(ts.T(), d.v, actual)
 	}
 }

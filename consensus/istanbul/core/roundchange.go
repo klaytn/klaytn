@@ -28,12 +28,6 @@ import (
 	"github.com/klaytn/klaytn/consensus/istanbul"
 )
 
-const (
-	// If the number of validators is 6 or less, the chain could be forked by round change if the required minimum consensus message is "2f+1".
-	// So, the exceptional case such as number of validator is 6, gather more messages than "2f+1". See requiredMessageCount for more specific information.
-	exceptionalValidatorsNumber = 6
-)
-
 // sendNextRoundChange sends the ROUND CHANGE message with current round + 1
 func (c *core) sendNextRoundChange(loc string) {
 	if c.backend.NodeType() != common.CONSENSUSNODE {
@@ -119,19 +113,12 @@ func (c *core) handleRoundChange(msg *message, src istanbul.Validator) error {
 	}
 
 	var numCatchUp, numStartNewRound int
-	if c.valSet.Size() <= exceptionalValidatorsNumber {
-		n := requiredMessageCount(c.valSet)
-		// N ROUND CHANGE messages can start new round.
-		numStartNewRound = n
-		// N - 1 ROUND CHANGE messages can catch up the round.
-		numCatchUp = n - 1
-	} else {
-		f := int(c.valSet.F())
-		// 2*F + 1 ROUND CHANGE messages can start new round.
-		numStartNewRound = 2*f + 1
-		// F + 1 ROUND CHANGE messages can start catch up the round.
-		numCatchUp = f + 1
-	}
+	n := RequiredMessageCount(c.valSet)
+	f := int(c.valSet.F())
+	// N ROUND CHANGE messages can start new round.
+	numStartNewRound = n
+	// F + 1 ROUND CHANGE messages can start catch up the round.
+	numCatchUp = f + 1
 
 	if num == numStartNewRound && (c.waitingForRoundChange || cv.Round.Cmp(roundView.Round) < 0) {
 		// We've received enough ROUND CHANGE messages, start a new round immediately.

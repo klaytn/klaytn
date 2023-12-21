@@ -345,31 +345,19 @@ func (n *Node) startRPC(services map[reflect.Type]Service) error {
 		n.stopInProc()
 		return err
 	}
-	if n.config.IsFastHTTP() {
-		if err := n.startFastHTTP(n.httpEndpoint, apis, n.config.HTTPModules, n.config.HTTPCors, n.config.HTTPVirtualHosts, n.config.HTTPTimeouts); err != nil {
-			n.stopIPC()
-			n.stopInProc()
-			return err
-		}
-		if err := n.startFastWS(n.wsEndpoint, apis, n.config.WSModules, n.config.WSOrigins, n.config.WSExposeAll); err != nil {
-			n.stopHTTP()
-			n.stopIPC()
-			n.stopInProc()
-			return err
-		}
-	} else {
-		if err := n.startHTTP(n.httpEndpoint, apis, n.config.HTTPModules, n.config.HTTPCors, n.config.HTTPVirtualHosts, n.config.HTTPTimeouts); err != nil {
-			n.stopIPC()
-			n.stopInProc()
-			return err
-		}
-		if err := n.startWS(n.wsEndpoint, apis, n.config.WSModules, n.config.WSOrigins, n.config.WSExposeAll); err != nil {
-			n.stopHTTP()
-			n.stopIPC()
-			n.stopInProc()
-			return err
-		}
+
+	if err := n.startHTTP(n.httpEndpoint, apis, n.config.HTTPModules, n.config.HTTPCors, n.config.HTTPVirtualHosts, n.config.HTTPTimeouts); err != nil {
+		n.stopIPC()
+		n.stopInProc()
+		return err
 	}
+	if err := n.startWS(n.wsEndpoint, apis, n.config.WSModules, n.config.WSOrigins, n.config.WSExposeAll); err != nil {
+		n.stopHTTP()
+		n.stopIPC()
+		n.stopInProc()
+		return err
+	}
+
 	// start gRPC server
 	if err := n.startgRPC(apis); err != nil {
 		n.stopHTTP()
@@ -771,7 +759,7 @@ func (n *Node) ResolvePath(x string) string {
 }
 
 func (n *Node) apis() []rpc.API {
-	return []rpc.API{
+	rpcApi := []rpc.API{
 		{
 			Namespace: "admin",
 			Version:   "1.0",
@@ -782,11 +770,7 @@ func (n *Node) apis() []rpc.API {
 			Service:   NewPublicAdminAPI(n),
 			Public:    true,
 		}, {
-			Namespace: "unsafedebug",
-			Version:   "1.0",
-			Service:   debug.Handler,
-		}, {
-			Namespace: "unsafedebug",
+			Namespace: "debug",
 			Version:   "1.0",
 			Service:   NewPublicDebugAPI(n),
 		}, {
@@ -802,11 +786,23 @@ func (n *Node) apis() []rpc.API {
 			Public:    true,
 		},
 	}
+	debugRpcApi := []rpc.API{
+		{
+			Namespace: "debug",
+			Version:   "1.0",
+			Service:   debug.Handler,
+		},
+	}
+	if !n.config.DisableUnsafeDebug {
+		rpcApi = append(rpcApi, debugRpcApi...)
+	}
+	return rpcApi
 }
 
 const (
 	ntpTolerance = time.Second
 	RFC3339Nano  = "2006-01-02T15:04:05.999999999Z07:00"
+	ntpMaxRetry  = 10
 )
 
 func timeIsNear(lhs, rhs time.Time) bool {
@@ -833,14 +829,29 @@ func NtpCheckWithLocal(n *Node) error {
 		return err
 	}
 
-	local := time.Now()
-	remote, err := ntpclient.GetNetworkTime(url, portNum)
-	if err != nil {
-		return err
+	ntpRetryTime := time.Duration(1)
+	var remote *time.Time
+	for i := 0; i < ntpMaxRetry; i++ {
+		time.Sleep(ntpRetryTime)
+		remote, err = ntpclient.GetNetworkTime(url, portNum)
+		if remote != nil {
+			break
+		}
+
+		logger.Warn("Cannot connect to remote ntp server", "url", url, "err", err)
+		ntpRetryTime = ntpRetryTime * 2
 	}
+
+	usage := "You can use \"--ntp.disable\" or \"--ntp.server\" option to change ntp time checking config"
+	if err != nil {
+		logger.Warn("Failed to remote ntp server."+"\n"+usage, "url", url)
+		return nil
+	}
+
+	local := time.Now()
 	if !timeIsNear(local, *remote) {
 		errFormat := "System time is out of sync, local:%s remote:%s"
-		return fmt.Errorf(errFormat, local.UTC().Format(RFC3339Nano), remote.UTC().Format(RFC3339Nano))
+		return fmt.Errorf(errFormat+"\n"+usage, local.UTC().Format(RFC3339Nano), remote.UTC().Format(RFC3339Nano))
 	}
 	logger.Info("Ntp time check", "local", local.UTC().Format(RFC3339Nano), "remote", remote.UTC().Format(RFC3339Nano))
 	return nil

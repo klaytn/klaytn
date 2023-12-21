@@ -35,6 +35,7 @@ type node interface {
 	fstring(string) string
 	cache() (hashNode, bool)
 	lenEncoded() uint16
+	encode(w rlp.EncoderBuffer)
 }
 
 type (
@@ -57,16 +58,9 @@ var nilValueNode = valueNode(nil)
 
 // EncodeRLP encodes a full node into the consensus RLP format.
 func (n *fullNode) EncodeRLP(w io.Writer) error {
-	var nodes [17]node
-
-	for i, child := range &n.Children {
-		if child != nil {
-			nodes[i] = child
-		} else {
-			nodes[i] = nilValueNode
-		}
-	}
-	return rlp.Encode(w, nodes)
+	eb := rlp.NewEncoderBuffer(w)
+	n.encode(eb)
+	return eb.Flush()
 }
 
 func (n *fullNode) copy() *fullNode   { copy := *n; return &copy }
@@ -161,7 +155,7 @@ func decodeShort(hash, elems []byte) (node, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid value node: %v", err)
 		}
-		return &shortNode{key, append(valueNode{}, val...), flag}, nil
+		return &shortNode{key, valueNode(val), flag}, nil
 	}
 	r, _, err := decodeRef(rest)
 	if err != nil {
@@ -184,7 +178,7 @@ func decodeFull(hash, elems []byte) (*fullNode, error) {
 		return n, err
 	}
 	if len(val) > 0 {
-		n.Children[16] = append(valueNode{}, val...)
+		n.Children[16] = valueNode(val)
 	}
 	return n, nil
 }
@@ -209,8 +203,9 @@ func decodeRef(buf []byte) (node, []byte, error) {
 	case kind == rlp.String && len(val) == 0:
 		// empty node
 		return nil, rest, nil
-	case kind == rlp.String && len(val) == 32:
-		return append(hashNode{}, val...), rest, nil
+	case kind == rlp.String && (len(val) == common.HashLength || len(val) == common.ExtHashLength):
+		hash := common.BytesToExtHash(val)
+		return hashNode(hash.Bytes()), rest, nil
 	default:
 		return nil, nil, fmt.Errorf("invalid RLP string size %d (want 0 or 32)", len(val))
 	}

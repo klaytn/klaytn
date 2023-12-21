@@ -24,10 +24,11 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/hex"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"reflect"
+	"runtime"
+	"sync"
 	"testing"
 
 	"github.com/klaytn/klaytn/common"
@@ -157,7 +158,7 @@ func TestLoadECDSAFile(t *testing.T) {
 		}
 	}
 
-	ioutil.WriteFile(fileName0, []byte(testPrivHex), 0o600)
+	os.WriteFile(fileName0, []byte(testPrivHex), 0o600)
 	defer os.Remove(fileName0)
 
 	key0, err := LoadECDSA(fileName0)
@@ -253,4 +254,64 @@ func TestPythonIntegration(t *testing.T) {
 
 	t.Logf("msg: %x, privkey: %s sig: %x\n", msg0, kh, sig0)
 	t.Logf("msg: %x, privkey: %s sig: %x\n", msg1, kh, sig1)
+}
+
+func BenchmarkEcrecover(b *testing.B) {
+	data, sigs := generateBenchmarkMaterial(b.N)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		Ecrecover(data, sigs[i])
+	}
+}
+
+func BenchmarkParallelEcrecover(b *testing.B) {
+	run := func(size int) func(b *testing.B) {
+		return func(b *testing.B) {
+			data, sigs := generateBenchmarkMaterial(size)
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				parallelEcrecover(data, sigs)
+			}
+		}
+	}
+
+	b.Run("1", run(1))
+	b.Run("30", run(30))
+	b.Run("100", run(100))
+	b.Run("1000", run(1000))
+}
+
+func generateBenchmarkMaterial(L int) (data []byte, sigs [][]byte) {
+	data = common.HexToHash("0xabcd").Bytes()
+	sigs = make([][]byte, L)
+	for i := 0; i < L; i++ {
+		// any nonzero integer less than the order is a valid privkey
+		priv := ToECDSAUnsafe(big.NewInt(int64(i + 1)).Bytes())
+		sig, _ := Sign(data, priv)
+		sigs[i] = sig
+	}
+	return
+}
+
+func parallelEcrecover(data []byte, sigs [][]byte) {
+	threads := runtime.NumCPU()
+	var wg sync.WaitGroup
+	wg.Add(threads)
+
+	jobs := make(chan []byte, len(sigs))
+	for _, sig := range sigs {
+		jobs <- sig
+	}
+
+	for i := 0; i < threads; i++ {
+		go func() {
+			for sig := range jobs {
+				Ecrecover(data, sig)
+			}
+			wg.Done()
+		}()
+	}
+
+	close(jobs)
+	wg.Wait()
 }

@@ -45,15 +45,16 @@ var logger = log.NewModuleLogger(log.NodeCN)
 // GetDefaultConfig returns default settings for use on the Klaytn main net.
 func GetDefaultConfig() *Config {
 	return &Config{
-		SyncMode:            downloader.FullSync,
-		NetworkId:           params.CypressNetworkId,
-		LevelDBCacheSize:    768,
-		TrieCacheSize:       512,
-		TrieTimeout:         5 * time.Minute,
-		TrieBlockInterval:   blockchain.DefaultBlockInterval,
-		TrieNodeCacheConfig: *statedb.GetEmptyTrieNodeCacheConfig(),
-		TriesInMemory:       blockchain.DefaultTriesInMemory,
-		GasPrice:            big.NewInt(18 * params.Ston),
+		SyncMode:             downloader.FullSync,
+		NetworkId:            params.CypressNetworkId,
+		LevelDBCacheSize:     768,
+		TrieCacheSize:        512,
+		TrieTimeout:          5 * time.Minute,
+		TrieBlockInterval:    blockchain.DefaultBlockInterval,
+		TrieNodeCacheConfig:  *statedb.GetEmptyTrieNodeCacheConfig(),
+		TriesInMemory:        blockchain.DefaultTriesInMemory,
+		LivePruningRetention: blockchain.DefaultLivePruningRetention,
+		GasPrice:             big.NewInt(18 * params.Ston),
 
 		TxPool: blockchain.DefaultTxPoolConfig,
 		GPO: gasprice.Config{
@@ -64,7 +65,8 @@ func GetDefaultConfig() *Config {
 		},
 		WsEndpoint: "localhost:8546",
 
-		Istanbul: *istanbul.DefaultConfig,
+		Istanbul:      *istanbul.DefaultConfig,
+		RPCEVMTimeout: 5 * time.Second,
 	}
 }
 
@@ -116,10 +118,13 @@ type Config struct {
 	LevelDBBufferPool    bool
 	LevelDBCacheSize     int
 	DynamoDBConfig       database.DynamoDBConfig
+	RocksDBConfig        database.RocksDBConfig
 	TrieCacheSize        int
 	TrieTimeout          time.Duration
 	TrieBlockInterval    uint
 	TriesInMemory        uint64
+	LivePruning          bool
+	LivePruningRetention uint64
 	SenderTxHashIndexing bool
 	ParallelDBWrite      bool
 	TrieNodeCacheConfig  statedb.TrieNodeCacheConfig
@@ -144,6 +149,9 @@ type Config struct {
 	EnablePreimageRecording bool
 	// Enables collecting internal transaction data during processing a block
 	EnableInternalTxTracing bool
+	// Enables collecting and printing opcode execution time when node stops
+	EnableOpDebug bool
+
 	// Istanbul options
 	Istanbul istanbul.Config
 
@@ -171,10 +179,17 @@ type Config struct {
 	// RPCGasCap is the global gas cap for eth-call variants.
 	RPCGasCap *big.Int `toml:",omitempty"`
 
+	// RPCEVMTimeout is the global timeout for klay/eth-call.
+	RPCEVMTimeout time.Duration
+
 	// RPCTxFeeCap is the global transaction fee(price * gaslimit) cap for
 	// send-transction variants. The unit is klay.
 	// This is used by eth namespace RPC APIs
 	RPCTxFeeCap float64
+
+	// Disable option for unsafe debug APIs
+	DisableUnsafeDebug         bool          `toml:",omitempty"`
+	StateRegenerationTimeLimit time.Duration `toml:",omitempty"`
 }
 
 type configMarshaling struct {
@@ -185,5 +200,6 @@ func (c *Config) getVMConfig() vm.Config {
 	return vm.Config{
 		EnablePreimageRecording: c.EnablePreimageRecording,
 		EnableInternalTxTracing: c.EnableInternalTxTracing,
+		EnableOpDebug:           c.EnableOpDebug,
 	}
 }

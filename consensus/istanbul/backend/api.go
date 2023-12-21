@@ -80,7 +80,7 @@ func (api *API) GetValidators(number *rpc.BlockNumber) ([]common.Address, error)
 
 	snap, err := api.istanbul.snapshot(api.chain, header.Number.Uint64()-1, header.ParentHash, nil, false)
 	if err != nil {
-		logger.Error("Failed to get snapshot.", "hash", snap.Hash, "err", err)
+		logger.Error("Failed to get snapshot.", "blockNum", blockNumber, "err", err)
 		return nil, err
 	}
 	return snap.validators(), nil
@@ -105,7 +105,7 @@ func (api *API) GetValidatorsAtHash(hash common.Hash) ([]common.Address, error) 
 
 	snap, err := api.istanbul.snapshot(api.chain, header.Number.Uint64()-1, header.ParentHash, nil, false)
 	if err != nil {
-		logger.Error("Failed to get snapshot.", "hash", snap.Hash, "err", err)
+		logger.Error("Failed to get snapshot.", "blockNum", blockNumber, "err", err)
 		return nil, errInternalError
 	}
 	return snap.validators(), nil
@@ -122,14 +122,14 @@ func (api *API) GetDemoteValidators(number *rpc.BlockNumber) ([]common.Address, 
 	if blockNumber == 0 {
 		snap, err := api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil, false)
 		if err != nil {
-			logger.Error("Failed to get snapshot.", "hash", snap.Hash, "err", err)
+			logger.Error("Failed to get snapshot.", "blockNum", blockNumber, "err", err)
 			return nil, err
 		}
 		return snap.demotedValidators(), nil
 	} else {
 		snap, err := api.istanbul.snapshot(api.chain, header.Number.Uint64()-1, header.ParentHash, nil, false)
 		if err != nil {
-			logger.Error("Failed to get snapshot.", "hash", snap.Hash, "err", err)
+			logger.Error("Failed to get snapshot.", "blockNum", blockNumber, "err", err)
 			return nil, err
 		}
 		return snap.demotedValidators(), nil
@@ -147,14 +147,14 @@ func (api *API) GetDemotedValidatorsAtHash(hash common.Hash) ([]common.Address, 
 	if blockNumber == 0 {
 		snap, err := api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil, false)
 		if err != nil {
-			logger.Error("Failed to get snapshot.", "hash", snap.Hash, "err", err)
+			logger.Error("Failed to get snapshot.", "blockNum", blockNumber, "err", err)
 			return nil, err
 		}
 		return snap.demotedValidators(), nil
 	} else {
 		snap, err := api.istanbul.snapshot(api.chain, header.Number.Uint64()-1, header.ParentHash, nil, false)
 		if err != nil {
-			logger.Error("Failed to get snapshot.", "hash", snap.Hash, "err", err)
+			logger.Error("Failed to get snapshot.", "blockNum", blockNumber, "err", err)
 			return nil, err
 		}
 		return snap.demotedValidators(), nil
@@ -229,7 +229,7 @@ func (api *APIExtension) GetCouncil(number *rpc.BlockNumber) ([]common.Address, 
 
 	snap, err := api.istanbul.snapshot(api.chain, header.Number.Uint64()-1, header.ParentHash, nil, false)
 	if err != nil {
-		logger.Error("Failed to get snapshot.", "hash", snap.Hash, "err", err)
+		logger.Error("Failed to get snapshot.", "blockNum", blockNumber, "err", err)
 		return nil, err
 	}
 
@@ -308,7 +308,7 @@ func (api *APIExtension) makeRPCBlockOutput(b *types.Block,
 	if bc, ok := api.chain.(*blockchain.BlockChain); ok {
 		td = bc.GetTd(hash, b.NumberU64())
 	}
-	r, err := klaytnApi.RpcOutputBlock(b, td, false, false, api.chain.Config().IsEthTxTypeForkEnabled(b.Header().Number))
+	r, err := klaytnApi.RpcOutputBlock(b, td, false, false, api.chain.Config().Rules(b.Header().Number))
 	if err != nil {
 		logger.Error("failed to RpcOutputBlock", "err", err)
 		return nil

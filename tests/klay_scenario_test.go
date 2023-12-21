@@ -370,7 +370,7 @@ func TestSmartContractDeployAddress(t *testing.T) {
 		contractAddr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce)
 
 		// check receipt
-		receipt, _, err := applyTransaction(t, bcdata, tx)
+		receipt, err := applyTransaction(t, bcdata, tx)
 		assert.Equal(t, nil, err)
 		assert.Equal(t, contractAddr, receipt.ContractAddress)
 	}
@@ -539,7 +539,7 @@ func TestSmartContractScenario(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		balance := new(big.Int)
-		abii.Unpack(&balance, "balanceOf", ret)
+		abii.UnpackIntoInterface(&balance, "balanceOf", ret)
 
 		assert.Equal(t, amountToSend, balance)
 		reservoir.Nonce += 1
@@ -673,9 +673,9 @@ func TestSmartContractSign(t *testing.T) {
 		err = tx.SignWithKeys(signer, contract.Keys)
 		assert.Equal(t, nil, err)
 
-		receipt, _, err := applyTransaction(t, bcdata, tx)
+		receipt, err := applyTransaction(t, bcdata, tx)
 		assert.Equal(t, (*types.Receipt)(nil), receipt)
-		assert.Equal(t, types.ErrInvalidSigSender, err)
+		assert.Equal(t, types.ErrSender(types.ErrInvalidAccountKey), err)
 	}
 
 	// 4. Try fee delegation. It should be failed.
@@ -699,9 +699,9 @@ func TestSmartContractSign(t *testing.T) {
 		err = tx.SignFeePayerWithKeys(signer, contract.Keys)
 		assert.Equal(t, nil, err)
 
-		receipt, _, err := applyTransaction(t, bcdata, tx)
+		receipt, err := applyTransaction(t, bcdata, tx)
 		assert.Equal(t, (*types.Receipt)(nil), receipt)
-		assert.Equal(t, types.ErrInvalidSigFeePayer, err)
+		assert.Equal(t, types.ErrFeePayer(types.ErrInvalidAccountKey), err)
 	}
 }
 
@@ -884,7 +884,7 @@ func TestFeeDelegatedSmartContractScenario(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		balance := new(big.Int)
-		abii.Unpack(&balance, "balanceOf", ret)
+		abii.UnpackIntoInterface(&balance, "balanceOf", ret)
 
 		assert.Equal(t, amountToSend, balance)
 		reservoir.Nonce += 1
@@ -1076,7 +1076,7 @@ func TestFeeDelegatedSmartContractScenarioWithRatio(t *testing.T) {
 		assert.Equal(t, nil, err)
 
 		balance := new(big.Int)
-		abii.Unpack(&balance, "balanceOf", ret)
+		abii.UnpackIntoInterface(&balance, "balanceOf", ret)
 
 		assert.Equal(t, amountToSend, balance)
 		reservoir.Nonce += 1
@@ -1720,8 +1720,8 @@ func TestMultisigScenario(t *testing.T) {
 		err = tx.SignWithKeys(signer, anon.Keys[:1])
 		assert.Equal(t, nil, err)
 
-		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, types.ErrInvalidSigSender, err)
+		receipt, err := applyTransaction(t, bcdata, tx)
+		assert.Equal(t, types.ErrSender(types.ErrInvalidAccountKey), err)
 		assert.Equal(t, (*types.Receipt)(nil), receipt)
 	}
 
@@ -1743,7 +1743,7 @@ func TestValidateSender(t *testing.T) {
 
 	initialBalance := big.NewInt(1000000)
 
-	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil)
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
 	statedb.CreateEOA(anon.Addr, false, anon.AccKey)
 	statedb.SetNonce(anon.Addr, nonce)
 	statedb.SetBalance(anon.Addr, initialBalance)
@@ -1984,7 +1984,7 @@ func compileSolidity(filename string) (code []string, abiStr []string) {
 
 // applyTransaction setups variables to call block.ApplyTransaction() for tests.
 // It directly returns values from block.ApplyTransaction().
-func applyTransaction(t *testing.T, bcdata *BCData, tx *types.Transaction) (*types.Receipt, uint64, error) {
+func applyTransaction(t *testing.T, bcdata *BCData, tx *types.Transaction) (*types.Receipt, error) {
 	state, err := bcdata.bc.State()
 	assert.Equal(t, nil, err)
 
@@ -2002,6 +2002,6 @@ func applyTransaction(t *testing.T, bcdata *BCData, tx *types.Transaction) (*typ
 		BlockScore: big.NewInt(0),
 	}
 	usedGas := uint64(0)
-	receipt, gas, _, err := bcdata.bc.ApplyTransaction(bcdata.bc.Config(), author, state, header, tx, &usedGas, vmConfig)
-	return receipt, gas, err
+	receipt, _, err := bcdata.bc.ApplyTransaction(bcdata.bc.Config(), author, state, header, tx, &usedGas, vmConfig)
+	return receipt, err
 }

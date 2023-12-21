@@ -26,6 +26,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"math/big"
 	"sync"
@@ -44,8 +45,9 @@ var (
 	ErrInvalidSig                     = errors.New("invalid transaction v, r, s values")
 	ErrInvalidSigSender               = errors.New("invalid transaction v, r, s values of the sender")
 	ErrInvalidSigFeePayer             = errors.New("invalid transaction v, r, s values of the fee payer")
-	errNoSigner                       = errors.New("missing signing methods")
 	ErrInvalidTxTypeForAnchoredData   = errors.New("invalid transaction type for anchored data")
+	ErrNotLegacyAccount               = errors.New("not a legacy account")
+	ErrInvalidAccountKey              = errors.New("invalid account key")
 	errLegacyTransaction              = errors.New("should not be called by a legacy transaction")
 	errNotImplementTxInternalDataFrom = errors.New("not implement TxInternalDataFrom")
 	errNotFeeDelegationTransaction    = errors.New("not a fee delegation type transaction")
@@ -56,6 +58,14 @@ var (
 // deriveSigner makes a *best* guess about which signer to use.
 func deriveSigner(V *big.Int) Signer {
 	return LatestSignerForChainID(deriveChainId(V))
+}
+
+func ErrSender(err error) error {
+	return fmt.Errorf("invalid sender: %s", err)
+}
+
+func ErrFeePayer(err error) error {
+	return fmt.Errorf("invalid fee payer: %s", err)
 }
 
 type Transaction struct {
@@ -383,21 +393,23 @@ func (tx *Transaction) ValidateMutableValue(db StateDB, signer Signer, currentBl
 	accKey := db.GetKey(tx.ValidatedSender())
 	if tx.IsEthereumTransaction() {
 		if !accKey.Type().IsLegacyAccountKey() {
-			return ErrInvalidSigSender
+			return ErrNotLegacyAccount
 		}
 	} else {
-		pubkey, err := SenderPubkey(signer, tx)
-		if err != nil || accountkey.ValidateAccountKey(currentBlockNumber, tx.ValidatedSender(), accKey, pubkey, tx.GetRoleTypeForValidation()) != nil {
+		if pubkey, err := SenderPubkey(signer, tx); err != nil {
 			return ErrInvalidSigSender
+		} else if accountkey.ValidateAccountKey(currentBlockNumber, tx.ValidatedSender(), accKey, pubkey, tx.GetRoleTypeForValidation()) != nil {
+			return ErrInvalidAccountKey
 		}
 	}
 
 	// validate the fee payer's account key
 	if tx.IsFeeDelegatedTransaction() {
 		feePayerAccKey := db.GetKey(tx.ValidatedFeePayer())
-		feePayerPubkey, err := SenderFeePayerPubkey(signer, tx)
-		if err != nil || accountkey.ValidateAccountKey(currentBlockNumber, tx.ValidatedFeePayer(), feePayerAccKey, feePayerPubkey, accountkey.RoleFeePayer) != nil {
+		if feePayerPubkey, err := SenderFeePayerPubkey(signer, tx); err != nil {
 			return ErrInvalidSigFeePayer
+		} else if accountkey.ValidateAccountKey(currentBlockNumber, tx.ValidatedFeePayer(), feePayerAccKey, feePayerPubkey, accountkey.RoleFeePayer) != nil {
+			return ErrInvalidAccountKey
 		}
 	}
 
@@ -565,7 +577,7 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 
 	gasFrom, err := tx.ValidateSender(s, picker, currentBlockNumber)
 	if err != nil {
-		return nil, err
+		return nil, ErrSender(err)
 	}
 
 	tx.mu.Lock()
@@ -576,7 +588,7 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 	if tx.IsFeeDelegatedTransaction() {
 		gasFeePayer, err = tx.ValidateFeePayer(s, picker, currentBlockNumber)
 		if err != nil {
-			return nil, err
+			return nil, ErrFeePayer(err)
 		}
 	}
 
@@ -775,7 +787,7 @@ func (tx *Transaction) ValidateSender(signer Signer, p AccountKeyPicker, current
 	}
 
 	if err := accountkey.ValidateAccountKey(currentBlockNumber, from, accKey, pubkey, tx.GetRoleTypeForValidation()); err != nil {
-		return 0, ErrInvalidSigSender
+		return 0, ErrInvalidAccountKey
 	}
 
 	tx.mu.Lock()
@@ -810,7 +822,7 @@ func (tx *Transaction) ValidateFeePayer(signer Signer, p AccountKeyPicker, curre
 	}
 
 	if err := accountkey.ValidateAccountKey(currentBlockNumber, feePayer, accKey, pubkey, accountkey.RoleFeePayer); err != nil {
-		return 0, ErrInvalidSigFeePayer
+		return 0, ErrInvalidAccountKey
 	}
 
 	tx.mu.Lock()
@@ -1012,7 +1024,7 @@ func (t *TransactionsByTimeAndNonce) Pop() {
 }
 
 // NewMessage returns a `*Transaction` object with the given arguments.
-func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, checkNonce bool, intrinsicGas uint64) *Transaction {
+func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, checkNonce bool, intrinsicGas uint64, list AccessList) *Transaction {
 	transaction := &Transaction{
 		validatedIntrinsicGas: intrinsicGas,
 		validatedFeePayer:     from,
@@ -1020,8 +1032,13 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *b
 		checkNonce:            checkNonce,
 	}
 
-	internalData := newTxInternalDataLegacyWithValues(nonce, to, amount, gasLimit, gasPrice, data)
-	transaction.setDecoded(internalData, 0)
+	if list != nil {
+		internalData := newTxInternalDataEthereumAccessListWithValues(nonce, to, amount, gasLimit, gasPrice, data, list, nil)
+		transaction.setDecoded(internalData, 0)
+	} else {
+		internalData := newTxInternalDataLegacyWithValues(nonce, to, amount, gasLimit, gasPrice, data)
+		transaction.setDecoded(internalData, 0)
+	}
 
 	return transaction
 }
