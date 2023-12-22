@@ -578,9 +578,9 @@ func (s *CN) APIs() []rpc.API {
 		}, {
 			Namespace: "debug",
 			Version:   "1.0",
-			Service:   tracers.NewUnsafeAPI(s.APIBackend),
+			Service:   tracers.NewUnsafeAPI(s.APIBackend, !s.config.DisableUnsafeDebug),
 			Public:    false,
-			IPCOnly:   true,
+			IPCOnly:   s.config.DisableUnsafeDebug,
 		}, {
 			Namespace: "net",
 			Version:   "1.0",

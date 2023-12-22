@@ -116,9 +116,9 @@ type UnsafeAPI struct {
 
 // NewUnsafeAPI creates a new API definition for the tracing methods of the CN service,
 // only allowing predefined tracers.
-func NewUnsafeAPI(backend Backend) *UnsafeAPI {
+func NewUnsafeAPI(backend Backend, unsafeTrace bool) *UnsafeAPI {
 	return &UnsafeAPI{
-		CommonAPI{backend: backend, unsafeTrace: false},
+		CommonAPI{backend: backend, unsafeTrace: unsafeTrace},
 	}
 }
 
