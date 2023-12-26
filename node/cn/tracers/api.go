@@ -124,9 +124,9 @@ func NewUnsafeAPI(backend Backend, unsafeTrace bool) *UnsafeAPI {
 
 // NewAPI creates a new API definition for the tracing methods of the CN service,
 // allowing both predefined tracers and Javascript snippet based tracing.
-func NewAPI(backend Backend) *API {
+func NewAPI(backend Backend, unsafeTrace bool) *API {
 	return &API{
-		CommonAPI{backend: backend, unsafeTrace: true},
+		CommonAPI{backend: backend, unsafeTrace: unsafeTrace},
 	}
 }
 
