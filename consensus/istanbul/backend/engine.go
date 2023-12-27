@@ -940,14 +940,14 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 func (sb *backend) regen(chain consensus.ChainReader, headers []*types.Header) {
 	if !sb.isRestoringSnapshots.Load() && len(headers) > 1 {
 		var (
-			from        = headers[0].Number
-			to          = headers[len(headers)-1].Number
+			from        = headers[0].Number.Uint64()
+			to          = headers[len(headers)-1].Number.Uint64()
 			start       = time.Now()
 			commitTried = false
 		)
 
-		// Shortcut: No missing snaoshot data to be processed.
-		if to.Uint64()-(to.Uint64()%uint64(params.CheckpointInterval)) < from.Uint64() {
+		// Shortcut: No missing snapshot data to be processed.
+		if to-(to%uint64(params.CheckpointInterval)) < from {
 			return
 		}
 
