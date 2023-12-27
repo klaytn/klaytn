@@ -929,14 +929,15 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 
 // regen commits snapshot data to database
 // If the last header number is larger than the last snapshot number, regenerate handler gets triggered.
-// Triggered:
-// |   ^                          ^                          ^                          ^  ...|
-//     SI                 SI*(last snapshot)                 SI                         SI
-//       			   | header1, .. headerN |
-// Not triggered: (Guaranteed SI* was committed before )
-// |   ^                          ^                          ^                          ^  ...|
-//     SI                 SI*(last snapshot)                 SI                         SI
-//       			                 | header1, .. headerN |
+/*
+ Triggered:
+ |   ^                          ^                          ^                          ^  ...|
+     SI                 SI*(last snapshot)                 SI                         SI
+       			   | header1, .. headerN |
+ Not triggered: (Guaranteed SI* was committed before )
+ |   ^                          ^                          ^                          ^  ...|
+     SI                 SI*(last snapshot)                 SI                         SI
+*/
 func (sb *backend) regen(chain consensus.ChainReader, headers []*types.Header) {
 	if !sb.isRestoringSnapshots.Load() && len(headers) > 1 {
 		var (
