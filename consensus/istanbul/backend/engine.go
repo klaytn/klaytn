@@ -921,6 +921,8 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		logger.Trace("Stored voting snapshot to disk", "number", snap.Number, "hash", snap.Hash)
 	}
 
+	sb.regen(chain, headers)
+
 	sb.recents.Add(snap.Hash, snap)
 	return snap, err
 }
