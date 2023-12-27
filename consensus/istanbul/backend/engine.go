@@ -921,26 +921,38 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		logger.Trace("Stored voting snapshot to disk", "number", snap.Number, "hash", snap.Hash)
 	}
 
-	sb.regen(chain, headers)
-
 	sb.recents.Add(snap.Hash, snap)
 	return snap, err
 }
 
 // regen commits snapshot data to database
+// If the last header number is larger than the last snapshot number, regenerate handler gets triggered.
+// Triggered:
+// |   ^                          ^                          ^                          ^  ...|
+//     SI                 SI*(last snapshot)                 SI                         SI
+//       			   | header1, .. headerN |
+// Not triggered: (Guaranteed SI* was committed before )
+// |   ^                          ^                          ^                          ^  ...|
+//     SI                 SI*(last snapshot)                 SI                         SI
+//       			                 | header1, .. headerN |
 func (sb *backend) regen(chain consensus.ChainReader, headers []*types.Header) {
-	if !sb.isRestoring.Load() && len(headers) > 1 {
-		sb.isRestoring.Store(true)
-		defer func() {
-			sb.isRestoring.Store(false)
-		}()
-
+	if !sb.isRestoringSnapshots.Load() && len(headers) > 1 {
 		var (
 			from        = headers[0].Number
 			to          = headers[len(headers)-1].Number
 			start       = time.Now()
 			commitTried = false
 		)
+
+		// Shortcut: No missing snaoshot data to be processed.
+		if to.Uint64()-(to.Uint64()%uint64(params.CheckpointInterval)) < from.Uint64() {
+			return
+		}
+
+		sb.isRestoringSnapshots.Store(true)
+		defer func() {
+			sb.isRestoringSnapshots.Store(false)
+		}()
 		for _, header := range headers {
 			var (
 				hn = header.Number.Uint64()
@@ -962,7 +974,7 @@ func (sb *backend) regen(chain consensus.ChainReader, headers []*types.Header) {
 			}
 		}
 		if commitTried { // This prevents push too many logs by potential DoS attack
-			logger.Trace("[Snapshot] Snapshot restoring completed", "len(headers)", len(headers), "from", from, "to", to, "end", time.Since(start))
+			logger.Trace("[Snapshot] Snapshot restoring completed", "len(headers)", len(headers), "from", from, "to", to, "elapsed", time.Since(start))
 		}
 	}
 }
