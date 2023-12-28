@@ -928,7 +928,8 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 }
 
 // regen commits snapshot data to database
-// If the last header number is larger than the last snapshot number, regenerate handler gets triggered.
+// regen is triggered if there is any checkpoint block in the `headers`.
+// For each checkpoint block, this function verifies the existence of its snapshot in DB and stores one if missing.
 /*
  Triggered:
  |   ^                          ^                          ^                          ^  ...|
@@ -937,6 +938,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
  Not triggered: (Guaranteed SI* was committed before )
  |   ^                          ^                          ^                          ^  ...|
      SI                 SI*(last snapshot)                 SI                         SI
+	                            | header1, .. headerN |
 */
 func (sb *backend) regen(chain consensus.ChainReader, headers []*types.Header) {
 	if !sb.isRestoringSnapshots.Load() && len(headers) > 1 {
@@ -976,7 +978,7 @@ func (sb *backend) regen(chain consensus.ChainReader, headers []*types.Header) {
 				}
 			}
 		}
-		if commitTried { // This prevents push too many logs by potential DoS attack
+		if commitTried { // This prevents pushing too many logs by potential DoS attack
 			logger.Trace("[Snapshot] Snapshot restoring completed", "len(headers)", len(headers), "from", from, "to", to, "elapsed", time.Since(start))
 		}
 	}
