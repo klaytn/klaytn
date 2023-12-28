@@ -407,9 +407,8 @@ func (s *PublicBlockChainAPI) EstimateComputationCost(ctx context.Context, args 
 			return 0, err
 		}
 		rules := s.b.ChainConfig().Rules(block.Number())
-		errStr := fmt.Sprintf("%s (opcodeComputationCostSum = %d), (computationCostLimit = %d)",
+		errStr := fmt.Sprintf("%s (computationCostLimit = %d)",
 			vm.ErrOpcodeComputationCostLimitReached.Error(),
-			cc,
 			vm.GetComputationCost(rules, 0),
 		)
 		return cc, errors.New(errStr)
