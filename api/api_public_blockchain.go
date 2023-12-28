@@ -398,8 +398,23 @@ func (s *PublicBlockChainAPI) EstimateComputationCost(ctx context.Context, args 
 	if rpcGasCap := s.b.RPCGasCap(); rpcGasCap != nil {
 		gasCap = rpcGasCap
 	}
-	_, computationCost, err := DoCall(ctx, s.b, args, blockNrOrHash, vm.Config{}, s.b.RPCEVMTimeout(), gasCap)
-	return (hexutil.Uint64)(computationCost), err
+	result, computationCost, err := DoCall(ctx, s.b, args, blockNrOrHash, vm.Config{}, s.b.RPCEVMTimeout(), gasCap)
+	cc := (hexutil.Uint64)(computationCost)
+
+	if err == nil && result.Unwrap() == vm.ErrOpcodeComputationCostLimitReached {
+		block, err := s.b.BlockByNumberOrHash(ctx, blockNrOrHash)
+		if err != nil {
+			return 0, err
+		}
+		rules := s.b.ChainConfig().Rules(block.Number())
+		errStr := fmt.Sprintf("%s (opcodeComputationCostSum = %d), (computationCostLimit = %d)",
+			vm.ErrOpcodeComputationCostLimitReached.Error(),
+			cc,
+			vm.GetComputationCost(rules, 0),
+		)
+		return cc, errors.New(errStr)
+	}
+	return cc, err
 }
 
 // EstimateGas returns an estimate of the amount of gas needed to execute the given transaction against the latest block.

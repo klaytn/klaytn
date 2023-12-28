@@ -123,25 +123,30 @@ func NewEVMInterpreter(evm *EVM) *EVMInterpreter {
 		cfg.JumpTable = jt
 	}
 
-	// Enable the opcode computation cost limit
-	if cfg.ComputationCostLimit == 0 {
-		switch {
-		case evm.chainRules.IsCancun:
-			cfg.ComputationCostLimit = uint64(params.OpcodeComputationCostLimitCancun)
-		default:
-			cfg.ComputationCostLimit = uint64(params.OpcodeComputationCostLimit)
-		}
-	}
-
-	// It is an experimental feature.
-	if params.OpcodeComputationCostLimitOverride != 0 {
-		cfg.ComputationCostLimit = params.OpcodeComputationCostLimitOverride
-	}
+	cfg.ComputationCostLimit = GetComputationCost(evm.chainRules, cfg.ComputationCostLimit)
 
 	return &EVMInterpreter{
 		evm: evm,
 		cfg: cfg,
 	}
+}
+
+func GetComputationCost(rules params.Rules, cc uint64) uint64 {
+	if cc == 0 {
+		// Enable the opcode computation cost limit
+		switch {
+		case rules.IsCancun:
+			cc = uint64(params.OpcodeComputationCostLimitCancun)
+		default:
+			cc = uint64(params.OpcodeComputationCostLimit)
+		}
+	}
+
+	// It is an experimental feature.
+	if params.OpcodeComputationCostLimitOverride != 0 {
+		cc = params.OpcodeComputationCostLimitOverride
+	}
+	return cc
 }
 
 // count values and execution time of the opcodes are collected until the node is turned off.
