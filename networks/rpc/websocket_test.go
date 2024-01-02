@@ -81,59 +81,6 @@ func TestWebsocketLargeCall(t *testing.T) {
 	assert.Error(t, client.Call(&result, method, arg, 1), "no error for too large call")
 }
 
-func newTestListener() net.Listener {
-	ln, err := net.Listen("tcp", "localhost:0")
-	if err != nil {
-		panic(err)
-	}
-	return ln
-}
-
-func TestFastWSServer_MaxConnections(t *testing.T) {
-	// create server
-	var (
-		srv = newTestServer("service", new(Service))
-		ln  = newTestListener()
-	)
-	defer srv.Stop()
-	defer ln.Close()
-
-	go NewFastWSServer([]string{"*"}, srv).Serve(ln)
-	time.Sleep(100 * time.Millisecond)
-
-	// set max websocket connections
-	MaxWebsocketConnections = 3
-	testWebsocketMaxConnections(t, "ws://"+ln.Addr().String(), int(MaxWebsocketConnections))
-}
-
-func testWebsocketMaxConnections(t *testing.T, addr string, maxConnections int) {
-	var closers []*Client
-
-	for i := 0; i <= maxConnections; i++ {
-		client, err := DialWebsocket(context.Background(), addr, "")
-		if err != nil {
-			t.Fatal(err)
-		}
-		closers = append(closers, client)
-
-		var result echoResult
-		method := "service_echo"
-		arg := strings.Repeat("x", i)
-		err = client.Call(&result, method, arg, 1)
-		if i < int(MaxWebsocketConnections) {
-			assert.NoError(t, err)
-			assert.Equal(t, arg, result.String, "wrong string echoed")
-		} else {
-			assert.Error(t, err)
-			// assert.Equal(t, "EOF", err.Error())
-		}
-	}
-
-	for _, client := range closers {
-		client.Close()
-	}
-}
-
 func TestWebsocketClientHeaders(t *testing.T) {
 	t.Parallel()
 

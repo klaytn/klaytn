@@ -643,27 +643,28 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair bo
 		if err := bc.hc.SetHead(head, updateFn, delFn); err != nil {
 			return 0, err
 		}
-	}
 
-	// Delete istanbul snapshot database further two epochs
-	var (
-		curBlkNum   = bc.CurrentBlock().Number().Uint64()
-		epoch       = bc.Config().Istanbul.Epoch
-		votingEpoch = curBlkNum - (curBlkNum % epoch)
-	)
-	if votingEpoch == 0 {
-		votingEpoch = 1
-	}
-	// Delete the snapshot state beyond the block number of the previous epoch on the right
-	for i := curBlkNum; i >= votingEpoch; i-- {
-		if params.IsCheckpointInterval(i) {
-			// delete from sethead number to previous two epoch block nums
-			// to handle a block that contains non-empty vote data to make sure
-			// the `HandleGovernanceVote()` cannot be skipped
-			bc.db.DeleteIstanbulSnapshot(bc.GetBlockByNumber(i).Hash())
+		// Delete istanbul snapshot database further two epochs
+		// Invoked only if the sethead was originated from explicit API call
+		var (
+			curBlkNum   = bc.CurrentBlock().Number().Uint64()
+			epoch       = bc.Config().Istanbul.Epoch
+			votingEpoch = curBlkNum - (curBlkNum % epoch)
+		)
+		if votingEpoch == 0 {
+			votingEpoch = 1
 		}
+		// Delete the snapshot state beyond the block number of the previous epoch on the right
+		for i := curBlkNum; i >= votingEpoch; i-- {
+			if params.IsCheckpointInterval(i) {
+				// delete from sethead number to previous two epoch block nums
+				// to handle a block that contains non-empty vote data to make sure
+				// the `HandleGovernanceVote()` cannot be skipped
+				bc.db.DeleteIstanbulSnapshot(bc.GetBlockByNumber(i).Hash())
+			}
+		}
+		logger.Trace("[SetHead] Snapshot database deleted", "from", originLatestBlkNum, "to", votingEpoch)
 	}
-	logger.Trace("[SetHead] Snapshot database deleted", "from", originLatestBlkNum, "to", votingEpoch)
 
 	// Clear out any stale content from the caches
 	bc.futureBlocks.Purge()
