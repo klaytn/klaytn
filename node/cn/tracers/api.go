@@ -98,32 +98,33 @@ type Backend interface {
 	StateAtTransaction(ctx context.Context, block *types.Block, txIndex int, reexec uint64) (blockchain.Message, vm.BlockContext, vm.TxContext, *state.StateDB, error)
 }
 
-// CommonAPI is the collection of tracing APIs exposed over the private debugging endpoint.
+// CommonAPI contains
+// - public methods that change behavior depending on `.unsafeTrace` flag.
+// For instance, TraceTransaction and TraceCall may or may not support custom tracers.
+// - private helper methods such as traceTx
 type CommonAPI struct {
 	backend     Backend
 	unsafeTrace bool
 }
 
-// API is the safe APIs
+// API contains public methods that are considered "safe" to expose in public RPC.
 type API struct {
 	CommonAPI
 }
 
-// UNsafeAPI is the unsafe APIs
+// UnsafeAPI contains public methods that are considered "unsafe" to expose in public RPC.
 type UnsafeAPI struct {
 	CommonAPI
 }
 
-// NewUnsafeAPI creates a new API definition for the tracing methods of the CN service,
-// only allowing predefined tracers.
+// NewUnsafeAPI creates a new UnsafeAPI definition
 func NewUnsafeAPI(backend Backend, unsafeTrace bool) *UnsafeAPI {
 	return &UnsafeAPI{
 		CommonAPI{backend: backend, unsafeTrace: unsafeTrace},
 	}
 }
 
-// NewAPI creates a new API definition for the tracing methods of the CN service,
-// allowing both predefined tracers and Javascript snippet based tracing.
+// NewAPI creates a new API definition
 func NewAPI(backend Backend, unsafeTrace bool) *API {
 	return &API{
 		CommonAPI{backend: backend, unsafeTrace: unsafeTrace},
