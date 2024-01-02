@@ -89,25 +89,6 @@ func newTestListener() net.Listener {
 	return ln
 }
 
-/*
-func TestWSServer_MaxConnections(t *testing.T) {
-	// create server
-	var (
-		srv = newTestServer("service", new(Service))
-		ln  = newTestListener()
-	)
-	defer srv.Stop()
-	defer ln.Close()
-
-	go NewWSServer([]string{"*"}, srv).Serve(ln)
-	time.Sleep(100 * time.Millisecond)
-
-	// set max websocket connections
-	MaxWebsocketConnections = 3
-	testWebsocketMaxConnections(t, "ws://"+ln.Addr().String(), int(MaxWebsocketConnections))
-}
-*/
-
 func TestFastWSServer_MaxConnections(t *testing.T) {
 	// create server
 	var (
