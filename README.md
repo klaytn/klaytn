@@ -6,7 +6,7 @@
 
 # Klaytn
 
-Official golang implementation of the Klaytn protocol. Please visit [KlaytnDocs](https://docs.klaytn.com/) for more details on Klaytn design, node operation guides and application development resources.
+Official golang implementation of the Klaytn protocol. Please visit [KlaytnDocs](https://docs.klaytn.foundation/) for more details on Klaytn design, node operation guides and application development resources.
 
 ## Building from Sources
 
@@ -41,20 +41,20 @@ node (retaining all historical state).
 
 Core Cell (CC) is a set of one consensus node (CN) and one or more proxy nodes
 (PNs). Core Cell plays a role of generating blocks in the Klaytn network. We recommend to visit
-the [CC Operation Guide](https://docs.klaytn.com/node/core-cell)
+the [CC Operation Guide](https://docs.klaytn.foundation/docs/nodes/core-cell/)
 for the details of CC bootstrapping process.
 
 ## Running an Endpoint Node
 
 Endpoint Node (EN) is an entry point from the outside of the network in order to
 interact with the Klaytn network. Currently, two official networks are available: **Baobab** (testnet) and **Cypress** (mainnet). Please visit the official
-[EN Operation Guide](https://docs.klaytn.com/node/endpoint-node).
+[EN Operation Guide](https://docs.klaytn.foundation/docs/nodes/endpoint-node/).
 
 ## Running a Service Chain Node
 
 Service chain node is a node for Service Chain which is an auxiliary blockchain independent from the main chain tailored for individual service requiring special node configurations, customized security levels, and scalability for high throughput services. Service Chain expands and augments Klaytn by providing a data integrity mechanism and supporting token transfers between different chains.
-Although the service chain feature is under development, we provide the operation guide for testing purposes. Please visit the official document [Service Chain Operation Guide](https://docs.klaytn.com/node/service-chain).
-Furthermore, for those who are interested in the Klaytn Service Chain, please check out [Klaytn - Scaling Solutions](https://docs.klaytn.com/klaytn/scaling-solutions).
+Although the service chain feature is under development, we provide the operation guide for testing purposes. Please visit the official document [Service Chain Operation Guide](https://docs.klaytn.foundation/docs/nodes/service-chain/).
+Furthermore, for those who are interested in the Klaytn Service Chain, please check out [Klaytn - Scaling Solutions](https://docs.klaytn.foundation/docs/learn/scaling-solutions/).
 
 ## License
 
