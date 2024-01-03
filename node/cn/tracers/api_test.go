@@ -201,7 +201,7 @@ func TestTraceCall(t *testing.T) {
 		tx, err := types.SignTx(types.NewTransaction(uint64(i), accounts[0].addr, big.NewInt(1000), params.TxGas, big.NewInt(0), nil), signer, accounts[1].key)
 		assert.NoError(t, err)
 		b.AddTx(tx)
-	}), true)
+	}))
 
 	testSuite := []struct {
 		blockNumber rpc.BlockNumber
@@ -311,7 +311,7 @@ func TestTraceTransaction(t *testing.T) {
 		tx, _ := types.SignTx(types.NewTransaction(uint64(i), accounts[1].addr, big.NewInt(1000), params.TxGas, big.NewInt(1), nil), signer, accounts[0].key)
 		b.AddTx(tx)
 		target = tx.Hash()
-	}), true)
+	}))
 	result, err := api.TraceTransaction(context.Background(), target, nil)
 	if err != nil {
 		t.Errorf("Failed to trace transaction %v", err)
@@ -344,7 +344,7 @@ func TestTraceBlock(t *testing.T) {
 		//    fee:   0 peb
 		tx, _ := types.SignTx(types.NewTransaction(uint64(i), accounts[1].addr, big.NewInt(1000), params.TxGas, big.NewInt(0), nil), signer, accounts[0].key)
 		b.AddTx(tx)
-	}), true)
+	}))
 
 	testSuite := []struct {
 		blockNumber rpc.BlockNumber

@@ -118,16 +118,16 @@ type UnsafeAPI struct {
 }
 
 // NewUnsafeAPI creates a new UnsafeAPI definition
-func NewUnsafeAPI(backend Backend, unsafeTrace bool) *UnsafeAPI {
+func NewUnsafeAPI(backend Backend) *UnsafeAPI {
 	return &UnsafeAPI{
-		CommonAPI{backend: backend, unsafeTrace: unsafeTrace},
+		CommonAPI{backend: backend, unsafeTrace: true},
 	}
 }
 
 // NewAPI creates a new API definition
-func NewAPI(backend Backend, unsafeTrace bool) *API {
+func NewAPI(backend Backend) *API {
 	return &API{
-		CommonAPI{backend: backend, unsafeTrace: unsafeTrace},
+		CommonAPI{backend: backend, unsafeTrace: false},
 	}
 }
 
