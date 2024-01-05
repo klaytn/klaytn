@@ -123,7 +123,7 @@ func NewEVMInterpreter(evm *EVM) *EVMInterpreter {
 		cfg.JumpTable = jt
 	}
 
-	// Enable the opcode computation cost limit
+	// Set the opcode computation cost limit by the default value
 	if cfg.ComputationCostLimit == 0 {
 		switch {
 		case evm.chainRules.IsCancun:
@@ -131,11 +131,10 @@ func NewEVMInterpreter(evm *EVM) *EVMInterpreter {
 		default:
 			cfg.ComputationCostLimit = uint64(params.OpcodeComputationCostLimit)
 		}
-	}
-
-	// It is an experimental feature.
-	if params.OpcodeComputationCostLimitOverride != 0 {
-		cfg.ComputationCostLimit = params.OpcodeComputationCostLimitOverride
+		// It is an experimental feature.
+		if params.OpcodeComputationCostLimitOverride != 0 {
+			cfg.ComputationCostLimit = params.OpcodeComputationCostLimitOverride
+		}
 	}
 
 	return &EVMInterpreter{
