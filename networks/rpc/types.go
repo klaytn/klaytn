@@ -37,6 +37,7 @@ type API struct {
 	Version   string      // api version for DApp's
 	Service   interface{} // receiver instance which holds the methods
 	Public    bool        // indication if the methods must be considered safe for public use
+	IPCOnly   bool        // only accessible to IPC
 }
 
 // Error wraps RPC errors, which contain an error code in addition to the message.
