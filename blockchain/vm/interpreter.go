@@ -123,24 +123,26 @@ func NewEVMInterpreter(evm *EVM) *EVMInterpreter {
 		cfg.JumpTable = jt
 	}
 
+	// When setting computation cost limit value, priority is given to the original value, override experimental value,
+	// and then the limit value specified for each hard fork. If the original value is not infinite or
+	// there is no override value, the next priority value is used.
+	// Cautious, the infinite value is only applicable for specific API calls. (e.g. call/estimateGas/estimateComputationGas)
+	if cfg.ComputationCostLimit == params.OpcodeComputationCostLimitInfinite {
+		return &EVMInterpreter{evm: evm, cfg: cfg}
+	}
+	// Override the computation cost with an experiment value
+	if params.OpcodeComputationCostLimitOverride != 0 {
+		cfg.ComputationCostLimit = params.OpcodeComputationCostLimitOverride
+		return &EVMInterpreter{evm: evm, cfg: cfg}
+	}
 	// Set the opcode computation cost limit by the default value
-	if cfg.ComputationCostLimit == 0 {
-		switch {
-		case evm.chainRules.IsCancun:
-			cfg.ComputationCostLimit = uint64(params.OpcodeComputationCostLimitCancun)
-		default:
-			cfg.ComputationCostLimit = uint64(params.OpcodeComputationCostLimit)
-		}
-		// It is an experimental feature.
-		if params.OpcodeComputationCostLimitOverride != 0 {
-			cfg.ComputationCostLimit = params.OpcodeComputationCostLimitOverride
-		}
+	switch {
+	case evm.chainRules.IsCancun:
+		cfg.ComputationCostLimit = uint64(params.OpcodeComputationCostLimitCancun)
+	default:
+		cfg.ComputationCostLimit = uint64(params.OpcodeComputationCostLimit)
 	}
-
-	return &EVMInterpreter{
-		evm: evm,
-		cfg: cfg,
-	}
+	return &EVMInterpreter{evm: evm, cfg: cfg}
 }
 
 // count values and execution time of the opcodes are collected until the node is turned off.
@@ -241,11 +243,9 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 		}
 
 		// We limit tx's execution time using the sum of computation cost of opcodes.
-		if in.evm.Config.ComputationCostLimit != 0 {
-			in.evm.opcodeComputationCostSum += operation.computationCost
-			if in.evm.opcodeComputationCostSum > in.evm.Config.ComputationCostLimit {
-				return nil, ErrOpcodeComputationCostLimitReached
-			}
+		in.evm.opcodeComputationCostSum += operation.computationCost
+		if in.evm.opcodeComputationCostSum > in.evm.Config.ComputationCostLimit {
+			return nil, ErrOpcodeComputationCostLimitReached
 		}
 		var memorySize uint64
 		var extraSize uint64
