@@ -90,7 +90,7 @@ func InstallRegistry(state *state.StateDB, init *params.RegistryConfig) error {
 	return nil
 }
 
-func ReadRegistryActiveAddr(backend bind.ContractCaller, name string, num *big.Int) (common.Address, error) {
+func ReadActiveAddressFromRegistry(backend bind.ContractCaller, name string, num *big.Int) (common.Address, error) {
 	code, err := backend.CodeAt(context.Background(), RegistryAddr, num)
 	if err != nil {
 		return common.Address{}, err

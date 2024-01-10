@@ -78,7 +78,7 @@ func (p *ChainBlsPubkeyProvider) getAllCached(chain consensus.ChainReader, num *
 		}
 	} else if chain.Config().IsRandaoForkEnabled(num) {
 		var err error
-		kip113Addr, err = system.ReadRegistryActiveAddr(backend, system.Kip113Name, parentNum)
+		kip113Addr, err = system.ReadActiveAddressFromRegistry(backend, system.Kip113Name, parentNum)
 		if err != nil {
 			return nil, err
 		}
