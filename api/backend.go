@@ -39,9 +39,10 @@ import (
 	"github.com/klaytn/klaytn/storage/database"
 )
 
-//go:generate mockgen -destination=api/mocks/backend_mock.go github.com/klaytn/klaytn/api Backend
 // Backend interface provides the common API services (that are provided by
 // both full and light clients) with access to necessary functions.
+//
+//go:generate mockgen -destination=api/mocks/backend_mock.go github.com/klaytn/klaytn/api Backend
 type Backend interface {
 	// General Klaytn API
 	Progress() klaytn.SyncProgress
@@ -149,18 +150,13 @@ func GetAPIs(apiBackend Backend, disableUnsafeDebug bool) ([]rpc.API, *EthereumA
 			Version:   "1.0",
 			Service:   NewPrivateAccountAPI(apiBackend, nonceLock),
 			Public:    false,
-		},
-	}
-	privateDebugApi := []rpc.API{
-		{
+		}, {
 			Namespace: "debug",
 			Version:   "1.0",
 			Service:   NewPrivateDebugAPI(apiBackend),
 			Public:    false,
+			IPCOnly:   disableUnsafeDebug,
 		},
-	}
-	if !disableUnsafeDebug {
-		rpcApi = append(rpcApi, privateDebugApi...)
 	}
 
 	return rpcApi, ethAPI

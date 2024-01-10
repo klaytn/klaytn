@@ -183,14 +183,14 @@ func DoEstimateGas(ctx context.Context, gasLimit, rpcGasCap uint64, txValue, gas
 
 		// If the allowance is larger than maximum uint64, skip checking
 		if allowance.IsUint64() && hi > allowance.Uint64() {
-			logger.Warn("Gas estimation capped by limited funds", "original", hi, "balance", balance,
+			logger.Trace("Gas estimation capped by limited funds", "original", hi, "balance", balance,
 				"sent", txValue, "maxFeePerGas", gasPrice, "fundable", allowance)
 			hi = allowance.Uint64()
 		}
 	}
 	// Recap the highest gas allowance with specified gascap.
 	if rpcGasCap != 0 && hi > rpcGasCap {
-		logger.Warn("Caller gas above allowance, capping", "requested", hi, "cap", rpcGasCap)
+		logger.Trace("Caller gas above allowance, capping", "requested", hi, "cap", rpcGasCap)
 		hi = rpcGasCap
 	}
 	cap = hi

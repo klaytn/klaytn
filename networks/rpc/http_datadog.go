@@ -57,6 +57,7 @@ func newDatadogTracer() *DatadogTracer {
 	}
 
 	tracer.Start()
+	logger.Info("Datadog APM trace is enabled", "serviceName", service)
 
 	return &DatadogTracer{tags, service, klaytnResponse}
 }

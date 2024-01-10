@@ -89,7 +89,7 @@ func (mce *MainChainEventHandler) decodeAndWriteAnchoringTx(tx *types.Transactio
 	}
 	decodedData, err := types.DecodeAnchoringData(data)
 	if err != nil {
-		logger.Error("failed to decode anchoring tx", "txHash", tx.Hash().String(), "err", err)
+		logger.Warn("failed to decode anchoring tx", "txHash", tx.Hash().String(), "err", err)
 		return
 	}
 	mce.mainbridge.chainDB.WriteChildChainTxHash(decodedData.GetBlockHash(), tx.Hash())
