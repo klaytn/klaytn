@@ -941,46 +941,50 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 	                            | header1, .. headerN |
 */
 func (sb *backend) regen(chain consensus.ChainReader, headers []*types.Header) {
-	if !sb.isRestoringSnapshots.Load() && len(headers) > 1 {
+	// Prevent nested call. Ignore header length one
+	// because it was handled before the `regen` called.
+	defer func() {
+		sb.isRestoringSnapshots.CompareAndSwap(true, false)
+	}()
+	if !sb.isRestoringSnapshots.CompareAndSwap(false, true) || len(headers) <= 1 {
+		return
+	}
+
+	var (
+		from        = headers[0].Number.Uint64()
+		to          = headers[len(headers)-1].Number.Uint64()
+		start       = time.Now()
+		commitTried = false
+	)
+
+	// Shortcut: No missing snapshot data to be processed.
+	if to-(to%uint64(params.CheckpointInterval)) < from {
+		return
+	}
+
+	for _, header := range headers {
 		var (
-			from        = headers[0].Number.Uint64()
-			to          = headers[len(headers)-1].Number.Uint64()
-			start       = time.Now()
-			commitTried = false
+			hn = header.Number.Uint64()
+			hh = header.Hash()
 		)
-
-		// Shortcut: No missing snapshot data to be processed.
-		if to-(to%uint64(params.CheckpointInterval)) < from {
-			return
-		}
-
-		sb.isRestoringSnapshots.Store(true)
-		defer func() {
-			sb.isRestoringSnapshots.Store(false)
-		}()
-		for _, header := range headers {
-			var (
-				hn = header.Number.Uint64()
-				hh = header.Hash()
-			)
-			if params.IsCheckpointInterval(hn) {
-				snap, err := sb.snapshot(chain, hn, hh, nil, false)
-				if err != nil {
-					logger.Warn("[Snapshot] Snapshot restoring failed", "len(headers)", len(headers), "from", from, "to", to, "headerNumber", hn)
-					continue
-				}
-				// Store snapshot data if it was not committed before
-				if loadSnap, _ := sb.db.ReadIstanbulSnapshot(hh); loadSnap == nil {
-					if err = snap.store(sb.db); err != nil {
-						logger.Warn("[Snapshot] Snapshot restoring failed", "len(headers)", len(headers), "from", from, "to", to, "headerNumber", hn)
-					}
-					commitTried = true
-				}
+		if params.IsCheckpointInterval(hn) {
+			// Store snapshot data if it was not committed before
+			if loadSnap, _ := sb.db.ReadIstanbulSnapshot(hh); loadSnap != nil {
+				continue
 			}
+			snap, err := sb.snapshot(chain, hn, hh, nil, false)
+			if err != nil {
+				logger.Warn("[Snapshot] Snapshot restoring failed", "len(headers)", len(headers), "from", from, "to", to, "headerNumber", hn)
+				continue
+			}
+			if err = snap.store(sb.db); err != nil {
+				logger.Warn("[Snapshot] Snapshot restoring failed", "len(headers)", len(headers), "from", from, "to", to, "headerNumber", hn)
+			}
+			commitTried = true
 		}
-		if commitTried { // This prevents pushing too many logs by potential DoS attack
-			logger.Trace("[Snapshot] Snapshot restoring completed", "len(headers)", len(headers), "from", from, "to", to, "elapsed", time.Since(start))
-		}
+	}
+	if commitTried { // This prevents pushing too many logs by potential DoS attack
+		logger.Trace("[Snapshot] Snapshot restoring completed", "len(headers)", len(headers), "from", from, "to", to, "elapsed", time.Since(start))
 	}
 }
 
