@@ -52,7 +52,6 @@ func (api *PrivateDebugAPI) ChaindbProperty(property string) (string, error) {
 // removing all unused slots and merging all keys.
 func (api *PrivateDebugAPI) ChaindbCompact() error {
 	for b := 0; b <= 255; b++ {
-		cstart := time.Now()
 		var (
 			start = []byte{byte(b)}
 			end   = []byte{byte(b + 1)}
@@ -61,6 +60,7 @@ func (api *PrivateDebugAPI) ChaindbCompact() error {
 			end = nil
 		}
 		logger.Info("Compacting database started", "range", fmt.Sprintf("%#X-%#X", start, end))
+		cstart := time.Now()
 		if err := api.b.ChainDB().Compact(start, end); err != nil {
 			logger.Error("Database compaction failed", "err", err)
 			return err
