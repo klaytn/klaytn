@@ -532,7 +532,7 @@ func (db *shardedDB) Stat(property string) (string, error) {
 	for idx, shard := range db.shards {
 		stat, err := shard.Stat(property)
 		if err == nil {
-			headInfo := fmt.Sprintf(" [shrad%d:%s]\n", idx, shard.Type())
+			headInfo := fmt.Sprintf(" [shard%d:%s]\n", idx, shard.Type())
 			stats += headInfo + stat
 		} else {
 			errs += fmt.Sprintf("shard[%d]: %s", idx, err.Error())
