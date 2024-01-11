@@ -30,6 +30,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/consensus/istanbul"
+	"github.com/klaytn/klaytn/consensus/istanbul/backend"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/governance"
@@ -208,6 +209,7 @@ func decodeExtra(headerFile string) (map[string]interface{}, error) {
 	m["validators"] = validators
 	m["seal"] = hexutil.Encode(istanbulExtra.Seal)
 	m["committedSeal"] = cSeals
+	m["committers"] = backend.ParseCommitteedSeals(header)
 	m["validatorSize"] = len(validators)
 	m["committedSealSize"] = len(cSeals)
 	m["proposer"] = proposer.String()

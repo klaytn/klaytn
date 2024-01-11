@@ -30,8 +30,10 @@ import (
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/consensus/istanbul"
+	istanbulCore "github.com/klaytn/klaytn/consensus/istanbul/core"
 	"github.com/klaytn/klaytn/networks/rpc"
 )
 
@@ -327,12 +329,30 @@ func (api *APIExtension) makeRPCBlockOutput(b *types.Block,
 	}
 
 	r["committee"] = cInfo.Committee
+	r["committers"] = ParseCommitteedSeals(head)
 	r["proposer"] = cInfo.Proposer
 	r["round"] = cInfo.Round
 	r["originProposer"] = cInfo.OriginProposer
 	r["transactions"] = rpcTransactions
-
 	return r
+}
+
+func ParseCommitteedSeals(header *types.Header) map[string]string {
+	if header == nil {
+		return nil
+	}
+	committers := make(map[string]string)
+	if istanbulExtra, err := types.ExtractIstanbulExtra(header); err == nil {
+		for _, cs := range istanbulExtra.CommittedSeal {
+			committer, err := istanbul.GetSignatureAddress(istanbulCore.PrepareCommittedSeal(header.Hash()), cs)
+			if err != nil {
+				committers[committer.String()] = err.Error()
+			} else {
+				committers[committer.String()] = hexutil.Encode(cs)
+			}
+		}
+	}
+	return committers
 }
 
 // TODO-Klaytn: This API functions should be managed with API functions with namespace "klay"
