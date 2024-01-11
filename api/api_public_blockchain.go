@@ -466,6 +466,10 @@ func (s *PublicBlockChainAPI) CreateAccessList(ctx context.Context, args EthTran
 	return doCreateAccessList(ctx, s.b, args, blockNrOrHash)
 }
 
+func (s *PublicBlockChainAPI) GetProof(ctx context.Context, address common.Address, storageKeys []string, blockNrOrHash rpc.BlockNumberOrHash) (*EthAccountResult, error) {
+	return doGetProof(ctx, s.b, address, storageKeys, blockNrOrHash)
+}
+
 // StructLogRes stores a structured log emitted by the EVM while replaying a
 // transaction in debug mode
 type StructLogRes struct {
