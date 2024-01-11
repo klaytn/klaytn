@@ -213,6 +213,7 @@ func decodeExtra(headerFile string) (map[string]interface{}, error) {
 	m["validatorSize"] = len(validators)
 	m["committedSealSize"] = len(cSeals)
 	m["proposer"] = proposer.String()
+	m["round"] = header.Round()
 	return m, nil
 }
 
