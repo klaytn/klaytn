@@ -30,7 +30,6 @@ import (
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	istanbulCore "github.com/klaytn/klaytn/consensus/istanbul/core"
@@ -328,8 +327,15 @@ func (api *APIExtension) makeRPCBlockOutput(b *types.Block,
 		}
 	}
 
+	committers, _, err := ParseCommitteedSeals(head)
+	if err != nil {
+		parseErr := make(map[string]interface{})
+		parseErr["ERROR"] = err
+		return parseErr
+	}
+
 	r["committee"] = cInfo.Committee
-	r["committers"] = ParseCommitteedSeals(head)
+	r["committers"] = committers
 	r["proposer"] = cInfo.Proposer
 	r["round"] = cInfo.Round
 	r["originProposer"] = cInfo.OriginProposer
@@ -337,22 +343,23 @@ func (api *APIExtension) makeRPCBlockOutput(b *types.Block,
 	return r
 }
 
-func ParseCommitteedSeals(header *types.Header) map[string]string {
+func ParseCommitteedSeals(header *types.Header) ([]common.Address, [][]byte, error) {
 	if header == nil {
-		return nil
+		return nil, nil, errors.New("Empty header")
 	}
-	committers := make(map[string]string)
-	if istanbulExtra, err := types.ExtractIstanbulExtra(header); err == nil {
-		for _, cs := range istanbulExtra.CommittedSeal {
-			committer, err := istanbul.GetSignatureAddress(istanbulCore.PrepareCommittedSeal(header.Hash()), cs)
-			if err != nil {
-				committers[committer.String()] = err.Error()
-			} else {
-				committers[committer.String()] = hexutil.Encode(cs)
-			}
+	istanbulExtra, err := types.ExtractIstanbulExtra(header)
+	if err != nil {
+		return nil, nil, err
+	}
+	committers := make([]common.Address, len(istanbulExtra.CommittedSeal))
+	for idx, cs := range istanbulExtra.CommittedSeal {
+		committer, err := istanbul.GetSignatureAddress(istanbulCore.PrepareCommittedSeal(header.Hash()), cs)
+		if err != nil {
+			return nil, nil, err
 		}
+		committers[idx] = committer
 	}
-	return committers
+	return committers, istanbulExtra.CommittedSeal, nil
 }
 
 // TODO-Klaytn: This API functions should be managed with API functions with namespace "klay"
