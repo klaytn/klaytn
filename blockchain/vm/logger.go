@@ -69,7 +69,7 @@ type StructLog struct {
 	Storage         map[common.Hash]common.Hash `json:"-"`
 	Depth           int                         `json:"depth"`
 	RefundCounter   uint64                      `json:"refund"`
-	Computation     uint64                      `json:"computation`
+	Computation     uint64                      `json:"computation"`
 	ComputationCost uint64                      `json:"computationCost"`
 	Err             error                       `json:"-"`
 }
