@@ -70,7 +70,7 @@ type StructLog struct {
 	Depth               int                         `json:"depth"`
 	RefundCounter       uint64                      `json:"refund"`
 	Err                 error                       `json:"-"`
-	ComputationCostUsed uint64                      `json:computationCostUsed`
+	ComputationCostUsed uint64                      `json:"computationCostUsed"`
 }
 
 // overrides for gencodec
