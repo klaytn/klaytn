@@ -473,17 +473,17 @@ func (s *PublicBlockChainAPI) GetProof(ctx context.Context, address common.Addre
 // StructLogRes stores a structured log emitted by the EVM while replaying a
 // transaction in debug mode
 type StructLogRes struct {
-	Pc                   uint64             `json:"pc"`
-	Op                   string             `json:"op"`
-	Gas                  uint64             `json:"gas"`
-	GasCost              uint64             `json:"gasCost"`
-	Depth                int                `json:"depth"`
-	Error                error              `json:"error,omitempty"`
-	Stack                *[]string          `json:"stack,omitempty"`
-	Memory               *[]string          `json:"memory,omitempty"`
-	Storage              *map[string]string `json:"storage,omitempty"`
-	ComputationCostTotal uint64             `json:"computationCostTotal"`
-	ComputationCostUsed  uint64             `json:"computationCostUsed"`
+	Pc              uint64             `json:"pc"`
+	Op              string             `json:"op"`
+	Gas             uint64             `json:"gas"`
+	GasCost         uint64             `json:"gasCost"`
+	Depth           int                `json:"depth"`
+	Error           error              `json:"error,omitempty"`
+	Stack           *[]string          `json:"stack,omitempty"`
+	Memory          *[]string          `json:"memory,omitempty"`
+	Storage         *map[string]string `json:"storage,omitempty"`
+	Computation     uint64             `json:"computation"`
+	ComputationCost uint64             `json:"computationCost"`
 }
 
 // formatLogs formats EVM returned structured logs for json output
@@ -503,14 +503,14 @@ func FormatLogs(timeout time.Duration, logs []vm.StructLog, cc uint64) ([]Struct
 			return nil, fmt.Errorf("trace logger timeout")
 		}
 		formatted[index] = StructLogRes{
-			Pc:                   trace.Pc,
-			Op:                   trace.Op.String(),
-			Gas:                  trace.Gas,
-			GasCost:              trace.GasCost,
-			Depth:                trace.Depth,
-			Error:                trace.Err,
-			ComputationCostTotal: cc,
-			ComputationCostUsed:  trace.ComputationCostUsed,
+			Pc:              trace.Pc,
+			Op:              trace.Op.String(),
+			Gas:             trace.Gas,
+			GasCost:         trace.GasCost,
+			Depth:           trace.Depth,
+			Error:           trace.Err,
+			Computation:     trace.Computation,
+			ComputationCost: trace.ComputationCost,
 		}
 		if trace.Stack != nil {
 			stack := make([]string, len(trace.Stack))

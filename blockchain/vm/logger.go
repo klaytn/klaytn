@@ -59,18 +59,19 @@ type LogConfig struct {
 // StructLog is emitted to the EVM each cycle and lists information about the current internal state
 // prior to the execution of the statement.
 type StructLog struct {
-	Pc                  uint64                      `json:"pc"`
-	Op                  OpCode                      `json:"op"`
-	Gas                 uint64                      `json:"gas"`
-	GasCost             uint64                      `json:"gasCost"`
-	Memory              []byte                      `json:"memory"`
-	MemorySize          int                         `json:"memSize"`
-	Stack               []*big.Int                  `json:"stack"`
-	Storage             map[common.Hash]common.Hash `json:"-"`
-	Depth               int                         `json:"depth"`
-	RefundCounter       uint64                      `json:"refund"`
-	Err                 error                       `json:"-"`
-	ComputationCostUsed uint64                      `json:"computationCostUsed"`
+	Pc              uint64                      `json:"pc"`
+	Op              OpCode                      `json:"op"`
+	Gas             uint64                      `json:"gas"`
+	GasCost         uint64                      `json:"gasCost"`
+	Memory          []byte                      `json:"memory"`
+	MemorySize      int                         `json:"memSize"`
+	Stack           []*big.Int                  `json:"stack"`
+	Storage         map[common.Hash]common.Hash `json:"-"`
+	Depth           int                         `json:"depth"`
+	RefundCounter   uint64                      `json:"refund"`
+	Computation     uint64                      `json:"computation`
+	ComputationCost uint64                      `json:"computationCost"`
+	Err             error                       `json:"-"`
 }
 
 // overrides for gencodec
@@ -192,7 +193,11 @@ func (l *StructLogger) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost ui
 		storage = l.changedValues[contract.Address()].Copy()
 	}
 	// create a new snapshot of the EVM.
-	log := StructLog{pc, op, gas, cost, mem, memory.Len(), stck, storage, depth, env.StateDB.GetRefund(), err, env.GetOpCodeComputationCost()}
+	var (
+		availableCC = env.Config.ComputationCostLimit - env.opcodeComputationCostSum
+		opcodeCC    = env.interpreter.cfg.JumpTable[op].computationCost
+	)
+	log := StructLog{pc, op, gas, cost, mem, memory.Len(), stck, storage, depth, env.StateDB.GetRefund(), availableCC, opcodeCC, err}
 
 	l.logs = append(l.logs, log)
 }
