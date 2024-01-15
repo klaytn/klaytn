@@ -12,9 +12,6 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/klaytn/klaytn/accounts"
 	mock_accounts "github.com/klaytn/klaytn/accounts/mocks"
 	mock_api "github.com/klaytn/klaytn/api/mocks"
@@ -34,6 +31,8 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var dummyChainConfigForEthereumAPITest = &params.ChainConfig{
