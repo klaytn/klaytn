@@ -1491,7 +1491,7 @@ func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, b
 
 	executable := func(gas uint64) (bool, *blockchain.ExecutionResult, error) {
 		args.Gas = (*hexutil.Uint64)(&gas)
-		result, err := EthDoCall(ctx, b, args, rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber), nil, 0, gasCap)
+		result, err := EthDoCall(ctx, b, args, rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber), nil, b.RPCEVMTimeout(), gasCap)
 		if err != nil {
 			if errors.Is(err, blockchain.ErrIntrinsicGas) {
 				return true, nil, nil // Special case, raise gas limit
