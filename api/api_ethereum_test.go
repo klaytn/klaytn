@@ -9,14 +9,12 @@ import (
 	"math/big"
 	"reflect"
 	"testing"
-
-	"github.com/stretchr/testify/require"
-
-	"github.com/klaytn/klaytn/consensus"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/governance"
+	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/klaytn/klaytn/accounts"
 	mock_accounts "github.com/klaytn/klaytn/accounts/mocks"
 	mock_api "github.com/klaytn/klaytn/api/mocks"
@@ -27,13 +25,15 @@ import (
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/consensus/gxhash"
 	"github.com/klaytn/klaytn/consensus/mocks"
+	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
-	"github.com/stretchr/testify/assert"
 )
 
 var dummyChainConfigForEthereumAPITest = &params.ChainConfig{
@@ -2489,6 +2489,7 @@ func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimate
 	}
 	mockBackend.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
 	mockBackend.EXPECT().RPCGasCap().Return(common.Big0).AnyTimes()
+	mockBackend.EXPECT().RPCEVMTimeout().Return(5 * time.Second).AnyTimes()
 	mockBackend.EXPECT().StateAndHeaderByNumber(any, any).DoAndReturn(getStateAndHeader).AnyTimes()
 	mockBackend.EXPECT().StateAndHeaderByNumberOrHash(any, any).DoAndReturn(getStateAndHeader).AnyTimes()
 	mockBackend.EXPECT().GetEVM(any, any, any, any, any).DoAndReturn(getEVM).AnyTimes()
