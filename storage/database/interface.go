@@ -68,9 +68,30 @@ type KeyValueWriter interface {
 	Delete(key []byte) error
 }
 
+// KeyValueStater wraps the Stat method of a backing data store.
+type KeyValueStater interface {
+	// Stat returns a particular internal stat of the database.
+	Stat(property string) (string, error)
+}
+
+// Compacter wraps the Compact method of a backing data store.
+type Compacter interface {
+	// Compact flattens the underlying data store for the given key range. In essence,
+	// deleted and overwritten versions are discarded, and the data is rearranged to
+	// reduce the cost of operations needed to access them.
+	//
+	// A nil start is treated as a key before all keys in the data store; a nil limit
+	// is treated as a key after all keys in the data store. If both is nil then it
+	// will compact entire data store.
+	Compact(start []byte, limit []byte) error
+}
+
 // Database wraps all database operations. All methods are safe for concurrent use.
 type Database interface {
 	KeyValueWriter
+	KeyValueStater
+	Compacter
+
 	Get(key []byte) ([]byte, error)
 	Has(key []byte) (bool, error)
 	Close()
@@ -79,7 +100,6 @@ type Database interface {
 	Meter(prefix string)
 	Iteratee
 
-	GetProperty(name string) string
 	TryCatchUpWithPrimary() error
 }
 

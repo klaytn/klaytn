@@ -26,6 +26,7 @@ import (
 	"sync"
 
 	"github.com/klaytn/klaytn/common"
+	"github.com/pkg/errors"
 )
 
 var errKeyLengthZero = fmt.Errorf("database key for sharded database should be greater than 0")
@@ -173,8 +174,10 @@ func (db *shardedDB) Close() {
 }
 
 // Not enough size of channel slows down the iterator
-const shardedDBCombineChanSize = 1024 // Size of resultCh
-const shardedDBSubChannelSize = 128   // Size of each sub-channel of resultChs
+const (
+	shardedDBCombineChanSize = 1024 // Size of resultCh
+	shardedDBSubChannelSize  = 128  // Size of each sub-channel of resultChs
+)
 
 // shardedDBIterator iterates all items of each shardDB.
 // This is useful when you want to get items in serial in binary-alphabetigcal order.
@@ -438,14 +441,6 @@ func (db *shardedDB) Meter(prefix string) {
 	}
 }
 
-func (db *shardedDB) GetProperty(name string) string {
-	var buf bytes.Buffer
-	for index, shard := range db.shards {
-		buf.WriteString(fmt.Sprintf("shard %d: %s\n", index, shard.GetProperty(name)))
-	}
-	return buf.String()
-}
-
 func (db *shardedDB) TryCatchUpWithPrimary() error {
 	for _, shard := range db.shards {
 		if err := shard.TryCatchUpWithPrimary(); err != nil {
@@ -529,4 +524,37 @@ func (sdbBatch *shardedDBBatch) Replay(w KeyValueWriter) error {
 		}
 	}
 	return nil
+}
+
+func (db *shardedDB) Stat(property string) (string, error) {
+	stats := ""
+	errs := ""
+	for idx, shard := range db.shards {
+		stat, err := shard.Stat(property)
+		if err == nil {
+			headInfo := fmt.Sprintf(" [shard%d:%s]\n", idx, shard.Type())
+			stats += headInfo + stat
+		} else {
+			errs += fmt.Sprintf("shard[%d]: %s", idx, err.Error())
+		}
+	}
+	if errs == "" {
+		return stats, nil
+	} else {
+		return stats, errors.New(errs)
+	}
+}
+
+func (db *shardedDB) Compact(start []byte, limit []byte) error {
+	errs := ""
+	for idx, shard := range db.shards {
+		if err := shard.Compact(start, limit); err != nil {
+			errs += fmt.Sprintf("shard[%d]: %s", idx, err.Error())
+		}
+	}
+	if errs == "" {
+		return nil
+	} else {
+		return errors.New(errs)
+	}
 }

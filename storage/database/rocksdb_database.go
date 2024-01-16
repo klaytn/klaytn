@@ -216,10 +216,6 @@ func (db *rocksDB) Delete(key []byte) error {
 	return db.db.Delete(db.wo, key)
 }
 
-func (db *rocksDB) GetProperty(name string) string {
-	return db.db.GetProperty(name)
-}
-
 func (db *rocksDB) TryCatchUpWithPrimary() error {
 	return db.db.TryCatchUpWithPrimary()
 }
