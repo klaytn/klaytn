@@ -487,7 +487,7 @@ type StructLogRes struct {
 }
 
 // formatLogs formats EVM returned structured logs for json output
-func FormatLogs(timeout time.Duration, logs []vm.StructLog, cc uint64) ([]StructLogRes, error) {
+func FormatLogs(timeout time.Duration, logs []vm.StructLog) ([]StructLogRes, error) {
 	logTimeout := false
 	deadlineCtx, cancel := context.WithTimeout(context.Background(), timeout)
 	go func() {

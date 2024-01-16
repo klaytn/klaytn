@@ -948,7 +948,7 @@ func (api *CommonAPI) traceTx(ctx context.Context, message blockchain.Message, b
 				return nil, err
 			}
 		}
-		if logs, err := klaytnapi.FormatLogs(loggerTimeout, tracer.StructLogs(), vmenv.Config.ComputationCostLimit); err == nil {
+		if logs, err := klaytnapi.FormatLogs(loggerTimeout, tracer.StructLogs()); err == nil {
 			return &klaytnapi.ExecutionResult{
 				Gas:         ret.UsedGas,
 				Failed:      ret.Failed(),

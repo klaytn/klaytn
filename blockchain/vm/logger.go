@@ -194,10 +194,10 @@ func (l *StructLogger) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost ui
 	}
 	// create a new snapshot of the EVM.
 	var (
-		availableCC = env.Config.ComputationCostLimit - env.opcodeComputationCostSum
-		opcodeCC    = env.interpreter.cfg.JumpTable[op].computationCost
+		remainingComputationCost = env.Config.ComputationCostLimit - env.opcodeComputationCostSum
+		opcodeComputationCost    = env.interpreter.cfg.JumpTable[op].computationCost
 	)
-	log := StructLog{pc, op, gas, cost, mem, memory.Len(), stck, storage, depth, env.StateDB.GetRefund(), availableCC, opcodeCC, err}
+	log := StructLog{pc, op, gas, cost, mem, memory.Len(), stck, storage, depth, env.StateDB.GetRefund(), remainingComputationCost, opcodeComputationCost, err}
 
 	l.logs = append(l.logs, log)
 }
