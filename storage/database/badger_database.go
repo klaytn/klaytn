@@ -23,6 +23,7 @@ import (
 
 	"github.com/dgraph-io/badger"
 	"github.com/klaytn/klaytn/log"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -202,10 +203,6 @@ func (bg *badgerDB) Meter(prefix string) {
 	logger.Warn("badgerDB does not support metrics!")
 }
 
-func (bg *badgerDB) GetProperty(name string) string {
-	return ""
-}
-
 func (bg *badgerDB) TryCatchUpWithPrimary() error {
 	return nil
 }
@@ -255,5 +252,13 @@ func (b *badgerBatch) Release() {
 // Replay replays the batch contents.
 func (b *badgerBatch) Replay(w KeyValueWriter) error {
 	logger.CritWithStack("Replay is not implemented in badgerBatch!")
+	return nil
+}
+
+func (bg *badgerDB) Stat(property string) (string, error) {
+	return "", errors.New("unknown property")
+}
+
+func (bg *badgerDB) Compact(start []byte, limit []byte) error {
 	return nil
 }

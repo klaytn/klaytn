@@ -194,10 +194,6 @@ func (db *MemDB) Meter(prefix string) {
 	logger.Warn("MemDB does not support metrics!")
 }
 
-func (db *MemDB) GetProperty(name string) string {
-	return ""
-}
-
 func (db *MemDB) TryCatchUpWithPrimary() error {
 	return nil
 }
