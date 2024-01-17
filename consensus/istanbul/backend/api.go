@@ -32,6 +32,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/consensus/istanbul"
+	istanbulCore "github.com/klaytn/klaytn/consensus/istanbul/core"
 	"github.com/klaytn/klaytn/networks/rpc"
 )
 
@@ -326,13 +327,39 @@ func (api *APIExtension) makeRPCBlockOutput(b *types.Block,
 		}
 	}
 
+	committers, _, err := ParseCommitteedSeals(head)
+	if err != nil {
+		parseErr := make(map[string]interface{})
+		parseErr["ERROR"] = err
+		return parseErr
+	}
+
 	r["committee"] = cInfo.Committee
+	r["committers"] = committers
 	r["proposer"] = cInfo.Proposer
 	r["round"] = cInfo.Round
 	r["originProposer"] = cInfo.OriginProposer
 	r["transactions"] = rpcTransactions
-
 	return r
+}
+
+func ParseCommitteedSeals(header *types.Header) ([]common.Address, [][]byte, error) {
+	if header == nil {
+		return nil, nil, errors.New("Empty header")
+	}
+	istanbulExtra, err := types.ExtractIstanbulExtra(header)
+	if err != nil {
+		return nil, nil, err
+	}
+	committers := make([]common.Address, len(istanbulExtra.CommittedSeal))
+	for idx, cs := range istanbulExtra.CommittedSeal {
+		committer, err := istanbul.GetSignatureAddress(istanbulCore.PrepareCommittedSeal(header.Hash()), cs)
+		if err != nil {
+			return nil, nil, err
+		}
+		committers[idx] = committer
+	}
+	return committers, istanbulExtra.CommittedSeal, nil
 }
 
 // TODO-Klaytn: This API functions should be managed with API functions with namespace "klay"
