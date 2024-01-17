@@ -943,12 +943,12 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 func (sb *backend) regen(chain consensus.ChainReader, headers []*types.Header) {
 	// Prevent nested call. Ignore header length one
 	// because it was handled before the `regen` called.
-	defer func() {
-		sb.isRestoringSnapshots.CompareAndSwap(true, false)
-	}()
 	if !sb.isRestoringSnapshots.CompareAndSwap(false, true) || len(headers) <= 1 {
 		return
 	}
+	defer func() {
+		sb.isRestoringSnapshots.Store(false)
+	}()
 
 	var (
 		from        = headers[0].Number.Uint64()
