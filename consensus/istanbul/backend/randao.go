@@ -83,7 +83,7 @@ func (p *ChainBlsPubkeyProvider) getAllCached(chain consensus.ChainReader, num *
 		if pHeader == nil {
 			return nil, consensus.ErrUnknownAncestor
 		}
-		_, err := chain.StateAt(pHeader.Hash())
+		_, err := chain.StateAt(pHeader.Root)
 		if err != nil {
 			return nil, consensus.ErrPrunedAncestor
 		}
