@@ -15,7 +15,6 @@ import (
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/crypto/bls"
 	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/storage/statedb"
 )
 
 // For testing without KIP-113 contract setup
@@ -78,16 +77,19 @@ func (p *ChainBlsPubkeyProvider) getAllCached(chain consensus.ChainReader, num *
 			return nil, errors.New("KIP113 address not set in ChainConfig")
 		}
 	} else if chain.Config().IsRandaoForkEnabled(num) {
-		var err error
+		// If no state exist at block number `parentNum`,
+		// return the error `consensus.ErrPrunedAncestor`
+		pHeader := chain.GetHeaderByNumber(parentNum.Uint64())
+		if pHeader == nil {
+			return nil, consensus.ErrUnknownAncestor
+		}
+		_, err := chain.StateAt(pHeader.Hash())
+		if err != nil {
+			return nil, consensus.ErrPrunedAncestor
+		}
 		kip113Addr, err = system.ReadActiveAddressFromRegistry(backend, system.Kip113Name, parentNum)
 		if err != nil {
-			if _, ok := err.(*statedb.MissingNodeError); ok {
-				parentNum = nil
-				kip113Addr, err = system.ReadActiveAddressFromRegistry(backend, system.Kip113Name, parentNum)
-				if err != nil {
-					return nil, err
-				}
-			}
+			return nil, err
 		}
 	} else {
 		return nil, errors.New("Cannot read KIP113 address from registry before Randao fork")
