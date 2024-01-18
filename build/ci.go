@@ -241,6 +241,9 @@ func goToolArch(arch string, cc string, subcmd string, args ...string) *exec.Cmd
 	if cc != "" {
 		cmd.Env = append(cmd.Env, "CC="+cc)
 	}
+	// CKZG by default is not portable, append the necessary build flags to make
+	// it not rely on modern CPU instructions and enable linking against.
+	cmd.Env = append(cmd.Env, "CGO_CFLAGS=-O2 -g -D__BLST_PORTABLE__")
 	for _, e := range os.Environ() {
 		if strings.HasPrefix(e, "GOPATH=") || strings.HasPrefix(e, "GOBIN=") {
 			continue
