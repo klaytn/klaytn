@@ -382,7 +382,7 @@ func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNrOr
 	if rpcGasCap := s.b.RPCGasCap(); rpcGasCap != nil {
 		gasCap = rpcGasCap
 	}
-	result, _, err := DoCall(ctx, s.b, args, blockNrOrHash, vm.Config{}, s.b.RPCEVMTimeout(), gasCap)
+	result, _, err := DoCall(ctx, s.b, args, blockNrOrHash, vm.Config{ComputationCostLimit: params.OpcodeComputationCostLimitInfinite}, s.b.RPCEVMTimeout(), gasCap)
 	if err != nil {
 		return nil, err
 	}
@@ -398,7 +398,7 @@ func (s *PublicBlockChainAPI) EstimateComputationCost(ctx context.Context, args 
 	if rpcGasCap := s.b.RPCGasCap(); rpcGasCap != nil {
 		gasCap = rpcGasCap
 	}
-	_, computationCost, err := DoCall(ctx, s.b, args, blockNrOrHash, vm.Config{}, s.b.RPCEVMTimeout(), gasCap)
+	_, computationCost, err := DoCall(ctx, s.b, args, blockNrOrHash, vm.Config{ComputationCostLimit: params.OpcodeComputationCostLimitInfinite}, s.b.RPCEVMTimeout(), gasCap)
 	return (hexutil.Uint64)(computationCost), err
 }
 
@@ -428,7 +428,7 @@ func (s *PublicBlockChainAPI) DoEstimateGas(ctx context.Context, b Backend, args
 	// Create a helper to check if a gas allowance results in an executable transaction
 	executable := func(gas uint64) (bool, *blockchain.ExecutionResult, error) {
 		args.Gas = hexutil.Uint64(gas)
-		result, _, err := DoCall(ctx, b, args, rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber), vm.Config{}, 0, gasCap)
+		result, _, err := DoCall(ctx, b, args, rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber), vm.Config{ComputationCostLimit: params.OpcodeComputationCostLimitInfinite}, s.b.RPCEVMTimeout(), gasCap)
 		if err != nil {
 			if errors.Is(err, blockchain.ErrIntrinsicGas) {
 				return true, nil, nil // Special case, raise gas limit
@@ -466,18 +466,24 @@ func (s *PublicBlockChainAPI) CreateAccessList(ctx context.Context, args EthTran
 	return doCreateAccessList(ctx, s.b, args, blockNrOrHash)
 }
 
+func (s *PublicBlockChainAPI) GetProof(ctx context.Context, address common.Address, storageKeys []string, blockNrOrHash rpc.BlockNumberOrHash) (*EthAccountResult, error) {
+	return doGetProof(ctx, s.b, address, storageKeys, blockNrOrHash)
+}
+
 // StructLogRes stores a structured log emitted by the EVM while replaying a
 // transaction in debug mode
 type StructLogRes struct {
-	Pc      uint64             `json:"pc"`
-	Op      string             `json:"op"`
-	Gas     uint64             `json:"gas"`
-	GasCost uint64             `json:"gasCost"`
-	Depth   int                `json:"depth"`
-	Error   error              `json:"error,omitempty"`
-	Stack   *[]string          `json:"stack,omitempty"`
-	Memory  *[]string          `json:"memory,omitempty"`
-	Storage *map[string]string `json:"storage,omitempty"`
+	Pc              uint64             `json:"pc"`
+	Op              string             `json:"op"`
+	Gas             uint64             `json:"gas"`
+	GasCost         uint64             `json:"gasCost"`
+	Depth           int                `json:"depth"`
+	Error           error              `json:"error,omitempty"`
+	Stack           *[]string          `json:"stack,omitempty"`
+	Memory          *[]string          `json:"memory,omitempty"`
+	Storage         *map[string]string `json:"storage,omitempty"`
+	Computation     uint64             `json:"computation"`
+	ComputationCost uint64             `json:"computationCost"`
 }
 
 // formatLogs formats EVM returned structured logs for json output
@@ -497,12 +503,14 @@ func FormatLogs(timeout time.Duration, logs []vm.StructLog) ([]StructLogRes, err
 			return nil, fmt.Errorf("trace logger timeout")
 		}
 		formatted[index] = StructLogRes{
-			Pc:      trace.Pc,
-			Op:      trace.Op.String(),
-			Gas:     trace.Gas,
-			GasCost: trace.GasCost,
-			Depth:   trace.Depth,
-			Error:   trace.Err,
+			Pc:              trace.Pc,
+			Op:              trace.Op.String(),
+			Gas:             trace.Gas,
+			GasCost:         trace.GasCost,
+			Depth:           trace.Depth,
+			Error:           trace.Err,
+			Computation:     trace.Computation,
+			ComputationCost: trace.ComputationCost,
 		}
 		if trace.Stack != nil {
 			stack := make([]string, len(trace.Stack))
@@ -606,6 +614,10 @@ func getFrom(tx *types.Transaction) common.Address {
 		from, _ = tx.From()
 	}
 	return from
+}
+
+func NewRPCTransaction(b *types.Block, tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64) map[string]interface{} {
+	return newRPCTransaction(b, tx, blockHash, blockNumber, index)
 }
 
 // newRPCTransaction returns a transaction that will serialize to the RPC

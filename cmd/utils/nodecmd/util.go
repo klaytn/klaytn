@@ -30,6 +30,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/consensus/istanbul"
+	"github.com/klaytn/klaytn/consensus/istanbul/backend"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/governance"
@@ -189,28 +190,33 @@ func decodeExtra(headerFile string) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	validators := make([]string, len(istanbulExtra.Validators))
 	for idx, addr := range istanbulExtra.Validators {
 		validators[idx] = addr.String()
 	}
-	cSeals := make([]string, len(istanbulExtra.CommittedSeal))
-	for idx, cSeal := range istanbulExtra.CommittedSeal {
-		cSeals[idx] = hexutil.Encode(cSeal)
-	}
-
 	proposer, err := istanbul.GetSignatureAddress(hash.Bytes(), istanbulExtra.Seal)
 	if err != nil {
 		return nil, err
 	}
+	committers, cSealsBytes, err := backend.ParseCommitteedSeals(header)
+	if err != nil {
+		return nil, err
+	}
+	cSeals := make([]string, len(istanbulExtra.CommittedSeal))
+	for i := 0; i < len(cSeals); i++ {
+		cSeals[i] = hexutil.Encode(cSealsBytes[i])
+	}
+
 	m := make(map[string]interface{})
 	m["hash"] = hash
 	m["validators"] = validators
 	m["seal"] = hexutil.Encode(istanbulExtra.Seal)
 	m["committedSeal"] = cSeals
+	m["committers"] = committers
 	m["validatorSize"] = len(validators)
 	m["committedSealSize"] = len(cSeals)
 	m["proposer"] = proposer.String()
+	m["round"] = header.Round()
 	return m, nil
 }
 

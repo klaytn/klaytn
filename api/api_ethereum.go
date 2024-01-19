@@ -19,6 +19,7 @@ package api
 import (
 	"context"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -27,6 +28,7 @@ import (
 	"time"
 
 	"github.com/klaytn/klaytn/rlp"
+	"github.com/klaytn/klaytn/storage/statedb"
 
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
@@ -392,35 +394,123 @@ type EthStorageResult struct {
 	Proof []string     `json:"proof"`
 }
 
-// GetProof returns the Merkle-proof for a given account and optionally some storage keys.
-// This feature is not supported in Klaytn yet. It just returns account information from state trie.
-func (api *EthereumAPI) GetProof(ctx context.Context, address common.Address, storageKeys []string, blockNrOrHash rpc.BlockNumberOrHash) (*EthAccountResult, error) {
-	state, _, err := api.publicKlayAPI.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
+// proofList implements KeyValueWriter and collects the proofs as
+// hex-strings for delivery to rpc-caller.
+type proofList []string
+
+func (n *proofList) Put(key []byte, value []byte) error {
+	*n = append(*n, hexutil.Encode(value))
+	return nil
+}
+
+func (n *proofList) Delete(key []byte) error {
+	panic("not supported")
+}
+
+func (n *proofList) WriteMerkleProof(key, value []byte) {
+	n.Put(key, value)
+}
+
+// decodeHash parses a hex-encoded 32-byte hash. The input may optionally
+// be prefixed by 0x and can have a byte length up to 32.
+func decodeHash(s string) (h common.Hash, inputLength int, err error) {
+	if strings.HasPrefix(s, "0x") || strings.HasPrefix(s, "0X") {
+		s = s[2:]
+	}
+	if (len(s) & 1) > 0 {
+		s = "0" + s
+	}
+	b, err := hex.DecodeString(s)
+	if err != nil {
+		return common.Hash{}, 0, errors.New("hex string invalid")
+	}
+	if len(b) > 32 {
+		return common.Hash{}, len(b), errors.New("hex string too long, want at most 32 bytes")
+	}
+	return common.BytesToHash(b), len(b), nil
+}
+
+func doGetProof(ctx context.Context, b Backend, address common.Address, storageKeys []string, blockNrOrHash rpc.BlockNumberOrHash) (*EthAccountResult, error) {
+	var (
+		keys         = make([]common.Hash, len(storageKeys))
+		keyLengths   = make([]int, len(storageKeys))
+		storageProof = make([]EthStorageResult, len(storageKeys))
+	)
+	// Deserialize all keys. This prevents state access on invalid input.
+	for i, hexKey := range storageKeys {
+		var err error
+		keys[i], keyLengths[i], err = decodeHash(hexKey)
+		if err != nil {
+			return nil, err
+		}
+	}
+	state, header, err := b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if state == nil || err != nil {
 		return nil, err
 	}
-	storageTrie := state.StorageTrie(address)
-	storageHash := types.EmptyRootHashOriginal
 	codeHash := state.GetCodeHash(address)
-	storageProof := make([]EthStorageResult, len(storageKeys))
+
+	contractStorageRootExt, err := state.GetContractStorageRoot(address)
+	if err != nil {
+		return nil, err
+	}
+	contractStorageRoot := contractStorageRootExt.Unextend()
 
 	// if we have a storageTrie, (which means the account exists), we can update the storagehash
-	if storageTrie != nil {
-		storageHash = storageTrie.Hash()
-	} else {
-		// no storageTrie means the account does not exist, so the codeHash is the hash of an empty bytearray.
-		codeHash = crypto.Keccak256Hash(nil)
+	if len(keys) > 0 {
+		storageTrie, err := statedb.NewTrie(contractStorageRoot, state.Database().TrieDB(), nil)
+		if err != nil {
+			return nil, err
+		}
+		// Create the proofs for the storageKeys.
+		for i, key := range keys {
+			// Output key encoding is a bit special: if the input was a 32-byte hash, it is
+			// returned as such. Otherwise, we apply the QUANTITY encoding mandated by the
+			// JSON-RPC spec for getProof. This behavior exists to preserve backwards
+			// compatibility with older client versions.
+			var outputKey string
+			if keyLengths[i] != 32 {
+				outputKey = hexutil.EncodeBig(key.Big())
+			} else {
+				outputKey = hexutil.Encode(key[:])
+			}
+			if storageTrie == nil {
+				storageProof[i] = EthStorageResult{outputKey, &hexutil.Big{}, []string{}}
+				continue
+			}
+			var proof proofList
+			if err := storageTrie.Prove(crypto.Keccak256(key.Bytes()), 0, &proof); err != nil {
+				return nil, err
+			}
+			value := (*hexutil.Big)(state.GetState(address, key).Big())
+			storageProof[i] = EthStorageResult{outputKey, value, proof}
+		}
+	}
+
+	// Create the accountProof.
+	trie, err := statedb.NewTrie(header.Root, state.Database().TrieDB(), nil)
+	if err != nil {
+		return nil, err
+	}
+	var accountProof proofList
+	if err := trie.Prove(crypto.Keccak256(address.Bytes()), 0, &accountProof); err != nil {
+		return nil, err
 	}
 
 	return &EthAccountResult{
 		Address:      address,
-		AccountProof: []string{},
+		AccountProof: accountProof,
 		Balance:      (*hexutil.Big)(state.GetBalance(address)),
 		CodeHash:     codeHash,
 		Nonce:        hexutil.Uint64(state.GetNonce(address)),
-		StorageHash:  storageHash,
+		StorageHash:  contractStorageRoot,
 		StorageProof: storageProof,
 	}, state.Error()
+}
+
+// GetProof returns the Merkle-proof for a given account and optionally some storage keys
+func (api *EthereumAPI) GetProof(ctx context.Context, address common.Address, storageKeys []string, blockNrOrHash rpc.BlockNumberOrHash) (*EthAccountResult, error) {
+	return doGetProof(ctx, api.publicBlockChainAPI.b, address, storageKeys, blockNrOrHash)
 }
 
 // GetHeaderByNumber returns the requested canonical block header.
@@ -1346,7 +1436,7 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	if msg.Gas() < intrinsicGas {
 		return nil, fmt.Errorf("%w: msg.gas %d, want %d", blockchain.ErrIntrinsicGas, msg.Gas(), intrinsicGas)
 	}
-	evm, vmError, err := b.GetEVM(ctx, msg, state, header, vm.Config{})
+	evm, vmError, err := b.GetEVM(ctx, msg, state, header, vm.Config{ComputationCostLimit: params.OpcodeComputationCostLimitInfinite})
 	if err != nil {
 		return nil, err
 	}
@@ -1401,7 +1491,7 @@ func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, b
 
 	executable := func(gas uint64) (bool, *blockchain.ExecutionResult, error) {
 		args.Gas = (*hexutil.Uint64)(&gas)
-		result, err := EthDoCall(ctx, b, args, rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber), nil, 0, gasCap)
+		result, err := EthDoCall(ctx, b, args, rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber), nil, b.RPCEVMTimeout(), gasCap)
 		if err != nil {
 			if errors.Is(err, blockchain.ErrIntrinsicGas) {
 				return true, nil, nil // Special case, raise gas limit
