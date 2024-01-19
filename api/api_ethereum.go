@@ -1436,7 +1436,7 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	if msg.Gas() < intrinsicGas {
 		return nil, fmt.Errorf("%w: msg.gas %d, want %d", blockchain.ErrIntrinsicGas, msg.Gas(), intrinsicGas)
 	}
-	evm, vmError, err := b.GetEVM(ctx, msg, state, header, vm.Config{})
+	evm, vmError, err := b.GetEVM(ctx, msg, state, header, vm.Config{ComputationCostLimit: params.OpcodeComputationCostLimitInfinite})
 	if err != nil {
 		return nil, err
 	}
@@ -1491,7 +1491,7 @@ func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, b
 
 	executable := func(gas uint64) (bool, *blockchain.ExecutionResult, error) {
 		args.Gas = (*hexutil.Uint64)(&gas)
-		result, err := EthDoCall(ctx, b, args, rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber), nil, 0, gasCap)
+		result, err := EthDoCall(ctx, b, args, rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber), nil, b.RPCEVMTimeout(), gasCap)
 		if err != nil {
 			if errors.Is(err, blockchain.ErrIntrinsicGas) {
 				return true, nil, nil // Special case, raise gas limit
