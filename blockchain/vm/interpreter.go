@@ -200,7 +200,10 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 	if in.cfg.Debug {
 		defer func() {
 			if err != nil {
-				cc := in.cfg.JumpTable[op].computationCost
+				cc := uint64(0)
+				if in.cfg.JumpTable[op] != nil {
+					cc = in.cfg.JumpTable[op].computationCost
+				}
 				if !logged {
 					in.cfg.Tracer.CaptureState(in.evm, pcCopy, op, gasCopy, cost, cc, callContext, in.evm.depth, err)
 				} else {
