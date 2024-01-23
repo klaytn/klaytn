@@ -200,10 +200,11 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 	if in.cfg.Debug {
 		defer func() {
 			if err != nil {
+				cc := in.cfg.JumpTable[op].computationCost
 				if !logged {
-					in.cfg.Tracer.CaptureState(in.evm, pcCopy, op, gasCopy, cost, callContext, in.evm.depth, err)
+					in.cfg.Tracer.CaptureState(in.evm, pcCopy, op, gasCopy, cost, cc, callContext, in.evm.depth, err)
 				} else {
-					in.cfg.Tracer.CaptureFault(in.evm, pcCopy, op, gasCopy, cost, callContext, in.evm.depth, err)
+					in.cfg.Tracer.CaptureFault(in.evm, pcCopy, op, gasCopy, cost, cc, callContext, in.evm.depth, err)
 				}
 			}
 		}()
@@ -284,7 +285,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 		}
 
 		if in.cfg.Debug {
-			in.cfg.Tracer.CaptureState(in.evm, pc, op, gasCopy, cost, callContext, in.evm.depth, err)
+			in.cfg.Tracer.CaptureState(in.evm, pc, op, gasCopy, cost, operation.computationCost, callContext, in.evm.depth, err)
 			logged = true
 		}
 

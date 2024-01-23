@@ -84,6 +84,20 @@ func run(evm *EVM, contract *Contract, input []byte) ([]byte, error) {
 			//}
 			///////////////////////////////////////////////////////
 			evm.opcodeComputationCostSum += computationCost
+
+			if evm.Config.Debug {
+				callContext := &ScopeContext{
+					Memory:   NewMemory(),
+					Stack:    newstack(),
+					Contract: contract,
+				}
+				if err == nil {
+					evm.Config.Tracer.CaptureState(evm, 0, CALL, 0, 0, computationCost, callContext, evm.depth, err)
+				} else {
+					evm.Config.Tracer.CaptureFault(evm, 0, CALL, 0, 0, computationCost, callContext, evm.depth, err)
+				}
+			}
+
 			return ret, err
 		}
 	}
