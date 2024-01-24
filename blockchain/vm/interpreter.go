@@ -297,11 +297,10 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 					args := mem.GetPtr(int64(inOffset.Uint64()), int64(inSize.Uint64()))
 					// TODO: Takes a second return value (computation cost) and makes visible in capture state
 					precompiledGasCost, _ := p.GetRequiredGasAndComputationCost(args)
-					in.cfg.Tracer.CaptureState(in.evm, pc, op, gasCopy, cost-dynamicCost+precompiledGasCost, callContext, in.evm.depth, err)
+					cost = cost - dynamicCost + precompiledGasCost
 				}
-			} else {
-				in.cfg.Tracer.CaptureState(in.evm, pc, op, gasCopy, cost, callContext, in.evm.depth, err)
 			}
+			in.cfg.Tracer.CaptureState(in.evm, pc, op, gasCopy, cost, callContext, in.evm.depth, err)
 			logged = true
 		}
 
