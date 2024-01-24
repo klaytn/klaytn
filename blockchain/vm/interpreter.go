@@ -270,8 +270,8 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 		// Dynamic portion of gas
 		// consume the gas and return an error if not enough gas is available.
 		// cost is explicitly set so that the capture state defer method can get the proper cost
+		var dynamicCost uint64 = 0
 		if operation.dynamicGas != nil {
-			var dynamicCost uint64
 			dynamicCost, err = operation.dynamicGas(in.evm, contract, stack, mem, memorySize)
 			cost += dynamicCost // total cost, for debug tracing
 			if err != nil || !contract.UseGas(dynamicCost) {
@@ -284,7 +284,24 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 		}
 
 		if in.cfg.Debug {
-			in.cfg.Tracer.CaptureState(in.evm, pc, op, gasCopy, cost, callContext, in.evm.depth, err)
+			// Deterministic gas cost    : opcode and precompiled contract
+			// Non-deterministic gas cost: otherwise
+			if op == STATICCALL {
+				var (
+					addr               = stack.Back(1)
+					targetContractAddr = common.Address(addr.Bytes20())
+					precompiles        = in.evm.GetPrecompiledContractMap(targetContractAddr)
+				)
+				if p := precompiles[targetContractAddr]; p != nil {
+					inOffset, inSize := stack.Back(2), stack.Back(3)
+					args := mem.GetPtr(int64(inOffset.Uint64()), int64(inSize.Uint64()))
+					// TODO: Takes a second return value (computation cost) and makes visible in capture state
+					precompiledGasCost, _ := p.GetRequiredGasAndComputationCost(args)
+					in.cfg.Tracer.CaptureState(in.evm, pc, op, gasCopy, cost-dynamicCost+precompiledGasCost, callContext, in.evm.depth, err)
+				}
+			} else {
+				in.cfg.Tracer.CaptureState(in.evm, pc, op, gasCopy, cost, callContext, in.evm.depth, err)
+			}
 			logged = true
 		}
 
