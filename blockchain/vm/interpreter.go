@@ -295,7 +295,6 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 				//    this portion is stored in evm.callGasTemp (see gasCall*()).
 				//
 				// In the debug traces, we want to show deterministic components 1 and 2. So we subtract 3 from `cost`.
-				cost -= in.evm.callGasTemp
 				// If the toAddr is a precompile, add the precompile's gas cost and computation cost in the debug trace.
 				// TODO: Add the precompile's computation cost and feed into CaptureState
 				var (
@@ -312,7 +311,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 					}
 					input := mem.GetPtr(int64(inOffset.Uint64()), int64(inSize.Uint64()))
 					precompileGas, _ := p.GetRequiredGasAndComputationCost(input)
-					cost += precompileGas
+					cost += precompileGas - in.evm.callGasTemp
 				}
 			}
 			in.cfg.Tracer.CaptureState(in.evm, pc, op, gasCopy, cost, callContext, in.evm.depth, err)
