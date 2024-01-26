@@ -65,8 +65,9 @@ type ChainReader interface {
 	StateAt(root common.Hash) (*state.StateDB, error)
 }
 
-//go:generate mockgen -destination=consensus/mocks/engine_mock.go -package=mocks github.com/klaytn/klaytn/consensus Engine
 // Engine is an algorithm agnostic consensus engine.
+//
+//go:generate mockgen -destination=consensus/mocks/engine_mock.go -package=mocks github.com/klaytn/klaytn/consensus Engine
 type Engine interface {
 	// Author retrieves the Klaytn address of the account that minted the given
 	// block.
@@ -168,8 +169,11 @@ type Istanbul interface {
 }
 
 type ConsensusInfo struct {
+	// Proposer signs [sigHash] to make seal; Validators signs [block.Hash + msgCommit] to make committedSeal
+	SigHash        common.Hash
 	Proposer       common.Address
-	OriginProposer common.Address // the proposal of 0 round at the same block number
+	OriginProposer common.Address // the proposer of 0th round at the same block number
 	Committee      []common.Address
+	Committers     []common.Address
 	Round          byte
 }

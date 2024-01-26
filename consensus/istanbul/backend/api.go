@@ -327,15 +327,9 @@ func (api *APIExtension) makeRPCBlockOutput(b *types.Block,
 		}
 	}
 
-	committers, _, err := ParseCommitteedSeals(head)
-	if err != nil {
-		parseErr := make(map[string]interface{})
-		parseErr["ERROR"] = err
-		return parseErr
-	}
-
 	r["committee"] = cInfo.Committee
-	r["committers"] = committers
+	r["committers"] = cInfo.Committers
+	r["sigHash"] = cInfo.SigHash
 	r["proposer"] = cInfo.Proposer
 	r["round"] = cInfo.Round
 	r["originProposer"] = cInfo.OriginProposer
@@ -343,23 +337,16 @@ func (api *APIExtension) makeRPCBlockOutput(b *types.Block,
 	return r
 }
 
-func ParseCommitteedSeals(header *types.Header) ([]common.Address, [][]byte, error) {
-	if header == nil {
-		return nil, nil, errors.New("Empty header")
-	}
-	istanbulExtra, err := types.ExtractIstanbulExtra(header)
-	if err != nil {
-		return nil, nil, err
-	}
-	committers := make([]common.Address, len(istanbulExtra.CommittedSeal))
-	for idx, cs := range istanbulExtra.CommittedSeal {
-		committer, err := istanbul.GetSignatureAddress(istanbulCore.PrepareCommittedSeal(header.Hash()), cs)
+func RecoverCommittedSeals(extra *types.IstanbulExtra, headerHash common.Hash) ([]common.Address, error) {
+	committers := make([]common.Address, len(extra.CommittedSeal))
+	for idx, cs := range extra.CommittedSeal {
+		committer, err := istanbul.GetSignatureAddress(istanbulCore.PrepareCommittedSeal(headerHash), cs)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		committers[idx] = committer
 	}
-	return committers, istanbulExtra.CommittedSeal, nil
+	return committers, nil
 }
 
 // TODO-Klaytn: This API functions should be managed with API functions with namespace "klay"

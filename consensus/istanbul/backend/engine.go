@@ -818,34 +818,35 @@ func (sb *backend) GetConsensusInfo(block *types.Block) (consensus.ConsensusInfo
 		committeeAddrs[i] = v.Address()
 	}
 
-	// verify the committee list of the block using istanbul
-	//proposalSeal := istanbulCore.PrepareCommittedSeal(block.Hash())
-	//extra, err := types.ExtractIstanbulExtra(block.Header())
-	//istanbulAddrs := make([]common.Address, len(committeeAddrs))
-	//for i, seal := range extra.CommittedSeal {
-	//	addr, err := istanbul.GetSignatureAddress(proposalSeal, seal)
-	//	istanbulAddrs[i] = addr
-	//	if err != nil {
-	//		return proposer, []common.Address{}, err
-	//	}
-	//
-	//	var found bool = false
-	//	for _, v := range committeeAddrs {
-	//		if addr == v {
-	//			found = true
-	//			break
-	//		}
-	//	}
-	//	if found == false {
-	//		logger.Trace("validator is different!", "snap", committeeAddrs, "istanbul", istanbulAddrs)
-	//		return proposer, committeeAddrs, errors.New("validator set is different from Istanbul engine!!")
-	//	}
-	//}
+	// get the committers of this block from committed seals
+	extra, err := types.ExtractIstanbulExtra(block.Header())
+	if err != nil {
+		return consensus.ConsensusInfo{}, err
+	}
+	committers, err := RecoverCommittedSeals(extra, block.Hash())
+	if err != nil {
+		return consensus.ConsensusInfo{}, err
+	}
+
+	// Uncomment to validate if committers are in the committee
+	// for _, recovered := range committers {
+	// 	found := false
+	// 	for _, calculated := range committeeAddrs {
+	// 		if recovered == calculated {
+	// 			found = true
+	// 		}
+	// 	}
+	// 	if !found {
+	// 		return consensus.ConsensusInfo{}, errInvalidCommittedSeals
+	// 	}
+	// }
 
 	cInfo := consensus.ConsensusInfo{
+		SigHash:        sigHash(block.Header()),
 		Proposer:       proposer,
 		OriginProposer: originProposer,
 		Committee:      committeeAddrs,
+		Committers:     committers,
 		Round:          round,
 	}
 
