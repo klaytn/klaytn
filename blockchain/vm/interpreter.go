@@ -26,6 +26,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/holiman/uint256"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/kerrors"
@@ -284,20 +285,34 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 		}
 
 		if in.cfg.Debug {
-			// Deterministic gas cost    : opcode and precompiled contract
-			// Non-deterministic gas cost: otherwise
-			if op == STATICCALL {
+			if op == CALL || op == CALLCODE || op == DELEGATECALL || op == STATICCALL {
+				// In *CALL opcodes, the `cost` includes the three components:
+				//
+				// 1. The gas cost for the *CALL opcode itself (i.e. operation.constantGas)
+				// 2. The dynamic cost incured by memory expansion, account creation, value transfer, etc (see gasCall*())
+				// 3. The gas available in the callee, which is at most 63/64 of the gas available in the caller (see callGas() and EIP-150)
+				//    this portion will be partially refunded after callee returns, but we cannot know how much will be refunded at this point.
+				//    this portion is stored in evm.callGasTemp (see gasCall*()).
+				//
+				// In the debug traces, we want to show deterministic components 1 and 2. So we subtract 3 from `cost`.
+				cost -= in.evm.callGasTemp
+				// If the toAddr is a precompile, add the precompile's gas cost and computation cost in the debug trace.
+				// TODO: Add the precompile's computation cost and feed into CaptureState
 				var (
-					addr               = stack.Back(1)
-					targetContractAddr = common.Address(addr.Bytes20())
-					precompiles        = in.evm.GetPrecompiledContractMap(targetContractAddr)
+					callerAddr  = contract.Address()
+					precompiles = in.evm.GetPrecompiledContractMap(callerAddr)
+					toAddr      = common.Address(stack.Back(1).Bytes20())
 				)
-				if p := precompiles[targetContractAddr]; p != nil {
-					inOffset, inSize := stack.Back(2), stack.Back(3)
-					args := mem.GetPtr(int64(inOffset.Uint64()), int64(inSize.Uint64()))
-					// TODO: Takes a second return value (computation cost) and makes visible in capture state
-					precompiledGasCost, _ := p.GetRequiredGasAndComputationCost(args)
-					cost = cost - dynamicCost + precompiledGasCost
+				if p := precompiles[toAddr]; p != nil {
+					var inOffset, inSize *uint256.Int
+					if op == CALL || op == CALLCODE { // gas, address, value, argsOffset, argsSize, ...
+						inOffset, inSize = stack.Back(3), stack.Back(4)
+					} else if op == DELEGATECALL || op == STATICCALL { // gas, address, argsOffset, argsSize, ...
+						inOffset, inSize = stack.Back(2), stack.Back(3)
+					}
+					input := mem.GetPtr(int64(inOffset.Uint64()), int64(inSize.Uint64()))
+					precompileGas, _ := p.GetRequiredGasAndComputationCost(input)
+					cost += precompileGas
 				}
 			}
 			in.cfg.Tracer.CaptureState(in.evm, pc, op, gasCopy, cost, callContext, in.evm.depth, err)
