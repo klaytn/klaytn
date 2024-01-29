@@ -182,7 +182,7 @@ func parseHeaderFile(headerFile string) (*types.Header, common.Hash, error) {
 }
 
 func decodeExtra(headerFile string) (map[string]interface{}, error) {
-	header, hash, err := parseHeaderFile(headerFile)
+	header, sigHash, err := parseHeaderFile(headerFile)
 	if err != nil {
 		return nil, err
 	}
@@ -194,21 +194,22 @@ func decodeExtra(headerFile string) (map[string]interface{}, error) {
 	for idx, addr := range istanbulExtra.Validators {
 		validators[idx] = addr.String()
 	}
-	proposer, err := istanbul.GetSignatureAddress(hash.Bytes(), istanbulExtra.Seal)
+	proposer, err := istanbul.GetSignatureAddress(sigHash.Bytes(), istanbulExtra.Seal)
 	if err != nil {
 		return nil, err
 	}
-	committers, cSealsBytes, err := backend.ParseCommitteedSeals(header)
+	committers, err := backend.RecoverCommittedSeals(istanbulExtra, header.Hash())
 	if err != nil {
 		return nil, err
 	}
 	cSeals := make([]string, len(istanbulExtra.CommittedSeal))
 	for i := 0; i < len(cSeals); i++ {
-		cSeals[i] = hexutil.Encode(cSealsBytes[i])
+		cSeals[i] = hexutil.Encode(istanbulExtra.CommittedSeal[i])
 	}
 
 	m := make(map[string]interface{})
-	m["hash"] = hash
+	m["hash"] = header.Hash().Hex()
+	m["sigHash"] = sigHash.Hex()
 	m["validators"] = validators
 	m["seal"] = hexutil.Encode(istanbulExtra.Seal)
 	m["committedSeal"] = cSeals
