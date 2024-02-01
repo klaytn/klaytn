@@ -443,7 +443,7 @@ func (sbh *SubBridgeHandler) writeServiceChainTxReceipts(bc *blockchain.BlockCha
 				}
 				decodedData, err := types.DecodeAnchoringData(data)
 				if err != nil {
-					logger.Error("failed to decode anchoring tx", "txHash", txHash.String(), "err", err)
+					logger.Warn("failed to decode anchoring tx", "txHash", txHash.String(), "err", err)
 					continue
 				}
 				sbh.WriteReceiptFromParentChain(decodedData.GetBlockHash(), (*types.Receipt)(receipt))

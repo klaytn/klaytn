@@ -818,34 +818,35 @@ func (sb *backend) GetConsensusInfo(block *types.Block) (consensus.ConsensusInfo
 		committeeAddrs[i] = v.Address()
 	}
 
-	// verify the committee list of the block using istanbul
-	//proposalSeal := istanbulCore.PrepareCommittedSeal(block.Hash())
-	//extra, err := types.ExtractIstanbulExtra(block.Header())
-	//istanbulAddrs := make([]common.Address, len(committeeAddrs))
-	//for i, seal := range extra.CommittedSeal {
-	//	addr, err := istanbul.GetSignatureAddress(proposalSeal, seal)
-	//	istanbulAddrs[i] = addr
-	//	if err != nil {
-	//		return proposer, []common.Address{}, err
-	//	}
-	//
-	//	var found bool = false
-	//	for _, v := range committeeAddrs {
-	//		if addr == v {
-	//			found = true
-	//			break
-	//		}
-	//	}
-	//	if found == false {
-	//		logger.Trace("validator is different!", "snap", committeeAddrs, "istanbul", istanbulAddrs)
-	//		return proposer, committeeAddrs, errors.New("validator set is different from Istanbul engine!!")
-	//	}
-	//}
+	// get the committers of this block from committed seals
+	extra, err := types.ExtractIstanbulExtra(block.Header())
+	if err != nil {
+		return consensus.ConsensusInfo{}, err
+	}
+	committers, err := RecoverCommittedSeals(extra, block.Hash())
+	if err != nil {
+		return consensus.ConsensusInfo{}, err
+	}
+
+	// Uncomment to validate if committers are in the committee
+	// for _, recovered := range committers {
+	// 	found := false
+	// 	for _, calculated := range committeeAddrs {
+	// 		if recovered == calculated {
+	// 			found = true
+	// 		}
+	// 	}
+	// 	if !found {
+	// 		return consensus.ConsensusInfo{}, errInvalidCommittedSeals
+	// 	}
+	// }
 
 	cInfo := consensus.ConsensusInfo{
+		SigHash:        sigHash(block.Header()),
 		Proposer:       proposer,
 		OriginProposer: originProposer,
 		Committee:      committeeAddrs,
+		Committers:     committers,
 		Round:          round,
 	}
 
@@ -921,8 +922,71 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		logger.Trace("Stored voting snapshot to disk", "number", snap.Number, "hash", snap.Hash)
 	}
 
+	sb.regen(chain, headers)
+
 	sb.recents.Add(snap.Hash, snap)
 	return snap, err
+}
+
+// regen commits snapshot data to database
+// regen is triggered if there is any checkpoint block in the `headers`.
+// For each checkpoint block, this function verifies the existence of its snapshot in DB and stores one if missing.
+/*
+ Triggered:
+ |   ^                          ^                          ^                          ^  ...|
+     SI                 SI*(last snapshot)                 SI                         SI
+       			   | header1, .. headerN |
+ Not triggered: (Guaranteed SI* was committed before )
+ |   ^                          ^                          ^                          ^  ...|
+     SI                 SI*(last snapshot)                 SI                         SI
+	                            | header1, .. headerN |
+*/
+func (sb *backend) regen(chain consensus.ChainReader, headers []*types.Header) {
+	// Prevent nested call. Ignore header length one
+	// because it was handled before the `regen` called.
+	if !sb.isRestoringSnapshots.CompareAndSwap(false, true) || len(headers) <= 1 {
+		return
+	}
+	defer func() {
+		sb.isRestoringSnapshots.Store(false)
+	}()
+
+	var (
+		from        = headers[0].Number.Uint64()
+		to          = headers[len(headers)-1].Number.Uint64()
+		start       = time.Now()
+		commitTried = false
+	)
+
+	// Shortcut: No missing snapshot data to be processed.
+	if to-(to%uint64(params.CheckpointInterval)) < from {
+		return
+	}
+
+	for _, header := range headers {
+		var (
+			hn = header.Number.Uint64()
+			hh = header.Hash()
+		)
+		if params.IsCheckpointInterval(hn) {
+			// Store snapshot data if it was not committed before
+			if loadSnap, _ := sb.db.ReadIstanbulSnapshot(hh); loadSnap != nil {
+				continue
+			}
+			snap, err := sb.snapshot(chain, hn, hh, nil, false)
+			if err != nil {
+				logger.Warn("[Snapshot] Snapshot restoring failed", "len(headers)", len(headers), "from", from, "to", to, "headerNumber", hn)
+				continue
+			}
+			if err = snap.store(sb.db); err != nil {
+				logger.Warn("[Snapshot] Snapshot restoring failed", "len(headers)", len(headers), "from", from, "to", to, "headerNumber", hn)
+			}
+			commitTried = true
+		}
+	}
+	if commitTried { // This prevents pushing too many logs by potential DoS attack
+		logger.Trace("[Snapshot] Snapshot restoring completed", "len(headers)", len(headers), "from", from, "to", to, "elapsed", time.Since(start))
+	}
 }
 
 // FIXME: Need to update this for Istanbul

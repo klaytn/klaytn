@@ -330,7 +330,7 @@ func (c *Console) Welcome() {
 			modules = append(modules, fmt.Sprintf("%s:%s", api, version))
 		}
 		sort.Strings(modules)
-		fmt.Fprintln(c.printer, " modules:", strings.Join(modules, " "))
+		fmt.Fprintln(c.printer, "  modules:", strings.Join(modules, " "))
 	}
 	fmt.Fprintln(c.printer)
 }

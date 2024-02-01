@@ -830,21 +830,21 @@ var (
 	}
 	RPCGlobalGasCap = &cli.Uint64Flag{
 		Name:     "rpc.gascap",
-		Usage:    "Sets a cap on gas that can be used in klay_call/estimateGas",
+		Usage:    "Sets a cap on gas in {eth,klay}_{call,estimateGas,estimateComputationCost} (0 = no cap)",
 		Aliases:  []string{"http-rpc.gascap"},
 		EnvVars:  []string{"KLAYTN_RPC_GASCAP"},
 		Category: "API AND CONSOLE",
 	}
 	RPCGlobalEVMTimeoutFlag = &cli.DurationFlag{
 		Name:     "rpc.evmtimeout",
-		Usage:    "Sets a timeout used for eth_call (0=infinite)",
+		Usage:    "Sets a timeout in {eth,klay}_{call,estimateGas,estimateComputationCost}. (0 = apply http-rpc.execution.timeout)",
 		Aliases:  []string{"http-rpc.evmtimeout"},
 		EnvVars:  []string{"KLAYTN_RPC_EVMTIMEOUT"},
 		Category: "API AND CONSOLE",
 	}
 	RPCGlobalEthTxFeeCapFlag = &cli.Float64Flag{
 		Name:     "rpc.ethtxfeecap",
-		Usage:    "Sets a cap on transaction fee (in klay) that can be sent via the eth namespace RPC APIs (0 = no cap)",
+		Usage:    "Sets a cap on transaction fee (=gasLimit*gasPrice) (in klay) in eth_signTransaction (0 = no cap)",
 		Aliases:  []string{"http-rpc.eth-tx-feecap"},
 		EnvVars:  []string{"KLAYTN_RPC_ETHTXFEECAP"},
 		Category: "API AND CONSOLE",

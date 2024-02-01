@@ -77,7 +77,16 @@ func (p *ChainBlsPubkeyProvider) getAllCached(chain consensus.ChainReader, num *
 			return nil, errors.New("KIP113 address not set in ChainConfig")
 		}
 	} else if chain.Config().IsRandaoForkEnabled(num) {
-		var err error
+		// If no state exist at block number `parentNum`,
+		// return the error `consensus.ErrPrunedAncestor`
+		pHeader := chain.GetHeaderByNumber(parentNum.Uint64())
+		if pHeader == nil {
+			return nil, consensus.ErrUnknownAncestor
+		}
+		_, err := chain.StateAt(pHeader.Root)
+		if err != nil {
+			return nil, consensus.ErrPrunedAncestor
+		}
 		kip113Addr, err = system.ReadActiveAddressFromRegistry(backend, system.Kip113Name, parentNum)
 		if err != nil {
 			return nil, err

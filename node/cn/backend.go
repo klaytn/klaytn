@@ -535,23 +535,8 @@ func (s *CN) APIs() []rpc.API {
 	ethAPI.SetGovernanceKlayAPI(governanceKlayAPI)
 	ethAPI.SetGovernanceAPI(governanceAPI)
 
-	var tracerAPI *tracers.API
-	if s.config.DisableUnsafeDebug {
-		tracerAPI = tracers.NewAPIUnsafeDisabled(s.APIBackend)
-	} else {
-		tracerAPI = tracers.NewAPI(s.APIBackend)
-		apis = append(apis, []rpc.API{
-			{
-				Namespace: "debug",
-				Version:   "1.0",
-				Service:   NewPrivateDebugAPI(s.chainConfig, s),
-				Public:    false,
-			},
-		}...)
-	}
-
 	// Append all the local APIs and return
-	return append(apis, []rpc.API{
+	apis = append(apis, []rpc.API{
 		{
 			Namespace: "klay",
 			Version:   "1.0",
@@ -588,8 +573,14 @@ func (s *CN) APIs() []rpc.API {
 		}, {
 			Namespace: "debug",
 			Version:   "1.0",
-			Service:   tracerAPI,
+			Service:   tracers.NewAPI(s.APIBackend),
 			Public:    false,
+		}, {
+			Namespace: "debug",
+			Version:   "1.0",
+			Service:   tracers.NewUnsafeAPI(s.APIBackend),
+			Public:    false,
+			IPCOnly:   s.config.DisableUnsafeDebug,
 		}, {
 			Namespace: "net",
 			Version:   "1.0",
@@ -610,8 +601,16 @@ func (s *CN) APIs() []rpc.API {
 			Version:   "1.0",
 			Service:   ethAPI,
 			Public:    true,
+		}, {
+			Namespace: "debug",
+			Version:   "1.0",
+			Service:   NewPrivateDebugAPI(s.chainConfig, s),
+			Public:    false,
+			IPCOnly:   s.config.DisableUnsafeDebug,
 		},
 	}...)
+
+	return apis
 }
 
 func (s *CN) ResetWithGenesisBlock(gb *types.Block) {

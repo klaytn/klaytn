@@ -32,6 +32,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/consensus/istanbul"
+	istanbulCore "github.com/klaytn/klaytn/consensus/istanbul/core"
 	"github.com/klaytn/klaytn/networks/rpc"
 )
 
@@ -318,16 +319,34 @@ func (api *APIExtension) makeRPCBlockOutput(b *types.Block,
 	numTxs := len(transactions)
 	rpcTransactions := make([]map[string]interface{}, numTxs)
 	for i, tx := range transactions {
-		rpcTransactions[i] = klaytnApi.RpcOutputReceipt(head, tx, hash, head.Number.Uint64(), uint64(i), receipts[i])
+		if len(receipts) == len(transactions) {
+			rpcTransactions[i] = klaytnApi.RpcOutputReceipt(head, tx, hash, head.Number.Uint64(), uint64(i), receipts[i])
+		} else {
+			// fill the transaction output if receipt is not found
+			rpcTransactions[i] = klaytnApi.NewRPCTransaction(b, tx, hash, head.Number.Uint64(), uint64(i))
+		}
 	}
 
 	r["committee"] = cInfo.Committee
+	r["committers"] = cInfo.Committers
+	r["sigHash"] = cInfo.SigHash
 	r["proposer"] = cInfo.Proposer
 	r["round"] = cInfo.Round
 	r["originProposer"] = cInfo.OriginProposer
 	r["transactions"] = rpcTransactions
-
 	return r
+}
+
+func RecoverCommittedSeals(extra *types.IstanbulExtra, headerHash common.Hash) ([]common.Address, error) {
+	committers := make([]common.Address, len(extra.CommittedSeal))
+	for idx, cs := range extra.CommittedSeal {
+		committer, err := istanbul.GetSignatureAddress(istanbulCore.PrepareCommittedSeal(headerHash), cs)
+		if err != nil {
+			return nil, err
+		}
+		committers[idx] = committer
+	}
+	return committers, nil
 }
 
 // TODO-Klaytn: This API functions should be managed with API functions with namespace "klay"

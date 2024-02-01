@@ -101,7 +101,7 @@ func (cn *CN) stateAtBlock(block *types.Block, reexec uint64, base *state.StateD
 		if err != nil {
 			switch err.(type) {
 			case *statedb2.MissingNodeError:
-				return nil, fmt.Errorf("required historical state unavailable (reexec=%d)", reexec)
+				return nil, fmt.Errorf("historical state unavailable. tried regeneration but not possible, possibly due to state migration/pruning or global state saving interval is bigger than reexec value (reexec=%d)", reexec)
 			default:
 				return nil, err
 			}

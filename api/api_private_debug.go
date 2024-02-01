@@ -24,13 +24,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
+	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/storage/database"
-	"github.com/syndtr/goleveldb/leveldb"
-	"github.com/syndtr/goleveldb/leveldb/util"
 )
 
 // PrivateDebugAPI is the collection of Klaytn APIs exposed over the private
@@ -45,42 +43,29 @@ func NewPrivateDebugAPI(b Backend) *PrivateDebugAPI {
 	return &PrivateDebugAPI{b: b}
 }
 
-// GetDBProperty returns the value of the given property of the given database.
-func (api *PrivateDebugAPI) GetDBProperty(dt database.DBEntryType, name string) string {
-	return api.b.ChainDB().GetProperty(dt, name)
-}
-
 // ChaindbProperty returns leveldb properties of the chain database.
 func (api *PrivateDebugAPI) ChaindbProperty(property string) (string, error) {
-	ldb, ok := api.b.ChainDB().(interface {
-		LDB() *leveldb.DB
-	})
-	if !ok {
-		return "", fmt.Errorf("chaindbProperty does not work for memory databases")
-	}
-	if property == "" {
-		property = "leveldb.stats"
-	} else if !strings.HasPrefix(property, "leveldb.") {
-		property = "leveldb." + property
-	}
-	return ldb.LDB().GetProperty(property)
+	return api.b.ChainDB().Stat(property)
 }
 
-// ChaindbCompact compacts the chain database if successful, otherwise it returns nil.
+// ChaindbCompact flattens the entire key-value database into a single level,
+// removing all unused slots and merging all keys.
 func (api *PrivateDebugAPI) ChaindbCompact() error {
-	ldb, ok := api.b.ChainDB().(interface {
-		LDB() *leveldb.DB
-	})
-	if !ok {
-		return fmt.Errorf("chaindbCompact does not work for memory databases")
-	}
-	for b := byte(0); b < 255; b++ {
-		logger.Info("Compacting chain database", "range", fmt.Sprintf("0x%0.2X-0x%0.2X", b, b+1))
-		err := ldb.LDB().CompactRange(util.Range{Start: []byte{b}, Limit: []byte{b + 1}})
-		if err != nil {
+	for b := 0; b <= 255; b++ {
+		var (
+			start = []byte{byte(b)}
+			end   = []byte{byte(b + 1)}
+		)
+		if b == 255 {
+			end = nil
+		}
+		logger.Info("Compacting database started", "range", fmt.Sprintf("%#X-%#X", start, end))
+		cstart := time.Now()
+		if err := api.b.ChainDB().Compact(start, end); err != nil {
 			logger.Error("Database compaction failed", "err", err)
 			return err
 		}
+		logger.Info("Compacting database completed", "range", fmt.Sprintf("%#X-%#X", start, end), "elapsed", common.PrettyDuration(time.Since(cstart)))
 	}
 	return nil
 }
