@@ -509,16 +509,15 @@ func genBaobabTestGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Gen
 
 func allocGenesisFund(ctx *cli.Context, genesisJson *blockchain.Genesis) {
 	fundingAddr := ctx.String(fundingAddrFlag.Name)
-	if len(fundingAddr) == 0 {
-		return
-	}
+	for _, item := range strings.Split(fundingAddr, ",") {
+		if !common.IsHexAddress(item) {
+			log.Fatalf("'%s' is not a valid hex address", item)
+		}
 
-	if !common.IsHexAddress(fundingAddr) {
-		log.Fatalf("'%s' is not a valid hex address", fundingAddr)
+		addr := common.HexToAddress(item)
+		balance := new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil)
+		genesisJson.Alloc[addr] = blockchain.GenesisAccount{Balance: balance}
 	}
-	addr := common.HexToAddress(fundingAddr)
-	balance := new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil)
-	genesisJson.Alloc[addr] = blockchain.GenesisAccount{Balance: balance}
 }
 
 func patchGenesisAddressBook(ctx *cli.Context, genesisJson *blockchain.Genesis, nodeAddrs []common.Address) {
