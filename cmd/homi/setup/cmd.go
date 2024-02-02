@@ -509,6 +509,10 @@ func genBaobabTestGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Gen
 
 func allocGenesisFund(ctx *cli.Context, genesisJson *blockchain.Genesis) {
 	fundingAddr := ctx.String(fundingAddrFlag.Name)
+	if len(fundingAddr) == 0 {
+		return
+	}
+
 	for _, item := range strings.Split(fundingAddr, ",") {
 		if !common.IsHexAddress(item) {
 			log.Fatalf("'%s' is not a valid hex address", item)
