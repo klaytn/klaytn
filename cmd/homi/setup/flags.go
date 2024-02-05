@@ -182,7 +182,7 @@ var (
 	fundingAddrFlag = &cli.StringFlag{
 		Name:    "funding-addr",
 		Value:   "",
-		Usage:   "Give initial fund to the given addr",
+		Usage:   "Give initial funds to the given comma-separated list of addresses",
 		Aliases: []string{"genesis.funding-addr"},
 	}
 

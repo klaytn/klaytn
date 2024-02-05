@@ -513,12 +513,15 @@ func allocGenesisFund(ctx *cli.Context, genesisJson *blockchain.Genesis) {
 		return
 	}
 
-	if !common.IsHexAddress(fundingAddr) {
-		log.Fatalf("'%s' is not a valid hex address", fundingAddr)
-	}
-	addr := common.HexToAddress(fundingAddr)
 	balance := new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil)
-	genesisJson.Alloc[addr] = blockchain.GenesisAccount{Balance: balance}
+	for _, item := range strings.Split(fundingAddr, ",") {
+		if !common.IsHexAddress(item) {
+			log.Fatalf("'%s' is not a valid hex address", item)
+		}
+
+		addr := common.HexToAddress(item)
+		genesisJson.Alloc[addr] = blockchain.GenesisAccount{Balance: balance}
+	}
 }
 
 func patchGenesisAddressBook(ctx *cli.Context, genesisJson *blockchain.Genesis, nodeAddrs []common.Address) {
