@@ -704,11 +704,9 @@ func Gen(ctx *cli.Context) error {
 		nodeAddrs []common.Address
 	)
 
-	if len(ctx.String(cnNodeKeyDirFlag.Name)) > 0 {
-		keydir := ctx.String(cnNodeKeyDirFlag.Name)
+	if keydir := ctx.String(cnNodeKeyDirFlag.Name); len(keydir) > 0 {
 		privKeys, nodeKeys, nodeAddrs = istcommon.LoadNodekey(keydir)
-	} else if len(ctx.String(mnemonicFlag.Name)) > 0 {
-		mnemonic := ctx.String(mnemonicFlag.Name)
+	} else if mnemonic := ctx.String(mnemonicFlag.Name); len(mnemonic) > 0 {
 		mnemonic = strings.ReplaceAll(mnemonic, ",", " ")
 		// common keys used by web3 tools such as hardhat, foundry, etc.
 		if mnemonic == "test junk" {

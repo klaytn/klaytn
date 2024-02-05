@@ -166,6 +166,7 @@ func LoadNodekey(dir string) (keys []*ecdsa.PrivateKey, nodekeys []string, addrs
 			}
 			nodekey := string(b)
 			nodekeys = append(nodekeys, nodekey)
+
 			key, err := crypto.HexToECDSA(nodekey)
 			if err != nil {
 				logger.Error("Failed to generate key", "err", err)
