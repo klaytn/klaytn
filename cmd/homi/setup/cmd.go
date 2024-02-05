@@ -78,8 +78,8 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewIntFlag(numOfSPNsFlag),
 	altsrc.NewIntFlag(numOfSENsFlag),
 	altsrc.NewIntFlag(numOfTestKeyFlag),
-	altsrc.NewStringFlag(mnemonic),
-	altsrc.NewStringFlag(mnemonicPath),
+	altsrc.NewStringFlag(mnemonicFlag),
+	altsrc.NewStringFlag(mnemonicPathFlag),
 	altsrc.NewStringFlag(cnNodeKeyDirFlag),
 	altsrc.NewStringFlag(pnNodeKeyDirFlag),
 	altsrc.NewStringFlag(enNodeKeyDirFlag),
@@ -707,14 +707,14 @@ func Gen(ctx *cli.Context) error {
 	if len(ctx.String(cnNodeKeyDirFlag.Name)) > 0 {
 		keydir := ctx.String(cnNodeKeyDirFlag.Name)
 		privKeys, nodeKeys, nodeAddrs = istcommon.LoadNodekey(keydir)
-	} else if len(ctx.String(mnemonic.Name)) > 0 {
-		mnemonic := ctx.String(mnemonic.Name)
+	} else if len(ctx.String(mnemonicFlag.Name)) > 0 {
+		mnemonic := ctx.String(mnemonicFlag.Name)
 		mnemonic = strings.ReplaceAll(mnemonic, ",", " ")
 		// common keys used by web3 tools such as hardhat, foundry, etc.
 		if mnemonic == "test junk" {
 			mnemonic = "test test test test test test test test test test test junk"
 		}
-		path := strings.ToLower(ctx.String(mnemonicPath.Name))
+		path := strings.ToLower(ctx.String(mnemonicPathFlag.Name))
 		if !strings.HasPrefix(path, "m") {
 			switch path {
 			case "klay":
