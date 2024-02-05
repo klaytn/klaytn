@@ -143,6 +143,24 @@ var (
 		Value: "eth",
 	}
 
+	cnNodeKeyDirFlag = &cli.StringFlag{
+		Name:  "cn-nodekey-dir",
+		Usage: "CN nodekey dir containing nodekey*",
+		Value: "",
+	}
+
+	pnNodeKeyDirFlag = &cli.StringFlag{
+		Name:  "pn-nodekey-dir",
+		Usage: "PN nodekey dir containing nodekey*",
+		Value: "",
+	}
+
+	enNodeKeyDirFlag = &cli.StringFlag{
+		Name:  "en-nodekey-dir",
+		Usage: "EN nodekey dir containing nodekey*",
+		Value: "",
+	}
+
 	chainIDFlag = &cli.Uint64Flag{
 		Name:    "chainID",
 		Usage:   "ChainID",

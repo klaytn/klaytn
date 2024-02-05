@@ -80,6 +80,9 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewIntFlag(numOfTestKeyFlag),
 	altsrc.NewStringFlag(mnemonic),
 	altsrc.NewStringFlag(mnemonicPath),
+	altsrc.NewStringFlag(cnNodeKeyDirFlag),
+	altsrc.NewStringFlag(pnNodeKeyDirFlag),
+	altsrc.NewStringFlag(enNodeKeyDirFlag),
 	altsrc.NewUint64Flag(chainIDFlag),
 	altsrc.NewUint64Flag(serviceChainIDFlag),
 	altsrc.NewUint64Flag(unitPriceFlag),
@@ -701,9 +704,10 @@ func Gen(ctx *cli.Context) error {
 		nodeAddrs []common.Address
 	)
 
-	if len(ctx.String(mnemonic.Name)) == 0 {
-		privKeys, nodeKeys, nodeAddrs = istcommon.GenerateKeys(cnNum)
-	} else {
+	if len(ctx.String(cnNodeKeyDirFlag.Name)) > 0 {
+		keydir := ctx.String(cnNodeKeyDirFlag.Name)
+		privKeys, nodeKeys, nodeAddrs = istcommon.LoadNodekey(keydir)
+	} else if len(ctx.String(mnemonic.Name)) > 0 {
 		mnemonic := ctx.String(mnemonic.Name)
 		mnemonic = strings.ReplaceAll(mnemonic, ",", " ")
 		// common keys used by web3 tools such as hardhat, foundry, etc.
@@ -722,6 +726,8 @@ func Gen(ctx *cli.Context) error {
 			}
 		}
 		privKeys, nodeKeys, nodeAddrs = istcommon.GenerateKeysFromMnemonic(cnNum, mnemonic, path)
+	} else {
+		privKeys, nodeKeys, nodeAddrs = istcommon.GenerateKeys(cnNum)
 	}
 
 	testPrivKeys, testKeys, testAddrs := istcommon.GenerateKeys(numTestAccs)
@@ -784,12 +790,12 @@ func Gen(ctx *cli.Context) error {
 	switch genType {
 	case TypeDocker:
 		validators := makeValidators(cnNum, false, nodeAddrs, nodeKeys, privKeys)
-		pnValidators, proxyNodeKeys := makeProxys(pnNum, false)
+		pnValidators, proxyNodeKeys := makeProxys(ctx, pnNum, false)
 		nodeInfos := filterNodeInfo(validators)
 		staticNodesJsonBytes, _ := json.MarshalIndent(nodeInfos, "", "\t")
 		address := filterAddressesString(validators)
 		pnInfos := filterNodeInfo(pnValidators)
-		enValidators, enKeys := makeEndpoints(enNum, false)
+		enValidators, enKeys := makeEndpoints(ctx, enNum, false)
 		enInfos := filterNodeInfo(enValidators)
 
 		scnValidators, scnKeys := makeSCNs(scnNum, false)
@@ -854,11 +860,11 @@ func Gen(ctx *cli.Context) error {
 		fmt.Println("Created : ", path.Join(outputPath, "prometheus.yml"))
 		downLoadGrafanaJson()
 	case TypeLocal:
-		writeNodeFiles(true, cnNum, pnNum, nodeAddrs, nodeKeys, privKeys, genesisJsonBytes)
+		writeNodeFiles(ctx, true, cnNum, pnNum, nodeAddrs, nodeKeys, privKeys, genesisJsonBytes)
 		writeTestKeys(DirTestKeys, testPrivKeys, testKeys)
 		downLoadGrafanaJson()
 	case TypeRemote:
-		writeNodeFiles(false, cnNum, pnNum, nodeAddrs, nodeKeys, privKeys, genesisJsonBytes)
+		writeNodeFiles(ctx, false, cnNum, pnNum, nodeAddrs, nodeKeys, privKeys, genesisJsonBytes)
 		writeTestKeys(DirTestKeys, testPrivKeys, testKeys)
 		downLoadGrafanaJson()
 	case TypeDeploy:
@@ -934,7 +940,7 @@ func writePrometheusConfig(cnNum int, pnNum int) {
 	WriteFile([]byte(pConf.String()), "monitoring", "prometheus.yml")
 }
 
-func writeNodeFiles(isWorkOnSingleHost bool, num int, pnum int, nodeAddrs []common.Address, nodeKeys []string,
+func writeNodeFiles(ctx *cli.Context, isWorkOnSingleHost bool, num int, pnum int, nodeAddrs []common.Address, nodeKeys []string,
 	privKeys []*ecdsa.PrivateKey, genesisJsonBytes []byte,
 ) {
 	WriteFile(genesisJsonBytes, DirScript, "genesis.json")
@@ -946,7 +952,7 @@ func writeNodeFiles(isWorkOnSingleHost bool, num int, pnum int, nodeAddrs []comm
 	WriteFile(staticNodesJsonBytes, DirScript, "static-nodes.json")
 
 	if pnum > 0 {
-		proxys, proxyNodeKeys := makeProxys(pnum, isWorkOnSingleHost)
+		proxys, proxyNodeKeys := makeProxys(ctx, pnum, isWorkOnSingleHost)
 		pNodeInfos := filterNodeInfo(proxys)
 		staticPNodesJsonBytes, _ := json.MarshalIndent(pNodeInfos, "", "\t")
 		writeValidatorsAndNodesToFile(proxys, DirPnKeys, proxyNodeKeys)
@@ -1045,8 +1051,22 @@ func makeValidatorsWithIp(num int, isWorkOnSingleHost bool, nodeAddrs []common.A
 	return validators
 }
 
-func makeProxys(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
-	privKeys, nodeKeys, nodeAddrs := istcommon.GenerateKeys(num)
+func makeProxys(ctx *cli.Context, num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
+	var (
+		privKeys  []*ecdsa.PrivateKey
+		nodeKeys  []string
+		nodeAddrs []common.Address
+	)
+
+	keydir := ctx.String(pnNodeKeyDirFlag.Name)
+	if len(keydir) > 0 {
+		privKeys, nodeKeys, nodeAddrs = istcommon.LoadNodekey(keydir)
+		if len(nodeKeys) != num {
+			log.Fatalf("The number of nodekey files (%d) does not match the given PN num (%d)", len(nodeKeys), num)
+		}
+	} else {
+		privKeys, nodeKeys, nodeAddrs = istcommon.GenerateKeys(num)
+	}
 
 	var p2pPort uint16
 	var proxies []*ValidatorInfo
@@ -1076,8 +1096,22 @@ func makeProxys(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
 	return proxies, proxyNodeKeys
 }
 
-func makeEndpoints(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
-	privKeys, nodeKeys, nodeAddrs := istcommon.GenerateKeys(num)
+func makeEndpoints(ctx *cli.Context, num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
+	var (
+		privKeys  []*ecdsa.PrivateKey
+		nodeKeys  []string
+		nodeAddrs []common.Address
+	)
+
+	keydir := ctx.String(enNodeKeyDirFlag.Name)
+	if len(keydir) > 0 {
+		privKeys, nodeKeys, nodeAddrs = istcommon.LoadNodekey(keydir)
+		if len(nodeKeys) != num {
+			log.Fatalf("The number of nodekey files (%d) does not match the given EN num (%d)", len(nodeKeys), num)
+		}
+	} else {
+		privKeys, nodeKeys, nodeAddrs = istcommon.GenerateKeys(num)
+	}
 
 	var p2pPort uint16
 	var endpoints []*ValidatorInfo

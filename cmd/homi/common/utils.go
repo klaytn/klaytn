@@ -148,6 +148,39 @@ func GenerateKip113Init(privKeys []*ecdsa.PrivateKey, owner common.Address) syst
 	return init
 }
 
+func LoadNodekey(dir string) (keys []*ecdsa.PrivateKey, nodekeys []string, addrs []common.Address) {
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		logger.Error("Failed to read directory", "dir", dir, "err", err)
+		return nil, nil, nil
+	}
+
+	// files are sorted by filename
+	for _, file := range files {
+		fn := file.Name()
+		if strings.HasPrefix(fn, "nodekey") {
+			b, err := os.ReadFile(filepath.Join(dir, fn))
+			if err != nil {
+				logger.Error("Failed to load key", "file", fn, "err", err)
+				return nil, nil, nil
+			}
+			nodekey := string(b)
+			nodekeys = append(nodekeys, nodekey)
+			key, err := crypto.HexToECDSA(nodekey)
+			if err != nil {
+				logger.Error("Failed to generate key", "err", err)
+				return nil, nil, nil
+			}
+			keys = append(keys, key)
+
+			addr := crypto.PubkeyToAddress(key.PublicKey)
+			addrs = append(addrs, addr)
+		}
+	}
+
+	return keys, nodekeys, addrs
+}
+
 func RandomHex() string {
 	b, _ := RandomBytes(32)
 	return common.BytesToHash(b).Hex()
