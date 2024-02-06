@@ -706,8 +706,8 @@ func Gen(ctx *cli.Context) error {
 
 	if keydir := ctx.String(cnNodeKeyDirFlag.Name); len(keydir) > 0 {
 		privKeys, nodeKeys, nodeAddrs = istcommon.LoadNodekey(keydir)
-		if len(nodeKeys) != numValidators {
-			log.Fatalf("The number of nodekey files (%d) does not match the given CN num (%d)", len(nodeKeys), numValidators)
+		if len(nodeKeys) != cnNum {
+			log.Fatalf("The number of nodekey files (%d) does not match the given CN num (%d)", len(nodeKeys), cnNum)
 		}
 	} else if mnemonic := ctx.String(mnemonicFlag.Name); len(mnemonic) > 0 {
 		mnemonic = strings.ReplaceAll(mnemonic, ",", " ")
