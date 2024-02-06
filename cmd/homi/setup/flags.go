@@ -131,16 +131,35 @@ var (
 		Usage:   "Set the type of genesis.json to generate (cypress-test, cypress, baobab-test, baobab, clique, servicechain, servicechain-test, istanbul)",
 		Aliases: []string{"genesis.type"},
 	}
-	mnemonic = &cli.StringFlag{
+
+	mnemonicFlag = &cli.StringFlag{
 		Name:  "mnemonic",
 		Usage: "Use given mnemonic to derive node keys",
 		Value: "",
 	}
 
-	mnemonicPath = &cli.StringFlag{
+	mnemonicPathFlag = &cli.StringFlag{
 		Name:  "mnemonic-path",
 		Usage: "Use given path/coin to derive node keys (format: m/44'/60'/0'/0/). Effective only if --mnemonic is given",
 		Value: "eth",
+	}
+
+	cnNodeKeyDirFlag = &cli.StringFlag{
+		Name:  "cn-nodekey-dir",
+		Usage: "CN nodekey dir containing nodekey*",
+		Value: "",
+	}
+
+	pnNodeKeyDirFlag = &cli.StringFlag{
+		Name:  "pn-nodekey-dir",
+		Usage: "PN nodekey dir containing nodekey*",
+		Value: "",
+	}
+
+	enNodeKeyDirFlag = &cli.StringFlag{
+		Name:  "en-nodekey-dir",
+		Usage: "EN nodekey dir containing nodekey*",
+		Value: "",
 	}
 
 	chainIDFlag = &cli.Uint64Flag{
