@@ -21,17 +21,20 @@
 package nodecmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"runtime"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/docker/docker/pkg/reexec"
 	"github.com/klaytn/klaytn/api/debug"
 	"github.com/klaytn/klaytn/cmd/utils"
 	"github.com/klaytn/klaytn/console"
 	metricutils "github.com/klaytn/klaytn/metrics/utils"
+	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node"
 	"github.com/urfave/cli/v2"
 )
@@ -167,6 +170,31 @@ func runKlay(t *testing.T, name string, args ...string) *testklay {
 	tt.Run(name, args...)
 
 	return tt
+}
+
+// waitForEndpoint attempts to connect to an RPC endpoint until it succeeds.
+func waitForEndpoint(t *testing.T, endpoint string, timeout time.Duration) {
+	probe := func() bool {
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		c, err := rpc.DialContext(ctx, endpoint)
+		if c != nil {
+			_, err = c.SupportedModules()
+			c.Close()
+		}
+		return err == nil
+	}
+
+	start := time.Now()
+	for {
+		if probe() {
+			return
+		}
+		if time.Since(start) > timeout {
+			t.Fatal("endpoint", endpoint, "did not open within", timeout)
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
 }
 
 func RunTestKlaytnNode(ctx *cli.Context) error {
