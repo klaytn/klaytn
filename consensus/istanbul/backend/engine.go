@@ -544,8 +544,8 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 		}
 	}
 
-	// The Registry contract must be immediately available from the fork block.
-	// So it is installed at block (RandaoCompatibleBlock - 1) which is before the fork block.
+	// The Registry contract is installed at RandaoCompatibleBlock,
+	// so we need to call KIP113 contract from RandaoRegistry at RandaoCompatibleBlock.
 	if chain.Config().IsRandaoForkBlock(header.Number) {
 		err := system.InstallRegistry(state, chain.Config().RandaoRegistry)
 		if err != nil {
