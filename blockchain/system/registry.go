@@ -125,16 +125,3 @@ func GetRegistryCaller(backend bind.ContractCaller, num *big.Int) (*contracts.Re
 	}
 	return caller, nil
 }
-
-func ReadAddressFromConfig(config *params.ChainConfig, name string) (common.Address, error) {
-	if (config.RandaoRegistry == nil) || (config.RandaoRegistry.Records == nil) {
-		logger.Error("RandaoRegistry not correctly set in ChainConfig")
-		return common.Address{}, ErrContractNotConfigured
-	}
-	addr, ok := config.RandaoRegistry.Records[name]
-	if !ok {
-		logger.Error("Not congigured in RandaoRegistry", "name", name)
-		return common.Address{}, ErrContractNotConfigured
-	}
-	return addr, nil
-}
