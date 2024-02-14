@@ -161,12 +161,7 @@ func senderTxHashIndexer(db database.DBManager, chainEvent <-chan blockchain.Cha
 				}
 
 				txHash := tx.Hash()
-
-				if err = db.PutSenderTxHashToTxHashToBatch(batch, senderTxHash, txHash); err != nil {
-					logger.Error("Failed to store senderTxHash to txHash mapping to database",
-						"blockNum", event.Block.Number(), "senderTxHash", senderTxHash, "txHash", txHash, "err", err)
-					break
-				}
+				db.PutSenderTxHashToTxHashToBatch(batch, senderTxHash, txHash)
 			}
 
 			if err == nil {

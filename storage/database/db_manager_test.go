@@ -612,9 +612,7 @@ func TestDBManager_TxLookupEntry(t *testing.T) {
 		assert.Equal(t, uint64(0), entryIndex)
 
 		batch := dbm.NewSenderTxHashToTxHashBatch()
-		if err := dbm.PutSenderTxHashToTxHashToBatch(batch, hash1, hash2); err != nil {
-			t.Fatal("Failed while calling PutSenderTxHashToTxHashToBatch", "err", err)
-		}
+		dbm.PutSenderTxHashToTxHashToBatch(batch, hash1, hash2)
 
 		if err := batch.Write(); err != nil {
 			t.Fatal("Failed writing SenderTxHashToTxHashToBatch", "err", err)
@@ -634,21 +632,15 @@ func TestDBManager_BloomBits(t *testing.T) {
 		sh, _ := dbm.ReadBloomBits(hash1[:])
 		assert.Nil(t, sh)
 
-		err := dbm.WriteBloomBits(hash1[:], hash1[:])
-		if err != nil {
-			t.Fatal("Failed to write bloom bits", "err", err)
-		}
+		dbm.WriteBloomBits(hash1[:], hash1[:])
 
-		sh, err = dbm.ReadBloomBits(hash1[:])
+		sh, err := dbm.ReadBloomBits(hash1[:])
 		if err != nil {
 			t.Fatal("Failed to read bloom bits", "err", err)
 		}
 		assert.Equal(t, hash1[:], sh)
 
-		err = dbm.WriteBloomBits(hash1[:], hash2[:])
-		if err != nil {
-			t.Fatal("Failed to write bloom bits", "err", err)
-		}
+		dbm.WriteBloomBits(hash1[:], hash2[:])
 
 		sh, err = dbm.ReadBloomBits(hash1[:])
 		if err != nil {
@@ -801,14 +793,12 @@ func TestDBManager_CliqueSnapshot(t *testing.T) {
 		assert.NotNil(t, err)
 		assert.Nil(t, data)
 
-		err = dbm.WriteCliqueSnapshot(hash1, hash1[:])
-		assert.Nil(t, err)
+		dbm.WriteCliqueSnapshot(hash1, hash1[:])
 
 		data, _ = dbm.ReadCliqueSnapshot(hash1)
 		assert.Equal(t, hash1[:], data)
 
-		err = dbm.WriteCliqueSnapshot(hash1, hash2[:])
-		assert.Nil(t, err)
+		dbm.WriteCliqueSnapshot(hash1, hash2[:])
 
 		data, _ = dbm.ReadCliqueSnapshot(hash1)
 		assert.Equal(t, hash2[:], data)

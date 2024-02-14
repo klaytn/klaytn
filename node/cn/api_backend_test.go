@@ -784,8 +784,7 @@ func headerGovTest(t *testing.T, tt *rewindTest) {
 	snap := backend.Snapshot{Number: params.CheckpointInterval, Hash: chain.GetHeaderByNumber(params.CheckpointInterval).Hash()}
 	blob, err := json.Marshal(snap)
 	assert.Nil(t, err)
-	err = db.WriteIstanbulSnapshot(snap.Hash, blob)
-	assert.Nil(t, err)
+	db.WriteIstanbulSnapshot(snap.Hash, blob)
 	_, err = db.ReadIstanbulSnapshot(snap.Hash)
 	assert.Nil(t, err)
 

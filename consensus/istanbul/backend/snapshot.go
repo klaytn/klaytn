@@ -108,7 +108,8 @@ func (s *Snapshot) store(db database.DBManager) error {
 		return err
 	}
 
-	return db.WriteIstanbulSnapshot(s.Hash, blob)
+	db.WriteIstanbulSnapshot(s.Hash, blob)
+	return nil
 }
 
 // copy creates a deep copy of the snapshot, though not the individual votes.
