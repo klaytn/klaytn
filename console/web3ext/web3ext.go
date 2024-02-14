@@ -927,6 +927,18 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
 		}),
 		new web3._extend.Method({
+			name: 'getActiveAddressFromRegistry',
+			call: 'klay_getActiveAddressFromRegistry',
+			params: 2,
+			inputFormatter: [null, web3._extend.formatters.inputBlockNumberFormatter],
+		}),
+		new web3._extend.Method({
+			name: 'getAllRecordsFromRegistry',
+			call: 'klay_getAllRecordsFromRegistry',
+			params: 2,
+			inputFormatter: [null, web3._extend.formatters.inputBlockNumberFormatter],
+		}),
+		new web3._extend.Method({
 			name: 'accountCreated',
 			call: 'klay_accountCreated',
 			params: 2,
@@ -960,6 +972,12 @@ web3._extend({
 			call: 'klay_getBlockWithConsensusInfoByNumberRange',
 			params: 2,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'getBlsInfos',
+			call: 'klay_getBlsInfos',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'isContractAccount',
