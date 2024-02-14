@@ -516,14 +516,7 @@ func (api *APIExtension) GetAllRecordsFromRegistry(name string, number rpc.Block
 		bn = big.NewInt(number.Int64())
 	}
 
-	if api.chain.Config().IsRandaoForkBlock(bn) {
-		// return directly from config if it's at RandaoForkBlock
-		addr, err := system.ReadAddressFromConfig(api.chain.Config(), name)
-		if err != nil {
-			return nil, err
-		}
-		return []interface{}{map[string]interface{}{"addr": addr, "activation": big.NewInt(0)}}, nil
-	} else if api.chain.Config().IsRandaoForkEnabled(bn) {
+	if api.chain.Config().IsRandaoForkEnabled(bn) {
 		backend := backends.NewBlockchainContractBackend(api.chain, nil, nil)
 		records, err := system.ReadAllRecordsFromRegistry(backend, name, bn)
 		if err != nil {
@@ -531,7 +524,7 @@ func (api *APIExtension) GetAllRecordsFromRegistry(name string, number rpc.Block
 		}
 
 		if len(records) == 0 {
-			return nil, errors.New(name + " has not been registered")
+			return nil, errors.New("no records for " + name)
 		}
 
 		recordsList := make([]interface{}, len(records))
@@ -552,14 +545,7 @@ func (api *APIExtension) GetActiveAddressFromRegistry(name string, number rpc.Bl
 		bn = big.NewInt(number.Int64())
 	}
 
-	if api.chain.Config().IsRandaoForkBlock(bn) {
-		// Return directly from config if it's at RandaoForkBlock
-		addr, err := system.ReadAddressFromConfig(api.chain.Config(), name)
-		if err != nil {
-			return common.Address{}, err
-		}
-		return addr, nil
-	} else if api.chain.Config().IsRandaoForkEnabled(bn) {
+	if api.chain.Config().IsRandaoForkEnabled(bn) {
 		backend := backends.NewBlockchainContractBackend(api.chain, nil, nil)
 		addr, err := system.ReadActiveAddressFromRegistry(backend, name, bn)
 		if err != nil {
