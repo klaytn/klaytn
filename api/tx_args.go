@@ -32,7 +32,6 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
@@ -48,6 +47,10 @@ var (
 	errTxArgNilGas           = errors.New("gas limit is not set")
 	errTxArgNilGasPrice      = errors.New("gas price is not set")
 	errNotForFeeDelegationTx = errors.New("fee-delegation type transactions are not allowed to use this API")
+
+	// Javascript console can express integer at maximum, `Number.JS_SAFE_MAX_INTEGER`, where
+	// Number.MAX_SAFE_INTEGER(2**53 - 1) = 9007199254740991
+	JS_SAFE_MAX_INTEGER = uint64(9000000000000000)
 )
 
 // isTxField checks whether the string is a field name of the specific txType.
@@ -731,7 +734,7 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 	// Set default gas & gas price if none were set
 	gas := globalGasCap
 	if gas == 0 {
-		gas = uint64(math.MaxUint64 / 2)
+		gas = JS_SAFE_MAX_INTEGER
 	}
 	if args.Gas != nil {
 		gas = uint64(*args.Gas)
