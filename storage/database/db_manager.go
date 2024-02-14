@@ -1690,7 +1690,7 @@ func (dbm *databaseManager) WriteBadBlock(block *types.Block) {
 func (dbm *databaseManager) DeleteBadBlocks() {
 	db := dbm.getDatabase(MiscDB)
 	if err := db.Delete(badBlockKey); err != nil {
-		logger.Error("Failed to delete bad blocks", "err", err)
+		logger.Crit("Failed to delete bad blocks", "err", err)
 	}
 }
 
@@ -2151,7 +2151,9 @@ func putTxLookupEntriesToPutter(putter KeyValueWriter, block *types.Block) {
 // DeleteTxLookupEntry removes all transaction data associated with a hash.
 func (dbm *databaseManager) DeleteTxLookupEntry(hash common.Hash) {
 	db := dbm.getDatabase(TxLookUpEntryDB)
-	db.Delete(TxLookupKey(hash))
+	if err := db.Delete(TxLookupKey(hash)); err != nil {
+		logger.Crit("Failed to delete tx lookup key", "err", err)
+	}
 }
 
 // ReadTxAndLookupInfo retrieves a specific transaction from the database, along with
