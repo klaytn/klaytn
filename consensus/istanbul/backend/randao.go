@@ -71,10 +71,10 @@ func (p *ChainBlsPubkeyProvider) getAllCached(chain consensus.ChainReader, num *
 	// it is not possible to read KIP113 address from the Registry at RandaoForkBlock.
 	// Hence the ChainConfig fallback.
 	if chain.Config().IsRandaoForkBlock(num) {
-		var ok bool
-		kip113Addr, ok = chain.Config().RandaoRegistry.Records[system.Kip113Name]
-		if !ok {
-			return nil, errors.New("KIP113 address not set in ChainConfig")
+		var err error
+		kip113Addr, err = system.ReadKip113FromConfig(chain.Config())
+		if err != nil {
+			return nil, err
 		}
 	} else if chain.Config().IsRandaoForkEnabled(num) {
 		// If no state exist at block number `parentNum`,

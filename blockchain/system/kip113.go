@@ -27,6 +27,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	contracts "github.com/klaytn/klaytn/contracts/system_contracts"
 	"github.com/klaytn/klaytn/crypto/bls"
+	"github.com/klaytn/klaytn/params"
 )
 
 type BlsPublicKeyInfo struct {
@@ -178,4 +179,17 @@ func ReadKip113All(backend bind.ContractCaller, contractAddr common.Address, num
 	}
 
 	return infos, err
+}
+
+func ReadKip113FromConfig(config *params.ChainConfig) (common.Address, error) {
+	if (config.RandaoRegistry == nil) || (config.RandaoRegistry.Records == nil) {
+		logger.Error("RandaoRegistry not correctly set in ChainConfig")
+		return common.Address{}, ErrKip113NotConfigured
+	}
+	kip113Addr, ok := config.RandaoRegistry.Records[Kip113Name]
+	if !ok {
+		logger.Error("KIP113 address not set in ChainConfig")
+		return common.Address{}, ErrKip113NotConfigured
+	}
+	return kip113Addr, nil
 }

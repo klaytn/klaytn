@@ -62,6 +62,7 @@ var (
 
 	// Errors
 	ErrRegistryNotInstalled = errors.New("Registry contract not installed")
+	ErrKip113NotConfigured  = errors.New("KIP113 not configured at the RandaoRegistry")
 	ErrKip113BadResult      = errors.New("KIP113 call returned bad data")
 	ErrKip113BadPop         = errors.New("KIP113 PoP verification failed")
 )
