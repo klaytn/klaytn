@@ -681,7 +681,6 @@ func (stdBatch *stateTrieDBBatch) ValueSize() int {
 	return maxSize
 }
 
-// TODO
 // Write passes the list of batch to WriteBatchesParallel for writing batches.
 func (stdBatch *stateTrieDBBatch) Write() error {
 	_, err := WriteBatchesParallel(stdBatch.batches...)
