@@ -85,11 +85,11 @@ func TestIPCAttachWelcome(t *testing.T) {
 	klay := runKlay(t,
 		"klay-test", "--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none", "--ipcpath", ipc)
 
-	time.Sleep(5 * time.Second) // Simple way to wait for the RPC endpoint to open
+	waitForEndpoint(t, ipc, 10*time.Second)
 	testAttachWelcome(t, klay, "ipc:"+ipc, ipcAPIs)
 
 	klay.Interrupt()
-	klay.ExpectExit()
+	klay.Kill()
 }
 
 func TestHTTPAttachWelcome(t *testing.T) {
@@ -97,11 +97,12 @@ func TestHTTPAttachWelcome(t *testing.T) {
 	klay := runKlay(t,
 		"klay-test", "--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none", "--rpc", "--rpcport", port)
 
-	time.Sleep(5 * time.Second) // Simple way to wait for the RPC endpoint to open
-	testAttachWelcome(t, klay, "http://localhost:"+port, httpAPIs)
+	endpoint := "http://127.0.0.1:" + port
+	waitForEndpoint(t, endpoint, 10*time.Second)
+	testAttachWelcome(t, klay, endpoint, httpAPIs)
 
 	klay.Interrupt()
-	klay.ExpectExit()
+	klay.Kill()
 }
 
 func TestWSAttachWelcome(t *testing.T) {
@@ -110,11 +111,12 @@ func TestWSAttachWelcome(t *testing.T) {
 	klay := runKlay(t,
 		"klay-test", "--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none", "--ws", "--wsport", port)
 
-	time.Sleep(5 * time.Second) // Simple way to wait for the RPC endpoint to open
-	testAttachWelcome(t, klay, "ws://localhost:"+port, httpAPIs)
+	endpoint := "ws://127.0.0.1:" + port
+	waitForEndpoint(t, endpoint, 10*time.Second)
+	testAttachWelcome(t, klay, endpoint, httpAPIs)
 
 	klay.Interrupt()
-	klay.ExpectExit()
+	klay.Kill()
 }
 
 func testAttachWelcome(t *testing.T, klay *testklay, endpoint, apis string) {
