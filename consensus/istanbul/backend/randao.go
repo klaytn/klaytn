@@ -72,7 +72,7 @@ func (p *ChainBlsPubkeyProvider) getAllCached(chain consensus.ChainReader, num *
 	// Hence the ChainConfig fallback.
 	if chain.Config().IsRandaoForkBlock(num) {
 		var err error
-		kip113Addr, err = system.ReadKip113FromConfig(chain.Config())
+		kip113Addr, err = system.ReadAddressFromConfig(chain.Config(), system.Kip113Name)
 		if err != nil {
 			return nil, err
 		}

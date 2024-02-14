@@ -61,8 +61,8 @@ var (
 	ERC1967ProxyCode = hexutil.MustDecode("0x" + contracts.ERC1967ProxyBinRuntime)
 
 	// Errors
-	ErrRegistryNotInstalled = errors.New("Registry contract not installed")
-	ErrKip113NotConfigured  = errors.New("KIP113 not configured at the RandaoRegistry")
-	ErrKip113BadResult      = errors.New("KIP113 call returned bad data")
-	ErrKip113BadPop         = errors.New("KIP113 PoP verification failed")
+	ErrRegistryNotInstalled  = errors.New("Registry contract not installed")
+	ErrContractNotConfigured = errors.New("Given contract not configured in RandaoRegistry")
+	ErrKip113BadResult       = errors.New("KIP113 call returned bad data")
+	ErrKip113BadPop          = errors.New("KIP113 PoP verification failed")
 )
