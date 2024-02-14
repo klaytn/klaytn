@@ -491,20 +491,21 @@ func (api *APIExtension) GetBlsInfos(number rpc.BlockNumber) (map[string]interfa
 	}
 
 	backend := backends.NewBlockchainContractBackend(api.chain, nil, nil)
-	if infos, err := system.ReadKip113All(backend, kip113Addr, bn); err != nil {
+	infos, err := system.ReadKip113All(backend, kip113Addr, bn);
+	if err != nil {
 		return nil, err
-	} else {
-		blsInfos := make(map[string]interface{})
+	} 
+	
+	blsInfos := make(map[string]interface{})
+	for addr, info := range infos {
 		// make publicKey, Pop to hexadecimal string
-		for addr, info := range infos {
-			blsInfos[addr.Hex()] = map[string]interface{}{
-				"publicKey": hex.EncodeToString(info.PublicKey),
-				"pop":       hex.EncodeToString(info.Pop),
-				"verifyErr": info.VerifyErr,
-			}
+		blsInfos[addr.Hex()] = map[string]interface{}{
+			"publicKey": hex.EncodeToString(info.PublicKey),
+			"pop":       hex.EncodeToString(info.Pop),
+			"verifyErr": info.VerifyErr,
 		}
-		return blsInfos, nil
 	}
+	return blsInfos, nil
 }
 
 func (api *APIExtension) GetAllRecordsFromRegistry(name string, number rpc.BlockNumber) ([]interface{}, error) {
@@ -517,25 +518,27 @@ func (api *APIExtension) GetAllRecordsFromRegistry(name string, number rpc.Block
 
 	if api.chain.Config().IsRandaoForkBlock(bn) && name == system.Kip113Name {
 		// return directly from config if it's at RandaoForkBlock and the requested contract is KIP113
-		if kip113Addr, err := system.ReadKip113FromConfig(api.chain.Config()); err != nil {
+		kip113Addr, err := system.ReadKip113FromConfig(api.chain.Config())
+		if err != nil {
 			return nil, err
-		} else {
-			return []interface{}{map[string]interface{}{"addr": kip113Addr, "activation": big.NewInt(0)}}, nil
 		}
+		return []interface{}{map[string]interface{}{"addr": kip113Addr, "activation": big.NewInt(0)}}, nil
 	} else if api.chain.Config().IsRandaoForkEnabled(bn) {
 		backend := backends.NewBlockchainContractBackend(api.chain, nil, nil)
-		if records, err := system.ReadAllRecordsFromRegistry(backend, name, bn); err != nil {
+		records, err := system.ReadAllRecordsFromRegistry(backend, name, bn)
+		if err != nil {
 			return nil, err
-		} else {
-			if len(records) == 0 {
-				return nil, errors.New(name + " has not been registered")
-			}
-			recordsList := make([]interface{}, len(records))
-			for i, record := range records {
-				recordsList[i] = map[string]interface{}{"addr": record.Addr, "activation": record.Activation}
-			}
-			return recordsList, nil
 		}
+
+		if len(records) == 0 {
+			return nil, errors.New(name + " has not been registered")
+		}
+
+		recordsList := make([]interface{}, len(records))
+		for i, record := range records {
+			recordsList[i] = map[string]interface{}{"addr": record.Addr, "activation": record.Activation}
+		}
+		return recordsList, nil
 	} else {
 		return nil, errors.New("randao is not enabled")
 	}
@@ -551,21 +554,22 @@ func (api *APIExtension) GetActiveAddressFromRegistry(name string, number rpc.Bl
 
 	if api.chain.Config().IsRandaoForkBlock(bn) && name == system.Kip113Name {
 		// Return directly from config if it's at RandaoForkBlock and the requested contract is KIP113
-		if kip113Addr, err := system.ReadKip113FromConfig(api.chain.Config()); err != nil {
+		kip113Addr, err := system.ReadKip113FromConfig(api.chain.Config())
+		if err != nil {
 			return common.Address{}, err
-		} else {
-			return kip113Addr, nil
 		}
+		return kip113Addr, nil
 	} else if api.chain.Config().IsRandaoForkEnabled(bn) {
 		backend := backends.NewBlockchainContractBackend(api.chain, nil, nil)
-		if addr, err := system.ReadActiveAddressFromRegistry(backend, name, bn); err != nil {
+		addr, err := system.ReadActiveAddressFromRegistry(backend, name, bn)
+		if err != nil {
 			return common.Address{}, err
-		} else {
-			if addr == (common.Address{}) {
-				return common.Address{}, errors.New("no active address for " + name)
-			}
-			return addr, nil
 		}
+
+		if addr == (common.Address{}) {
+			return common.Address{}, errors.New("no active address for " + name)
+		}
+		return addr, nil
 	} else {
 		return common.Address{}, errors.New("randao is not enabled")
 	}
