@@ -202,7 +202,7 @@ func RegistryMock() Option {
 	}
 }
 
-func AllocateKip113(kip113ProxyAddr, kip113LogicAddr common.Address, proxyStorage, logicStorage map[common.Hash]common.Hash) Option {
+func AllocateKip113(kip113ProxyAddr, kip113LogicAddr common.Address, owner common.Address, proxyStorage, logicStorage map[common.Hash]common.Hash) Option {
 	return func(genesis *blockchain.Genesis) {
 		proxyCode := system.ERC1967ProxyCode
 		logicCode := system.Kip113Code
@@ -217,6 +217,12 @@ func AllocateKip113(kip113ProxyAddr, kip113LogicAddr common.Address, proxyStorag
 			Storage: logicStorage,
 			Balance: big.NewInt(0),
 		}
+		genesis.Config.RandaoRegistry = &params.RegistryConfig{
+			Records: map[string]common.Address{
+				system.Kip113Name: kip113ProxyAddr,
+			},
+			Owner: owner,
+		}
 	}
 }
 
@@ -228,11 +234,16 @@ func Kip113Mock(kip113LogicAddr common.Address) Option {
 		if !ok {
 			log.Fatalf("No kip113 to patch")
 		}
+		_, ok = genesis.Config.RandaoRegistry.Records[system.Kip113Name]
+		if !ok {
+			log.Fatalf("No kip113 record to patch")
+		}
 
 		genesis.Alloc[kip113LogicAddr] = blockchain.GenesisAccount{
 			Code:    kip113MockCode,
 			Balance: big.NewInt(0),
 		}
+		genesis.Config.RandaoRegistry.Records[system.Kip113Name] = kip113LogicAddr
 	}
 }
 

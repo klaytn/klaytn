@@ -614,7 +614,7 @@ func allocateKip113(ctx *cli.Context, genesisJson *blockchain.Genesis, init syst
 	allocStorage := system.MergeStorage(allocProxyStorage, allocKip113Storage)
 	allocLogicStorage := system.AllocKip113Logic()
 
-	allocationFunction := genesis.AllocateKip113(kip113ProxyAddr, kip113LogicAddr, allocStorage, allocLogicStorage)
+	allocationFunction := genesis.AllocateKip113(kip113ProxyAddr, kip113LogicAddr, init.Owner, allocStorage, allocLogicStorage)
 	allocationFunction(genesisJson)
 
 	return &kip113ProxyAddr, &kip113LogicAddr
