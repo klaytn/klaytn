@@ -612,6 +612,12 @@ func TestMultiOperatorRequestRecovery(t *testing.T) {
 	assert.Equal(t, nil, vtr.recoverPendingEvents())
 	info.remoteInfo.account = info.localInfo.account // other operator
 	ops[KLAY].dummyHandle(info, info.remoteInfo)
+	if info.sim.BlockChain().CurrentBlock().Transactions().Len() == 0 {
+		// sometimes recovered pending requests are already acquired by BridgeInfo loop, not dummyHandle
+		// for this case, give enough time for the BridgeInfo loop process the pending requests
+		time.Sleep(10 * time.Second)
+		info.sim.Commit()
+	}
 
 	// 9. Check results.
 	err = vtr.updateRecoveryHint()
