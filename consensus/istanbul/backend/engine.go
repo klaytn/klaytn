@@ -544,8 +544,7 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 		}
 	}
 
-	// The Registry contract is installed at RandaoCompatibleBlock,
-	// so we need to call KIP113 contract from RandaoRegistry at RandaoCompatibleBlock.
+	// The Registry contract are installed at RandaoCompatibleBlock with a KIP113 record
 	if chain.Config().IsRandaoForkBlock(header.Number) {
 		err := system.InstallRegistry(state, chain.Config().RandaoRegistry)
 		if err != nil {
