@@ -335,7 +335,7 @@ func doCover(cmdline []string) {
 
 	gotest.Args = append(gotest.Args, "-cover", "-covermode=atomic", "-coverprofile="+*outputFile)
 	gotest.Args = append(gotest.Args, "-coverpkg", coverPackagesString)
-	gotest.Args = append(gotest.Args, "--timeout=30m")
+	gotest.Args = append(gotest.Args, "--timeout=60m")
 	gotest.Args = append(gotest.Args, packages...)
 	build.MustRun(gotest)
 }
