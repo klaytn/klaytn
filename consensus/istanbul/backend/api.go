@@ -498,7 +498,7 @@ func (api *APIExtension) GetBlsInfos(number rpc.BlockNumber) (map[string]interfa
 
 	blsInfos := make(map[string]interface{})
 	for addr, info := range infos {
-		// make publicKey, Pop to hexadecimal string
+		// hexlify publicKey and pop
 		blsInfos[addr.Hex()] = map[string]interface{}{
 			"publicKey": hex.EncodeToString(info.PublicKey),
 			"pop":       hex.EncodeToString(info.Pop),
@@ -524,7 +524,7 @@ func (api *APIExtension) GetAllRecordsFromRegistry(name string, number rpc.Block
 		}
 
 		if len(records) == 0 {
-			return nil, errors.New("no records for " + name)
+			return nil, fmt.Errorf("%s has not been registered", name)
 		}
 
 		recordsList := make([]interface{}, len(records))
@@ -533,7 +533,7 @@ func (api *APIExtension) GetAllRecordsFromRegistry(name string, number rpc.Block
 		}
 		return recordsList, nil
 	} else {
-		return nil, errors.New("randao is not enabled")
+		return nil, errors.New("Randao fork is not enabled")
 	}
 }
 
@@ -557,7 +557,7 @@ func (api *APIExtension) GetActiveAddressFromRegistry(name string, number rpc.Bl
 		}
 		return addr, nil
 	} else {
-		return common.Address{}, errors.New("randao is not enabled")
+		return common.Address{}, errors.New("Randao fork is not enabled")
 	}
 }
 
