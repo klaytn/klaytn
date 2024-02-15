@@ -106,6 +106,11 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 	srcState := bc.StateCache()
 	dstState := state.NewDatabase(bc.db)
 
+	// collect preimages
+	preimages := bc.db.CollectPreimages(func(k common.Hash) []byte {
+		return dstState.TrieDB().Preimage(k)
+	})
+
 	// NOTE: lruCache is mandatory when state migration and block processing are executed simultaneously
 	lruCache, _ := lru.New(int(2 * units.Giga / common.HashLength)) // 2GB for 62,500,000 common.Hash key values
 	trieSync := state.NewStateSync(rootHash, dstState.TrieDB().DiskDB(), nil, lruCache, nil)
@@ -198,6 +203,9 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 		logger.Error("State migration is failed by commit error", "err", err)
 		return fmt.Errorf("DB write error: %v", err)
 	}
+
+	// Reinsert the collected images which are retrieved before migration
+	bc.db.WritePreimages(0, preimages)
 
 	stats.stateMigrationReport(true, trieSync.Pending(), trieSync.CalcProgressPercentage())
 	bc.readCnt, bc.committedCnt, bc.pendingCnt, bc.progress = stats.totalRead, stats.totalCommitted, trieSync.Pending(), stats.progress
