@@ -483,11 +483,9 @@ func (api *APIExtension) GetBlsInfos(number rpc.BlockNumber) (map[string]interfa
 		return nil, err
 	}
 
-	var bn *big.Int
+	bn := big.NewInt(number.Int64())
 	if number == rpc.LatestBlockNumber || number == rpc.PendingBlockNumber {
 		bn = big.NewInt(api.chain.CurrentBlock().Number().Int64())
-	} else {
-		bn = big.NewInt(number.Int64())
 	}
 
 	backend := backends.NewBlockchainContractBackend(api.chain, nil, nil)
@@ -509,11 +507,9 @@ func (api *APIExtension) GetBlsInfos(number rpc.BlockNumber) (map[string]interfa
 }
 
 func (api *APIExtension) GetAllRecordsFromRegistry(name string, number rpc.BlockNumber) ([]interface{}, error) {
-	var bn *big.Int
+	bn := big.NewInt(number.Int64())
 	if number == rpc.LatestBlockNumber || number == rpc.PendingBlockNumber {
 		bn = big.NewInt(api.chain.CurrentBlock().Number().Int64())
-	} else {
-		bn = big.NewInt(number.Int64())
 	}
 
 	if api.chain.Config().IsRandaoForkEnabled(bn) {
@@ -538,11 +534,9 @@ func (api *APIExtension) GetAllRecordsFromRegistry(name string, number rpc.Block
 }
 
 func (api *APIExtension) GetActiveAddressFromRegistry(name string, number rpc.BlockNumber) (common.Address, error) {
-	var bn *big.Int
+	bn := big.NewInt(number.Int64())
 	if number == rpc.LatestBlockNumber || number == rpc.PendingBlockNumber {
 		bn = big.NewInt(api.chain.CurrentBlock().Number().Int64())
-	} else {
-		bn = big.NewInt(number.Int64())
 	}
 
 	if api.chain.Config().IsRandaoForkEnabled(bn) {
