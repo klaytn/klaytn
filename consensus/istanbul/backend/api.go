@@ -21,13 +21,16 @@
 package backend
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
 	"reflect"
 
+	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	klaytnApi "github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/system"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
@@ -472,6 +475,84 @@ func (api *APIExtension) GetBlockWithConsensusInfoByHash(blockHash common.Hash) 
 	}
 
 	return api.makeRPCBlockOutput(block, cInfo, block.Transactions(), receipts), nil
+}
+
+func (api *APIExtension) GetBlsInfos(number rpc.BlockNumber) (map[string]interface{}, error) {
+	kip113Addr, err := api.GetActiveAddressFromRegistry(system.Kip113Name, number)
+	if err != nil {
+		return nil, err
+	}
+
+	bn := big.NewInt(number.Int64())
+	if number == rpc.LatestBlockNumber || number == rpc.PendingBlockNumber {
+		bn = big.NewInt(api.chain.CurrentBlock().Number().Int64())
+	}
+
+	backend := backends.NewBlockchainContractBackend(api.chain, nil, nil)
+	infos, err := system.ReadKip113All(backend, kip113Addr, bn)
+	if err != nil {
+		return nil, err
+	}
+
+	blsInfos := make(map[string]interface{})
+	for addr, info := range infos {
+		// hexlify publicKey and pop
+		blsInfos[addr.Hex()] = map[string]interface{}{
+			"publicKey": hex.EncodeToString(info.PublicKey),
+			"pop":       hex.EncodeToString(info.Pop),
+			"verifyErr": info.VerifyErr,
+		}
+	}
+	return blsInfos, nil
+}
+
+func (api *APIExtension) GetAllRecordsFromRegistry(name string, number rpc.BlockNumber) ([]interface{}, error) {
+	bn := big.NewInt(number.Int64())
+	if number == rpc.LatestBlockNumber || number == rpc.PendingBlockNumber {
+		bn = big.NewInt(api.chain.CurrentBlock().Number().Int64())
+	}
+
+	if api.chain.Config().IsRandaoForkEnabled(bn) {
+		backend := backends.NewBlockchainContractBackend(api.chain, nil, nil)
+		records, err := system.ReadAllRecordsFromRegistry(backend, name, bn)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(records) == 0 {
+			return nil, fmt.Errorf("%s has not been registered", name)
+		}
+
+		recordsList := make([]interface{}, len(records))
+		for i, record := range records {
+			recordsList[i] = map[string]interface{}{"addr": record.Addr, "activation": record.Activation}
+		}
+		return recordsList, nil
+	} else {
+		return nil, errors.New("Randao fork is not enabled")
+	}
+}
+
+func (api *APIExtension) GetActiveAddressFromRegistry(name string, number rpc.BlockNumber) (common.Address, error) {
+	bn := big.NewInt(number.Int64())
+	if number == rpc.LatestBlockNumber || number == rpc.PendingBlockNumber {
+		bn = big.NewInt(api.chain.CurrentBlock().Number().Int64())
+	}
+
+	if api.chain.Config().IsRandaoForkEnabled(bn) {
+		backend := backends.NewBlockchainContractBackend(api.chain, nil, nil)
+		addr, err := system.ReadActiveAddressFromRegistry(backend, name, bn)
+		if err != nil {
+			return common.Address{}, err
+		}
+
+		if addr == (common.Address{}) {
+			return common.Address{}, errors.New("no active address for " + name)
+		}
+		return addr, nil
+	} else {
+		return common.Address{}, errors.New("Randao fork is not enabled")
+	}
 }
 
 func (api *API) GetTimeout() uint64 {
