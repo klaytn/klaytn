@@ -691,7 +691,7 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 	// Set default gas & gas price if none were set
 	gas := globalGasCap
 	if gas == 0 {
-		gas = uint64(math.MaxUint64 / 2)
+		gas = params.UpperGasLimit
 	}
 	if args.Gas != 0 {
 		gas = uint64(args.Gas)
