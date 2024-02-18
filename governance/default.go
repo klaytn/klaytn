@@ -1048,16 +1048,12 @@ func (gov *Governance) WriteGovernanceState(num uint64, isCheckpoint bool) error
 		logger.Error("Error in marshaling governance state", "err", err)
 		return err
 	} else {
-		if err = gov.db.WriteGovernanceState(b); err != nil {
-			logger.Error("Error in writing governance state", "err", err)
-			return err
-		} else {
-			if isCheckpoint {
-				atomic.StoreUint64(&gov.lastGovernanceStateBlock, num)
-			}
-			logger.Info("Successfully stored governance state", "num", num)
-			return nil
+		gov.db.WriteGovernanceState(b)
+		if isCheckpoint {
+			atomic.StoreUint64(&gov.lastGovernanceStateBlock, num)
 		}
+		logger.Info("Successfully stored governance state", "num", num)
+		return nil
 	}
 }
 

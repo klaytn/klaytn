@@ -110,7 +110,8 @@ func (s *Snapshot) store(db database.DBManager) error {
 	if err != nil {
 		return err
 	}
-	return db.WriteCliqueSnapshot(s.Hash, blob)
+	db.WriteCliqueSnapshot(s.Hash, blob)
+	return nil
 }
 
 // copy creates a deep copy of the snapshot, though not the individual votes.

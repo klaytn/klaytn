@@ -34,7 +34,8 @@ func (db *CheckpointDB) ReadCheckpoint() (int64, error) {
 }
 
 func (db *CheckpointDB) WriteCheckpoint(checkpoint int64) error {
-	return db.manager.WriteChainDataFetcherCheckpoint(uint64(checkpoint))
+	db.manager.WriteChainDataFetcherCheckpoint(uint64(checkpoint))
+	return nil
 }
 
 func (db *CheckpointDB) SetComponent(component interface{}) {

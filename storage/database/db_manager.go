@@ -132,7 +132,7 @@ type DBManager interface {
 	FindCommonAncestor(a, b *types.Header) *types.Header
 
 	ReadIstanbulSnapshot(hash common.Hash) ([]byte, error)
-	WriteIstanbulSnapshot(hash common.Hash, blob []byte) error
+	WriteIstanbulSnapshot(hash common.Hash, blob []byte)
 	DeleteIstanbulSnapshot(hash common.Hash)
 
 	WriteMerkleProof(key, value []byte)
@@ -191,11 +191,11 @@ type DBManager interface {
 	ReadTxAndLookupInfo(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
 
 	NewSenderTxHashToTxHashBatch() Batch
-	PutSenderTxHashToTxHashToBatch(batch Batch, senderTxHash, txHash common.Hash) error
+	PutSenderTxHashToTxHashToBatch(batch Batch, senderTxHash, txHash common.Hash)
 	ReadTxHashFromSenderTxHash(senderTxHash common.Hash) common.Hash
 
 	ReadBloomBits(bloomBitsKey []byte) ([]byte, error)
-	WriteBloomBits(bloomBitsKey []byte, bits []byte) error
+	WriteBloomBits(bloomBitsKey []byte, bits []byte)
 
 	ReadValidSections() ([]byte, error)
 	WriteValidSections(encodedSections []byte)
@@ -278,7 +278,7 @@ type DBManager interface {
 	ReadTxReceiptInCache(txHash common.Hash) *types.Receipt
 
 	// snapshot in clique(ConsensusClique) consensus
-	WriteCliqueSnapshot(snapshotBlockHash common.Hash, encodedSnapshot []byte) error
+	WriteCliqueSnapshot(snapshotBlockHash common.Hash, encodedSnapshot []byte)
 	ReadCliqueSnapshot(snapshotBlockHash common.Hash) ([]byte, error)
 
 	// Governance related functions
@@ -287,7 +287,7 @@ type DBManager interface {
 	ReadGovernance(num uint64) (map[string]interface{}, error)
 	ReadRecentGovernanceIdx(count int) ([]uint64, error)
 	ReadGovernanceAtNumber(num uint64, epoch uint64) (uint64, map[string]interface{}, error)
-	WriteGovernanceState(b []byte) error
+	WriteGovernanceState(b []byte)
 	ReadGovernanceState() ([]byte, error)
 	DeleteGovernance(num uint64)
 	// TODO-Klaytn implement governance DB deletion methods.
@@ -302,7 +302,7 @@ type DBManager interface {
 	StartDBMigration(DBManager) error
 
 	// ChainDataFetcher checkpoint function
-	WriteChainDataFetcherCheckpoint(checkpoint uint64) error
+	WriteChainDataFetcherCheckpoint(checkpoint uint64)
 	ReadChainDataFetcherCheckpoint() (uint64, error)
 
 	TryCatchUpWithPrimary() error
@@ -1690,7 +1690,7 @@ func (dbm *databaseManager) WriteBadBlock(block *types.Block) {
 func (dbm *databaseManager) DeleteBadBlocks() {
 	db := dbm.getDatabase(MiscDB)
 	if err := db.Delete(badBlockKey); err != nil {
-		logger.Error("Failed to delete bad blocks", "err", err)
+		logger.Crit("Failed to delete bad blocks", "err", err)
 	}
 }
 
@@ -1728,9 +1728,11 @@ func (dbm *databaseManager) ReadIstanbulSnapshot(hash common.Hash) ([]byte, erro
 	return db.Get(snapshotKey(hash))
 }
 
-func (dbm *databaseManager) WriteIstanbulSnapshot(hash common.Hash, blob []byte) error {
+func (dbm *databaseManager) WriteIstanbulSnapshot(hash common.Hash, blob []byte) {
 	db := dbm.getDatabase(MiscDB)
-	return db.Put(snapshotKey(hash), blob)
+	if err := db.Put(snapshotKey(hash), blob); err != nil {
+		logger.Crit("Failed to write istanbul snapshot", "err", err)
+	}
 }
 
 func (dbm *databaseManager) DeleteIstanbulSnapshot(hash common.Hash) {
@@ -2119,7 +2121,7 @@ func (dbm *databaseManager) WriteAndCacheTxLookupEntries(block *types.Block) err
 		dbm.cm.writeTxAndLookupInfoCache(tx.Hash(), &TransactionLookup{tx, &entry})
 	}
 	if err := batch.Write(); err != nil {
-		logger.Error("Failed to write TxLookupEntries in batch", "err", err, "blockNumber", block.Number())
+		logger.Crit("Failed to write TxLookupEntries in batch", "err", err, "blockNumber", block.Number())
 		return err
 	}
 	return nil
@@ -2149,7 +2151,9 @@ func putTxLookupEntriesToPutter(putter KeyValueWriter, block *types.Block) {
 // DeleteTxLookupEntry removes all transaction data associated with a hash.
 func (dbm *databaseManager) DeleteTxLookupEntry(hash common.Hash) {
 	db := dbm.getDatabase(TxLookUpEntryDB)
-	db.Delete(TxLookupKey(hash))
+	if err := db.Delete(TxLookupKey(hash)); err != nil {
+		logger.Crit("Failed to delete tx lookup key", "err", err)
+	}
 }
 
 // ReadTxAndLookupInfo retrieves a specific transaction from the database, along with
@@ -2174,19 +2178,19 @@ func (dbm *databaseManager) NewSenderTxHashToTxHashBatch() Batch {
 
 // PutSenderTxHashToTxHashToBatch 1) puts the given senderTxHash and txHash to the given batch and
 // 2) writes the information to the cache.
-func (dbm *databaseManager) PutSenderTxHashToTxHashToBatch(batch Batch, senderTxHash, txHash common.Hash) error {
+func (dbm *databaseManager) PutSenderTxHashToTxHashToBatch(batch Batch, senderTxHash, txHash common.Hash) {
 	if err := batch.Put(SenderTxHashToTxHashKey(senderTxHash), txHash.Bytes()); err != nil {
-		return err
+		logger.Crit("Failed to write sender tx hash", "err", err)
 	}
 
 	dbm.cm.writeSenderTxHashToTxHashCache(senderTxHash, txHash)
 
 	if batch.ValueSize() > IdealBatchSize {
-		batch.Write()
+		if err := batch.Write(); err != nil {
+			logger.Crit("Failed to write sender tx hash", "err", err)
+		}
 		batch.Reset()
 	}
-
-	return nil
 }
 
 // ReadTxHashFromSenderTxHash retrieves a txHash corresponding to the given senderTxHash.
@@ -2215,9 +2219,11 @@ func (dbm *databaseManager) ReadBloomBits(bloomBitsKey []byte) ([]byte, error) {
 
 // WriteBloomBits stores the compressed bloom bits vector belonging to the given
 // section and bit index.
-func (dbm *databaseManager) WriteBloomBits(bloomBitsKey, bits []byte) error {
+func (dbm *databaseManager) WriteBloomBits(bloomBitsKey, bits []byte) {
 	db := dbm.getDatabase(MiscDB)
-	return db.Put(bloomBitsKey, bits)
+	if err := db.Put(bloomBitsKey, bits); err != nil {
+		logger.Crit("Failed to write bloom bits", "err", err)
+	}
 }
 
 // ValidSections operation.
@@ -2228,7 +2234,9 @@ func (dbm *databaseManager) ReadValidSections() ([]byte, error) {
 
 func (dbm *databaseManager) WriteValidSections(encodedSections []byte) {
 	db := dbm.getDatabase(MiscDB)
-	db.Put(validSectionKey, encodedSections)
+	if err := db.Put(validSectionKey, encodedSections); err != nil {
+		logger.Crit("Failed to write section data", "err", err)
+	}
 }
 
 // SectionHead operation.
@@ -2239,12 +2247,16 @@ func (dbm *databaseManager) ReadSectionHead(encodedSection []byte) ([]byte, erro
 
 func (dbm *databaseManager) WriteSectionHead(encodedSection []byte, hash common.Hash) {
 	db := dbm.getDatabase(MiscDB)
-	db.Put(sectionHeadKey(encodedSection), hash.Bytes())
+	if err := db.Put(sectionHeadKey(encodedSection), hash.Bytes()); err != nil {
+		logger.Crit("Failed to write section head", "err", err)
+	}
 }
 
 func (dbm *databaseManager) DeleteSectionHead(encodedSection []byte) {
 	db := dbm.getDatabase(MiscDB)
-	db.Delete(sectionHeadKey(encodedSection))
+	if err := db.Delete(sectionHeadKey(encodedSection)); err != nil {
+		logger.Crit("Failed to delete section head", "err", err)
+	}
 }
 
 // ReadDatabaseVersion retrieves the version number of the database.
@@ -2694,9 +2706,11 @@ func (dbm *databaseManager) ReadTxReceiptInCache(txHash common.Hash) *types.Rece
 	return dbm.cm.readTxReceiptInCache(txHash)
 }
 
-func (dbm *databaseManager) WriteCliqueSnapshot(snapshotBlockHash common.Hash, encodedSnapshot []byte) error {
+func (dbm *databaseManager) WriteCliqueSnapshot(snapshotBlockHash common.Hash, encodedSnapshot []byte) {
 	db := dbm.getDatabase(MiscDB)
-	return db.Put(snapshotKey(snapshotBlockHash), encodedSnapshot)
+	if err := db.Put(snapshotKey(snapshotBlockHash), encodedSnapshot); err != nil {
+		logger.Crit("Failed to write clique snapshot", "err", err)
+	}
 }
 
 func (dbm *databaseManager) ReadCliqueSnapshot(snapshotBlockHash common.Hash) ([]byte, error) {
@@ -2834,9 +2848,11 @@ func (dbm *databaseManager) ReadGovernanceAtNumber(num uint64, epoch uint64) (ui
 	return 0, nil, errors.New("No governance data found")
 }
 
-func (dbm *databaseManager) WriteGovernanceState(b []byte) error {
+func (dbm *databaseManager) WriteGovernanceState(b []byte) {
 	db := dbm.getDatabase(MiscDB)
-	return db.Put(governanceStateKey, b)
+	if err := db.Put(governanceStateKey, b); err != nil {
+		logger.Crit("Failed to write governance state", "err", err)
+	}
 }
 
 func (dbm *databaseManager) ReadGovernanceState() ([]byte, error) {
@@ -2844,9 +2860,11 @@ func (dbm *databaseManager) ReadGovernanceState() ([]byte, error) {
 	return db.Get(governanceStateKey)
 }
 
-func (dbm *databaseManager) WriteChainDataFetcherCheckpoint(checkpoint uint64) error {
+func (dbm *databaseManager) WriteChainDataFetcherCheckpoint(checkpoint uint64) {
 	db := dbm.getDatabase(MiscDB)
-	return db.Put(chaindatafetcherCheckpointKey, common.Int64ToByteBigEndian(checkpoint))
+	if err := db.Put(chaindatafetcherCheckpointKey, common.Int64ToByteBigEndian(checkpoint)); err != nil {
+		logger.Crit("Failed to wrtie chaindata fetcher checkpoint", "err", err)
+	}
 }
 
 func (dbm *databaseManager) ReadChainDataFetcherCheckpoint() (uint64, error) {
