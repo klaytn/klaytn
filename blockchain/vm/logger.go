@@ -113,8 +113,8 @@ type Tracer interface {
 	CaptureEnter(typ OpCode, from common.Address, to common.Address, input []byte, gas uint64, value *big.Int)
 	CaptureExit(output []byte, gasUsed uint64, err error)
 	// Opcode level
-	CaptureState(env *EVM, pc uint64, op OpCode, gas, cost, cc, ccUnit uint64, scope *ScopeContext, depth int, err error)
-	CaptureFault(env *EVM, pc uint64, op OpCode, gas, cost, cc, ccUnit uint64, scope *ScopeContext, depth int, err error)
+	CaptureState(env *EVM, pc uint64, op OpCode, gas, cost, ccLeft, ccOpcode uint64, scope *ScopeContext, depth int, err error)
+	CaptureFault(env *EVM, pc uint64, op OpCode, gas, cost, ccLeft, ccOpcode uint64, scope *ScopeContext, depth int, err error)
 }
 
 // StructLogger is an EVM state logger and implements Tracer.
@@ -149,7 +149,7 @@ func (l *StructLogger) CaptureStart(env *EVM, from common.Address, to common.Add
 // CaptureState logs a new structured log message and pushes it out to the environment
 //
 // CaptureState also tracks SSTORE ops to track dirty values.
-func (l *StructLogger) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost, cc, ccUnit uint64, scope *ScopeContext, depth int, err error) {
+func (l *StructLogger) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost, ccLeft, ccOpcode uint64, scope *ScopeContext, depth int, err error) {
 	memory := scope.Memory
 	stack := scope.Stack
 	contract := scope.Contract
@@ -193,14 +193,14 @@ func (l *StructLogger) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost, c
 		storage = l.changedValues[contract.Address()].Copy()
 	}
 	// create a new snapshot of the EVM.
-	log := StructLog{pc, op, gas, cost, mem, memory.Len(), stck, storage, depth, env.StateDB.GetRefund(), cc, ccUnit, err}
+	log := StructLog{pc, op, gas, cost, mem, memory.Len(), stck, storage, depth, env.StateDB.GetRefund(), ccLeft, ccOpcode, err}
 
 	l.logs = append(l.logs, log)
 }
 
 // CaptureFault implements the Tracer interface to trace an execution fault
 // while running an opcode.
-func (l *StructLogger) CaptureFault(env *EVM, pc uint64, op OpCode, gas, cost, cc, ccUnit uint64, scope *ScopeContext, depth int, err error) {
+func (l *StructLogger) CaptureFault(env *EVM, pc uint64, op OpCode, gas, cost, ccLeft, ccOpcode uint64, scope *ScopeContext, depth int, err error) {
 }
 
 // CaptureEnd is called after the call finishes to finalize the tracing.

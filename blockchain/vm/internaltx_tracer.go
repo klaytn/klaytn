@@ -199,7 +199,7 @@ func (t *InternalTxTracer) Stop(err error) {
 }
 
 // CaptureState implements the Tracer interface to trace a single step of VM execution.
-func (t *InternalTxTracer) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost, cc, ccUnit uint64, scope *ScopeContext, depth int, err error) {
+func (t *InternalTxTracer) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost, ccLeft, ccOpcode uint64, scope *ScopeContext, depth int, err error) {
 	if t.err == nil {
 		// Initialize the context if it wasn't done yet
 		if !t.initialized {
@@ -396,7 +396,7 @@ func (t *InternalTxTracer) step(log *tracerLog) error {
 
 // CaptureFault implements the Tracer interface to trace an execution fault
 // while running an opcode.
-func (t *InternalTxTracer) CaptureFault(env *EVM, pc uint64, op OpCode, gas, cost, cc, ccUnit uint64, scope *ScopeContext, depth int, err error) {
+func (t *InternalTxTracer) CaptureFault(env *EVM, pc uint64, op OpCode, gas, cost, ccLeft, ccOpcode uint64, scope *ScopeContext, depth int, err error) {
 	if t.err == nil {
 		// Apart from the error, everything matches the previous invocation
 		t.errValue = err.Error()
