@@ -49,7 +49,7 @@ test-others:
 	$(GORUN) build/ci.go test -p 1 -exclude datasync,networks,node,tests
 
 cover:
-	$(GORUN) build/ci.go cover -coverprofile=coverage.out
+	$(GORUN) build/ci.go cover -p 1 -coverprofile=coverage.out
 	go tool cover -func=coverage.out -o coverage_report.txt
 	go tool cover -html=coverage.out -o coverage_report.html
 	@echo "Two coverage reports coverage_report.txt and coverage_report.html are generated."
