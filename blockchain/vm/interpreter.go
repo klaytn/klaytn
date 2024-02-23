@@ -183,12 +183,14 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 		// For optimisation reason we're using uint64 as the program counter.
 		// It's theoretically possible to go above 2^64. The YP defines the PC
 		// to be uint256. Practically much less so feasible.
-		pc   = uint64(0) // program counter
-		cost uint64
+		pc       = uint64(0) // program counter
+		cost     uint64
+		ccOpcode uint64
 		// copies used by tracer
-		pcCopy              uint64              // needed for the deferred Tracer
-		gasCopy             uint64              // for Tracer to log gas remaining before execution
-		logged              bool                // deferred Tracer should ignore already logged steps
+		pcCopy              uint64 // needed for the deferred Tracer
+		gasCopy             uint64 // for Tracer to log gas remaining before execution
+		logged              bool   // deferred Tracer should ignore already logged steps
+		ccLeftCopy          uint64
 		res                 []byte              // result of the opcode execution function
 		allocatedMemorySize = uint64(mem.Len()) // Currently allocated memory size
 
@@ -201,9 +203,9 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 		defer func() {
 			if err != nil {
 				if !logged {
-					in.cfg.Tracer.CaptureState(in.evm, pcCopy, op, gasCopy, cost, callContext, in.evm.depth, err)
+					in.cfg.Tracer.CaptureState(in.evm, pcCopy, op, gasCopy, cost, ccLeftCopy, ccOpcode, callContext, in.evm.depth, err)
 				} else {
-					in.cfg.Tracer.CaptureFault(in.evm, pcCopy, op, gasCopy, cost, callContext, in.evm.depth, err)
+					in.cfg.Tracer.CaptureFault(in.evm, pcCopy, op, gasCopy, cost, ccLeftCopy, ccOpcode, callContext, in.evm.depth, err)
 				}
 			}
 		}()
@@ -219,7 +221,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 		}
 		if in.cfg.Debug {
 			// Capture pre-execution values for tracing.
-			logged, pcCopy, gasCopy = false, pc, contract.Gas
+			logged, pcCopy, gasCopy, ccLeftCopy = false, pc, contract.Gas, in.evm.Config.ComputationCostLimit-in.evm.opcodeComputationCostSum
 		}
 
 		// Get the operation from the jump table and validate the stack to ensure there are
@@ -247,6 +249,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 		if in.evm.opcodeComputationCostSum > in.evm.Config.ComputationCostLimit {
 			return nil, ErrOpcodeComputationCostLimitReached
 		}
+		ccOpcode = operation.computationCost
 		var memorySize uint64
 		var extraSize uint64
 		// calculate the new memory size and expand the memory to fit
@@ -284,7 +287,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 		}
 
 		if in.cfg.Debug {
-			in.cfg.Tracer.CaptureState(in.evm, pc, op, gasCopy, cost, callContext, in.evm.depth, err)
+			in.cfg.Tracer.CaptureState(in.evm, pc, op, gasCopy, cost, ccLeftCopy, ccOpcode, callContext, in.evm.depth, err)
 			logged = true
 		}
 
