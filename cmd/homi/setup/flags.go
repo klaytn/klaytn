@@ -512,6 +512,13 @@ var (
 		Aliases: []string{"genesis.hardfork.cancun-compatible-blocknumber"},
 	}
 
+	dragonCompatibleBlockNumberFlag = &cli.Int64Flag{
+		Name:    "dragon-compatible-blocknumber",
+		Usage:   "dragonCompatible blockNumber",
+		Value:   0,
+		Aliases: []string{"genesis.hardfork.dragon-compatible-blocknumber"},
+	}
+
 	// KIP103 hardfork is optional
 	kip103CompatibleBlockNumberFlag = &cli.Int64Flag{
 		Name:    "kip103-compatible-blocknumber",
