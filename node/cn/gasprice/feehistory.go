@@ -22,8 +22,10 @@ package gasprice
 
 import (
 	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
+	"math"
 	"math/big"
 	"sort"
 	"sync/atomic"
@@ -58,6 +60,11 @@ type blockFees struct {
 	// filled by processBlock
 	results processedFees
 	err     error
+}
+
+type cacheKey struct {
+	number      uint64
+	percentiles string
 }
 
 // processedFees contains the results of a processed block and is also used for caching
@@ -101,8 +108,16 @@ func (oracle *Oracle) processBlock(bf *blockFees, percentiles []float64) {
 		bf.results.nextBaseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
 	}
 
-	// There is no GasLimit in Klaytn, so it is enough to use pre-defined constant in api package as now.
-	bf.results.gasUsedRatio = float64(bf.header.GasUsed) / float64(params.UpperGasLimit)
+	// Use gasTarget as gasLimit for gasUsedRatio.
+	if chainconfig.IsMagmaForkEnabled(big.NewInt(int64(bf.blockNumber))) {
+		// TODO-Klaytn: Instead of using chainConfig, we should use governance set values.
+		if chainconfig.Governance.KIP71.GasTarget != 0 {
+			bf.results.gasUsedRatio = float64(bf.header.GasUsed) / float64(chainconfig.Governance.KIP71.GasTarget)
+		}
+	}
+	if bf.results.gasUsedRatio == 0 {
+		bf.results.gasUsedRatio = float64(bf.header.GasUsed) / float64(params.UpperGasLimit)
+	}
 	if len(percentiles) == 0 {
 		// rewards were not requested, return null
 		return
@@ -122,12 +137,9 @@ func (oracle *Oracle) processBlock(bf *blockFees, percentiles []float64) {
 	}
 
 	sorter := make(sortGasAndReward, len(bf.block.Transactions()))
-	for i := range bf.block.Transactions() {
-		// TODO-Klaytn: If we change the fixed unit price policy and add baseFee feature, we should re-calculate reward.
-		reward := bf.block.Header().BaseFee
-		if reward == nil {
-			reward = new(big.Int).SetUint64(chainconfig.UnitPrice)
-		}
+	for i, tx := range bf.block.Transactions() {
+		reward := tx.EffectiveGasTip(bf.header.BaseFee)
+
 		sorter[i] = txGasAndReward{gasUsed: bf.receipts[i].GasUsed, reward: reward}
 	}
 	sort.Sort(sorter)
@@ -228,6 +240,10 @@ func (oracle *Oracle) FeeHistory(
 		next    = oldestBlock
 		results = make(chan *blockFees, blocks)
 	)
+	percentileKey := make([]byte, 8*len(rewardPercentiles))
+	for i, p := range rewardPercentiles {
+		binary.LittleEndian.PutUint64(percentileKey[i*8:(i+1)*8], math.Float64bits(p))
+	}
 	for i := 0; i < maxBlockFetchers && i < blocks; i++ {
 		go func() {
 			for {
@@ -238,20 +254,30 @@ func (oracle *Oracle) FeeHistory(
 				}
 
 				fees := &blockFees{blockNumber: blockNumber}
-				if len(rewardPercentiles) != 0 {
-					fees.block, fees.err = oracle.backend.BlockByNumber(ctx, rpc.BlockNumber(blockNumber))
-					if fees.block != nil && fees.err == nil {
-						fees.receipts = oracle.backend.GetBlockReceipts(ctx, fees.block.Hash())
-						fees.header = fees.block.Header()
-					}
+				cacheKey := cacheKey{number: blockNumber, percentiles: string(percentileKey)}
+
+				if p, ok := oracle.historyCache.Get(cacheKey); ok {
+					fees.results = p.(processedFees)
+					results <- fees
 				} else {
-					fees.header, fees.err = oracle.backend.HeaderByNumber(ctx, rpc.BlockNumber(blockNumber))
+					if len(rewardPercentiles) != 0 {
+						fees.block, fees.err = oracle.backend.BlockByNumber(ctx, rpc.BlockNumber(blockNumber))
+						if fees.block != nil && fees.err == nil {
+							fees.receipts = oracle.backend.GetBlockReceipts(ctx, fees.block.Hash())
+							fees.header = fees.block.Header()
+						}
+					} else {
+						fees.header, fees.err = oracle.backend.HeaderByNumber(ctx, rpc.BlockNumber(blockNumber))
+					}
+					if fees.header != nil && fees.err == nil {
+						oracle.processBlock(fees, rewardPercentiles)
+						if fees.err == nil {
+							oracle.historyCache.Add(cacheKey, fees.results)
+						}
+					}
+					// send to results even if empty to guarantee that blocks items are sent in total
+					results <- fees
 				}
-				if fees.header != nil && fees.err == nil {
-					oracle.processBlock(fees, rewardPercentiles)
-				}
-				// send to results even if empty to guarantee that blocks items are sent in total
-				results <- fees
 			}
 		}()
 	}
@@ -259,7 +285,7 @@ func (oracle *Oracle) FeeHistory(
 		reward       = make([][]*big.Int, blocks)
 		baseFee      = make([]*big.Int, blocks+1)
 		gasUsedRatio = make([]float64, blocks)
-		blockCount   = blocks
+		firstMissing = blocks
 	)
 	for ; blocks > 0; blocks-- {
 		fees := <-results
@@ -267,13 +293,23 @@ func (oracle *Oracle) FeeHistory(
 			return common.Big0, nil, nil, nil, fees.err
 		}
 		i := int(fees.blockNumber - oldestBlock)
-		reward[i], baseFee[i], baseFee[i+1], gasUsedRatio[i] = fees.results.reward, fees.results.baseFee, fees.results.nextBaseFee, fees.results.gasUsedRatio
+		if fees.results.baseFee != nil {
+			reward[i], baseFee[i], baseFee[i+1], gasUsedRatio[i] = fees.results.reward, fees.results.baseFee, fees.results.nextBaseFee, fees.results.gasUsedRatio
+		} else {
+			// getting no block and no error means we are requesting into the future (might happen because of a reorg)
+			if i < firstMissing {
+				firstMissing = i
+			}
+		}
+	}
+	if firstMissing == 0 {
+		return common.Big0, nil, nil, nil, nil
 	}
 	if len(rewardPercentiles) != 0 {
-		reward = reward[:blockCount]
+		reward = reward[:firstMissing]
 	} else {
 		reward = nil
 	}
-	baseFee, gasUsedRatio = baseFee[:blockCount+1], gasUsedRatio[:blockCount]
+	baseFee, gasUsedRatio = baseFee[:firstMissing+1], gasUsedRatio[:firstMissing]
 	return new(big.Int).SetUint64(oldestBlock), reward, baseFee, gasUsedRatio, nil
 }

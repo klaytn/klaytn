@@ -25,10 +25,12 @@ import (
 	"math/big"
 	"sync"
 
+	lru "github.com/hashicorp/golang-lru"
+	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/networks/rpc"
-
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/event"
+	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
 )
 
@@ -49,6 +51,7 @@ type OracleBackend interface {
 	GetBlockReceipts(ctx context.Context, hash common.Hash) types.Receipts
 	ChainConfig() *params.ChainConfig
 	CurrentBlock() *types.Block
+	SubscribeChainHeadEvent(ch chan<- blockchain.ChainHeadEvent) event.Subscription
 }
 
 type TxPool interface {
@@ -68,6 +71,8 @@ type Oracle struct {
 	checkBlocks, maxEmpty, maxBlocks  int
 	percentile                        int
 	maxHeaderHistory, maxBlockHistory int
+
+	historyCache *lru.Cache
 }
 
 // NewOracle returns a new oracle.
@@ -83,6 +88,29 @@ func NewOracle(backend OracleBackend, params Config, txPool TxPool) *Oracle {
 	if percent > 100 {
 		percent = 100
 	}
+
+	maxHeaderHistory := params.MaxHeaderHistory
+	if maxHeaderHistory < 1 {
+		maxHeaderHistory = 1
+		logger.Warn("Sanitizing invalid gasprice oracle max header history", "provided", params.MaxHeaderHistory, "updated", maxHeaderHistory)
+	}
+	maxBlockHistory := params.MaxBlockHistory
+	if maxBlockHistory < 1 {
+		maxBlockHistory = 1
+		logger.Warn("Sanitizing invalid gasprice oracle max block history", "provided", params.MaxBlockHistory, "updated", maxBlockHistory)
+	}
+	cache, _ := lru.New(2048)
+	headEvent := make(chan blockchain.ChainHeadEvent, 1)
+	backend.SubscribeChainHeadEvent(headEvent)
+	go func() {
+		var lastHead common.Hash
+		for ev := range headEvent {
+			if ev.Block.ParentHash() != lastHead {
+				cache.Purge()
+			}
+			lastHead = ev.Block.Hash()
+		}
+	}()
 	return &Oracle{
 		backend:          backend,
 		lastPrice:        params.Default,
@@ -90,9 +118,10 @@ func NewOracle(backend OracleBackend, params Config, txPool TxPool) *Oracle {
 		maxEmpty:         blocks / 2,
 		maxBlocks:        blocks * 5,
 		percentile:       percent,
-		maxHeaderHistory: params.MaxHeaderHistory,
-		maxBlockHistory:  params.MaxBlockHistory,
+		maxHeaderHistory: maxHeaderHistory,
+		maxBlockHistory:  maxBlockHistory,
 		txPool:           txPool,
+		historyCache:     cache,
 	}
 }
 
@@ -125,7 +154,15 @@ func (gpo *Oracle) SuggestPrice(ctx context.Context) (*big.Int, error) {
 	}
 
 	nextNum := new(big.Int).Add(gpo.backend.CurrentBlock().Number(), common.Big1)
-	if gpo.backend.ChainConfig().IsMagmaForkEnabled(nextNum) {
+	if gpo.backend.ChainConfig().IsDragonForkEnabled(nextNum) {
+		// After Dragon, include suggested tip
+		baseFee := gpo.txPool.GasPrice()
+		suggestedTip, err := gpo.SuggestTipCap(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return new(big.Int).Add(new(big.Int).Mul(baseFee, common.Big2), suggestedTip), nil
+	} else if gpo.backend.ChainConfig().IsMagmaForkEnabled(nextNum) {
 		// After Magma, return the twice of BaseFee as a buffer.
 		baseFee := gpo.txPool.GasPrice()
 		return new(big.Int).Mul(baseFee, common.Big2), nil
@@ -146,7 +183,10 @@ func (gpo *Oracle) SuggestTipCap(ctx context.Context) (*big.Int, error) {
 	}
 
 	nextNum := new(big.Int).Add(gpo.backend.CurrentBlock().Number(), common.Big1)
-	if gpo.backend.ChainConfig().IsMagmaForkEnabled(nextNum) {
+	if gpo.backend.ChainConfig().IsDragonForkEnabled(nextNum) {
+		// TODO: After Dragon, return 60% percentile of last 20 blocks
+		return common.Big0, nil
+	} else if gpo.backend.ChainConfig().IsMagmaForkEnabled(nextNum) {
 		// After Magma, return zero
 		return common.Big0, nil
 	} else {

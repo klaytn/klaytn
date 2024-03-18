@@ -28,6 +28,7 @@ import (
 	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/consensus/gxhash"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
@@ -73,6 +74,10 @@ func (b *testBackend) ChainConfig() *params.ChainConfig {
 
 func (b *testBackend) CurrentBlock() *types.Block {
 	return b.chain.CurrentBlock()
+}
+
+func (b *testBackend) SubscribeChainHeadEvent(ch chan<- blockchain.ChainHeadEvent) event.Subscription {
+	return b.chain.SubscribeChainHeadEvent(ch)
 }
 
 func newTestBackend(t *testing.T) *testBackend {
