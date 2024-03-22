@@ -618,6 +618,10 @@ func (db *Database) preimage(hash common.Hash) []byte {
 	return db.diskDB.ReadPreimage(hash)
 }
 
+func (db *Database) Preimage(hash common.Hash) []byte {
+	return db.preimage(hash)
+}
+
 // Nodes retrieves the hashes of all the nodes cached within the memory database.
 // This method is extremely expensive and should only be used to validate internal
 // states in test code.
