@@ -35,6 +35,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	mock_api "github.com/klaytn/klaytn/api/mocks"
+	eventmock "github.com/klaytn/klaytn/event/mocks"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -98,9 +99,9 @@ func newTestBackend(t *testing.T) *testBackend {
 
 		toaddr := common.Address{}
 		data := make([]byte, 1)
-		gas, _ := types.IntrinsicGas(data, nil, false, params.TestChainConfig.Rules(big.NewInt(0)))
-		signer := types.NewEIP155Signer(params.TestChainConfig.ChainID)
-		tx, _ := types.SignTx(types.NewTransaction(b.TxNonce(addr), toaddr, big.NewInt(1), gas, nil, data), signer, key)
+		gas, _ := types.IntrinsicGas(data, nil, false, gspec.Config.Rules(big.NewInt(int64(i))))
+		signer := types.NewEIP155Signer(gspec.Config.ChainID)
+		tx, _ := types.SignTx(types.NewTransaction(b.TxNonce(addr), toaddr, big.NewInt(1), gas, big.NewInt(int64(gspec.Config.UnitPrice)), data), signer, key)
 		b.AddTx(tx)
 	})
 	// Construct testing chain
@@ -116,6 +117,10 @@ func TestGasPrice_NewOracle(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockBackend := mock_api.NewMockBackend(mockCtrl)
+
+	sub := eventmock.NewMockSubscription(mockCtrl)
+	mockBackend.EXPECT().SubscribeChainHeadEvent(gomock.Any()).Return(sub).Times(5)
+
 	params := Config{}
 	oracle := NewOracle(mockBackend, params, nil)
 
@@ -171,6 +176,9 @@ func TestGasPrice_SuggestPrice(t *testing.T) {
 	chainConfig := testBackend.ChainConfig()
 	chainConfig.UnitPrice = 0
 	txPoolWith0 := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain)
+
+	sub := eventmock.NewMockSubscription(mockCtrl)
+	mockBackend.EXPECT().SubscribeChainHeadEvent(gomock.Any()).Return(sub).Times(2)
 	oracle := NewOracle(mockBackend, params, txPoolWith0)
 
 	currentBlock := testBackend.CurrentBlock()
@@ -183,6 +191,7 @@ func TestGasPrice_SuggestPrice(t *testing.T) {
 
 	params = Config{Default: big.NewInt(123)}
 	chainConfig.UnitPrice = 25
+	mockBackend.EXPECT().ChainConfig().Return(chainConfig).Times(2)
 	txPoolWith25 := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain)
 	oracle = NewOracle(mockBackend, params, txPoolWith25)
 
