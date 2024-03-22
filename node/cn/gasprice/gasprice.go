@@ -34,6 +34,7 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"golang.org/x/exp/slices"
 )
+
 const sampleNumber = 3 // Number of transactions sampled in a block
 
 var maxPrice = big.NewInt(500 * params.Ston)

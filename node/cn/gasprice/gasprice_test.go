@@ -21,6 +21,8 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/golang/mock/gomock"
+	mock_api "github.com/klaytn/klaytn/api/mocks"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
@@ -29,13 +31,10 @@ import (
 	"github.com/klaytn/klaytn/consensus/gxhash"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/event"
+	"github.com/klaytn/klaytn/event/mocks"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
-
-	"github.com/golang/mock/gomock"
-	mock_api "github.com/klaytn/klaytn/api/mocks"
-	eventmock "github.com/klaytn/klaytn/event/mocks"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -118,7 +117,7 @@ func TestGasPrice_NewOracle(t *testing.T) {
 	defer mockCtrl.Finish()
 	mockBackend := mock_api.NewMockBackend(mockCtrl)
 
-	sub := eventmock.NewMockSubscription(mockCtrl)
+	sub := mocks.NewMockSubscription(mockCtrl)
 	mockBackend.EXPECT().SubscribeChainHeadEvent(gomock.Any()).Return(sub).Times(5)
 
 	params := Config{}
@@ -177,7 +176,7 @@ func TestGasPrice_SuggestPrice(t *testing.T) {
 	chainConfig.UnitPrice = 0
 	txPoolWith0 := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain)
 
-	sub := eventmock.NewMockSubscription(mockCtrl)
+	sub := mocks.NewMockSubscription(mockCtrl)
 	mockBackend.EXPECT().SubscribeChainHeadEvent(gomock.Any()).Return(sub).Times(2)
 	oracle := NewOracle(mockBackend, params, txPoolWith0)
 
