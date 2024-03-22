@@ -32,7 +32,9 @@ import (
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
+	"golang.org/x/exp/slices"
 )
+const sampleNumber = 3 // Number of transactions sampled in a block
 
 var maxPrice = big.NewInt(500 * params.Ston)
 
@@ -175,7 +177,6 @@ func (gpo *Oracle) SuggestPrice(ctx context.Context) (*big.Int, error) {
 
 // SuggestTipCap returns the recommended gas tip cap.
 // This value is intended to be used as maxPriorityFeePerGas.
-// Though Klaytn does not recognize gas tip, this function returns some value for compatibility.
 func (gpo *Oracle) SuggestTipCap(ctx context.Context) (*big.Int, error) {
 	if gpo.txPool == nil {
 		// If txpool is not set, just return 0. This is used for testing.
@@ -184,8 +185,10 @@ func (gpo *Oracle) SuggestTipCap(ctx context.Context) (*big.Int, error) {
 
 	nextNum := new(big.Int).Add(gpo.backend.CurrentBlock().Number(), common.Big1)
 	if gpo.backend.ChainConfig().IsDragonForkEnabled(nextNum) {
-		// TODO: After Dragon, return 60% percentile of last 20 blocks
-		return common.Big0, nil
+		// After Dragon, return using fee history.
+		// By default config, this will return 60% percentile of last 20 blocks
+		// See node/cn/config.go for the default config.
+		return gpo.suggestTipCapUsingFeeHistory(ctx)
 	} else if gpo.backend.ChainConfig().IsMagmaForkEnabled(nextNum) {
 		// After Magma, return zero
 		return common.Big0, nil
@@ -193,5 +196,129 @@ func (gpo *Oracle) SuggestTipCap(ctx context.Context) (*big.Int, error) {
 		// Before Magma, return the fixed UnitPrice.
 		unitPrice := gpo.txPool.GasPrice()
 		return unitPrice, nil
+	}
+}
+
+// suggestTipCapUsingFeeHistory returns a tip cap based on fee history.
+func (oracle *Oracle) suggestTipCapUsingFeeHistory(ctx context.Context) (*big.Int, error) {
+	head, _ := oracle.backend.HeaderByNumber(ctx, rpc.LatestBlockNumber)
+	headHash := head.Hash()
+
+	// If the latest gasprice is still available, return it.
+	oracle.cacheLock.RLock()
+	lastHead, lastPrice := oracle.lastHead, oracle.lastPrice
+	oracle.cacheLock.RUnlock()
+	if headHash == lastHead {
+		return new(big.Int).Set(lastPrice), nil
+	}
+	oracle.fetchLock.Lock()
+	defer oracle.fetchLock.Unlock()
+
+	// Try checking the cache again, maybe the last fetch fetched what we need
+	oracle.cacheLock.RLock()
+	lastHead, lastPrice = oracle.lastHead, oracle.lastPrice
+	oracle.cacheLock.RUnlock()
+	if headHash == lastHead {
+		return new(big.Int).Set(lastPrice), nil
+	}
+	var (
+		sent, exp int
+		number    = head.Number.Uint64()
+		result    = make(chan results, oracle.checkBlocks)
+		quit      = make(chan struct{})
+		results   []*big.Int
+	)
+	for sent < oracle.checkBlocks && number > 0 {
+		go oracle.getBlockValues(ctx, number, sampleNumber, result, quit)
+		sent++
+		exp++
+		number--
+	}
+	for exp > 0 {
+		res := <-result
+		if res.err != nil {
+			close(quit)
+			return new(big.Int).Set(lastPrice), res.err
+		}
+		exp--
+		// Nothing returned. There are two special cases here:
+		// - The block is empty
+		// - All the transactions included are sent by the miner itself.
+		// In these cases, use the latest calculated price for sampling.
+		if len(res.values) == 0 {
+			res.values = []*big.Int{lastPrice}
+		}
+		// Besides, in order to collect enough data for sampling, if nothing
+		// meaningful returned, try to query more blocks. But the maximum
+		// is 2*checkBlocks.
+		if len(res.values) == 1 && len(results)+1+exp < oracle.checkBlocks*2 && number > 0 {
+			go oracle.getBlockValues(ctx, number, sampleNumber, result, quit)
+			sent++
+			exp++
+			number--
+		}
+		results = append(results, res.values...)
+	}
+	price := lastPrice
+	if len(results) > 0 {
+		slices.SortFunc(results, func(a, b *big.Int) int { return a.Cmp(b) })
+		price = results[(len(results)-1)*oracle.percentile/100]
+	}
+	if price.Cmp(maxPrice) > 0 {
+		price = new(big.Int).Set(maxPrice)
+	}
+	oracle.cacheLock.Lock()
+	oracle.lastHead = headHash
+	oracle.lastPrice = price
+	oracle.cacheLock.Unlock()
+
+	return new(big.Int).Set(price), nil
+}
+
+type results struct {
+	values []*big.Int
+	err    error
+}
+
+// getBlockValues calculates the lowest transaction gas price in a given block
+// and sends it to the result channel. If the block is empty or all transactions
+// are sent by the miner itself(it doesn't make any sense to include this kind of
+// transaction prices for sampling), nil gasprice is returned.
+func (oracle *Oracle) getBlockValues(ctx context.Context, blockNum uint64, limit int, result chan results, quit chan struct{}) {
+	block, err := oracle.backend.BlockByNumber(ctx, rpc.BlockNumber(blockNum))
+	if block == nil {
+		select {
+		case result <- results{nil, err}:
+		case <-quit:
+		}
+		return
+	}
+	signer := types.MakeSigner(oracle.backend.ChainConfig(), block.Number())
+
+	// Sort the transaction by effective tip in ascending sort.
+	txs := block.Transactions()
+	sortedTxs := make([]*types.Transaction, len(txs))
+	copy(sortedTxs, txs)
+	baseFee := block.Header().BaseFee
+	slices.SortFunc(sortedTxs, func(a, b *types.Transaction) int {
+		tip1 := a.EffectiveGasTip(baseFee)
+		tip2 := b.EffectiveGasTip(baseFee)
+		return tip1.Cmp(tip2)
+	})
+
+	var prices []*big.Int
+	for _, tx := range sortedTxs {
+		tip := tx.EffectiveGasTip(baseFee)
+		sender, err := types.Sender(signer, tx)
+		if err == nil && sender != block.Rewardbase() {
+			prices = append(prices, tip)
+			if len(prices) >= limit {
+				break
+			}
+		}
+	}
+	select {
+	case result <- results{prices, nil}:
+	case <-quit:
 	}
 }
