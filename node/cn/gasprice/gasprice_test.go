@@ -30,8 +30,6 @@ import (
 	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/consensus/gxhash"
 	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/event"
-	"github.com/klaytn/klaytn/event/mocks"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
@@ -74,10 +72,6 @@ func (b *testBackend) ChainConfig() *params.ChainConfig {
 
 func (b *testBackend) CurrentBlock() *types.Block {
 	return b.chain.CurrentBlock()
-}
-
-func (b *testBackend) SubscribeChainHeadEvent(ch chan<- blockchain.ChainHeadEvent) event.Subscription {
-	return b.chain.SubscribeChainHeadEvent(ch)
 }
 
 func (b *testBackend) teardown() {
@@ -158,9 +152,6 @@ func TestGasPrice_NewOracle(t *testing.T) {
 	defer mockCtrl.Finish()
 	mockBackend := mock_api.NewMockBackend(mockCtrl)
 
-	sub := mocks.NewMockSubscription(mockCtrl)
-	mockBackend.EXPECT().SubscribeChainHeadEvent(gomock.Any()).Return(sub).Times(5)
-
 	params := Config{}
 	oracle := NewOracle(mockBackend, params, nil)
 
@@ -218,8 +209,6 @@ func TestGasPrice_SuggestPrice(t *testing.T) {
 	chainConfig.UnitPrice = 0
 	txPoolWith0 := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain)
 
-	sub := mocks.NewMockSubscription(mockCtrl)
-	mockBackend.EXPECT().SubscribeChainHeadEvent(gomock.Any()).Return(sub).Times(2)
 	oracle := NewOracle(mockBackend, params, txPoolWith0)
 
 	currentBlock := testBackend.CurrentBlock()

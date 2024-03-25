@@ -26,10 +26,8 @@ import (
 	"sync"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
 	"golang.org/x/exp/slices"
@@ -54,7 +52,6 @@ type OracleBackend interface {
 	GetBlockReceipts(ctx context.Context, hash common.Hash) types.Receipts
 	ChainConfig() *params.ChainConfig
 	CurrentBlock() *types.Block
-	SubscribeChainHeadEvent(ch chan<- blockchain.ChainHeadEvent) event.Subscription
 }
 
 type TxPool interface {
@@ -103,17 +100,7 @@ func NewOracle(backend OracleBackend, params Config, txPool TxPool) *Oracle {
 		logger.Warn("Sanitizing invalid gasprice oracle max block history", "provided", params.MaxBlockHistory, "updated", maxBlockHistory)
 	}
 	cache, _ := lru.New(2048)
-	headEvent := make(chan blockchain.ChainHeadEvent, 1)
-	backend.SubscribeChainHeadEvent(headEvent)
-	go func() {
-		var lastHead common.Hash
-		for ev := range headEvent {
-			if ev.Block.ParentHash() != lastHead {
-				cache.Purge()
-			}
-			lastHead = ev.Block.Hash()
-		}
-	}()
+	
 	return &Oracle{
 		backend:          backend,
 		lastPrice:        params.Default,
@@ -322,4 +309,10 @@ func (oracle *Oracle) getBlockValues(ctx context.Context, blockNum uint64, limit
 	case result <- results{prices, nil}:
 	case <-quit:
 	}
+}
+
+func (oracle *Oracle) PurgeCache() {
+	oracle.cacheLock.Lock()
+	oracle.historyCache.Purge()
+	oracle.cacheLock.Unlock()
 }
