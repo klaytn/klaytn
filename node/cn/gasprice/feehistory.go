@@ -108,16 +108,20 @@ func (oracle *Oracle) processBlock(bf *blockFees, percentiles []float64) {
 		bf.results.nextBaseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
 	}
 
-	// Use gasTarget as gasLimit for gasUsedRatio.
+	// Use MaxBlockGasUsedForBaseFee as gasLimit for gasUsedRatio.
 	if chainconfig.IsMagmaForkEnabled(big.NewInt(int64(bf.blockNumber))) {
 		// TODO-Klaytn: Instead of using chainConfig, we should use governance set values.
-		if chainconfig.Governance.KIP71.GasTarget != 0 {
-			bf.results.gasUsedRatio = float64(bf.header.GasUsed) / float64(chainconfig.Governance.KIP71.GasTarget)
+		if chainconfig.Governance.KIP71.MaxBlockGasUsedForBaseFee != 0 {
+			bf.results.gasUsedRatio = float64(bf.header.GasUsed) / float64(chainconfig.Governance.KIP71.MaxBlockGasUsedForBaseFee)
 		}
 	}
 	if bf.results.gasUsedRatio == 0 {
 		bf.results.gasUsedRatio = float64(bf.header.GasUsed) / float64(params.UpperGasLimit)
 	}
+	if bf.results.gasUsedRatio > 1 {
+		bf.results.gasUsedRatio = 1
+	}
+
 	if len(percentiles) == 0 {
 		// rewards were not requested, return null
 		return

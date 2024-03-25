@@ -25,7 +25,9 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/networks/rpc"
+	"github.com/klaytn/klaytn/params"
 )
 
 func TestFeeHistory(t *testing.T) {
@@ -44,7 +46,6 @@ func TestFeeHistory(t *testing.T) {
 		{1000, 1000, 1000000000, 30, nil, 0, 31, nil},
 		{1000, 1000, 1000000000, rpc.LatestBlockNumber, nil, 0, 33, nil},
 		{1000, 1000, 10, 40, nil, 0, 0, errRequestBeyondHead},
-		{1000, 1000, 10, 40, nil, 0, 0, errRequestBeyondHead},
 		{20, 2, 100, rpc.LatestBlockNumber, nil, 13, 20, nil},
 		{20, 2, 100, rpc.LatestBlockNumber, []float64{0, 10}, 31, 2, nil},
 		{20, 2, 100, 32, []float64{0, 10}, 31, 2, nil},
@@ -56,7 +57,8 @@ func TestFeeHistory(t *testing.T) {
 			MaxHeaderHistory: c.maxHeader,
 			MaxBlockHistory:  c.maxBlock,
 		}
-		backend := newTestBackend(t)
+		backend := newTestBackend(t, nil, nil)
+		defer backend.teardown()
 		oracle := NewOracle(backend, config, nil)
 
 		first, reward, baseFee, ratio, err := oracle.FeeHistory(context.Background(), c.count, c.last, c.percent)
@@ -85,5 +87,37 @@ func TestFeeHistory(t *testing.T) {
 		if err != c.expErr && !errors.Is(err, c.expErr) {
 			t.Fatalf("Test case %d: error mismatch, want %v, got %v", i, c.expErr, err)
 		}
+	}
+}
+
+func TestGasUsedRatioForMagma(t *testing.T) {
+	config := Config{
+		MaxHeaderHistory: 1000,
+		MaxBlockHistory:  1000,
+	}
+	backendNoMagma := newTestBackend(t, nil, nil)
+	defer backendNoMagma.teardown()
+	oracle := NewOracle(backendNoMagma, config, nil)
+
+	expectedRatio := 21000/float64(params.UpperGasLimit)
+	_, _, _, ratio, _ := oracle.FeeHistory(context.Background(), 1, 30, nil)
+	if len(ratio) != 1 {
+		t.Fatalf("Wrong number of gas used ratio, want 1, got %d", len(ratio))
+	}
+	if ratio[0] != expectedRatio {
+		t.Fatalf("Gas used ratio mismatch, want %f, got %f", expectedRatio, ratio[0])
+	}
+
+	backendWithMagma := newTestBackend(t, common.Big0, nil)
+	defer backendWithMagma.teardown()
+	oracle = NewOracle(backendWithMagma, config, nil)
+
+	expectedRatio = 21000/float64(backendWithMagma.ChainConfig().Governance.KIP71.MaxBlockGasUsedForBaseFee)
+	_, _, _, ratio, _ = oracle.FeeHistory(context.Background(), 1, 30, nil)
+	if len(ratio) != 1 {
+		t.Fatalf("Wrong number of gas used ratio, want 1, got %d", len(ratio))
+	}
+	if ratio[0] != expectedRatio {
+		t.Fatalf("Gas used ratio mismatch, want %f, got %f", expectedRatio, ratio[0])
 	}
 }
