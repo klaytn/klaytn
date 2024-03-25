@@ -89,7 +89,7 @@ func newTestBackend(t *testing.T, magmaBlock, dragonBlock *big.Int) *testBackend
 			Config: config,
 			Alloc:  blockchain.GenesisAlloc{addr: {Balance: big.NewInt(math.MaxInt64)}},
 		}
-		signer = types.LatestSignerForChainID(gspec.Config.ChainID)
+		signer  = types.LatestSignerForChainID(gspec.Config.ChainID)
 		db      = database.NewMemoryDBManager()
 		genesis = gspec.MustCommit(db)
 	)
@@ -114,23 +114,23 @@ func newTestBackend(t *testing.T, magmaBlock, dragonBlock *big.Int) *testBackend
 		var txdata types.TxInternalData
 		if config.MagmaCompatibleBlock != nil && b.Number().Cmp(config.MagmaCompatibleBlock) >= 0 {
 			txdata = &types.TxInternalDataEthereumDynamicFee{
-				ChainID:       gspec.Config.ChainID,
-				AccountNonce:  b.TxNonce(addr),
-				Recipient:     &common.Address{},
-				GasLimit:      30000,
-				GasFeeCap:     big.NewInt(100 * params.Ston),
-				GasTipCap:     big.NewInt(int64(i+1) * params.Ston),
-				Payload:       []byte{},
-				Amount:        big.NewInt(100),
+				ChainID:      gspec.Config.ChainID,
+				AccountNonce: b.TxNonce(addr),
+				Recipient:    &common.Address{},
+				GasLimit:     30000,
+				GasFeeCap:    big.NewInt(100 * params.Ston),
+				GasTipCap:    big.NewInt(int64(i+1) * params.Ston),
+				Payload:      []byte{},
+				Amount:       big.NewInt(100),
 			}
 		} else {
 			txdata = &types.TxInternalDataLegacy{
-				AccountNonce:  b.TxNonce(addr),
-				Recipient:     &common.Address{},
-				GasLimit:      21000,
-				Price:         big.NewInt(int64(i+1) * params.Ston),
-				Amount:        big.NewInt(100),
-				Payload:       []byte{},
+				AccountNonce: b.TxNonce(addr),
+				Recipient:    &common.Address{},
+				GasLimit:     21000,
+				Price:        big.NewInt(int64(i+1) * params.Ston),
+				Amount:       big.NewInt(100),
+				Payload:      []byte{},
 			}
 		}
 		tx, _ := types.SignTx(types.NewTx(txdata), signer, key)
@@ -232,17 +232,17 @@ func TestGasPrice_SuggestPrice(t *testing.T) {
 
 func TestSuggestTipCap(t *testing.T) {
 	config := Config{
-		Blocks:     3,
-		Percentile: 60,
-		Default:    big.NewInt(params.Ston),
+		Blocks:           3,
+		Percentile:       60,
+		Default:          big.NewInt(params.Ston),
 		MaxHeaderHistory: 30,
-		MaxBlockHistory: 30,
+		MaxBlockHistory:  30,
 	}
 
-	var cases = []struct {
-		magmaBlock *big.Int // Magma fork block number
+	cases := []struct {
+		magmaBlock  *big.Int // Magma fork block number
 		dragonBlock *big.Int // Dragon fork block number
-		expect *big.Int // Expected gasprice suggestion
+		expect      *big.Int // Expected gasprice suggestion
 	}{
 		{nil, nil, big.NewInt(1)}, // If not Magma forked, should return unitPrice (which is 1 for test)
 
@@ -267,7 +267,7 @@ func TestSuggestTipCap(t *testing.T) {
 			t.Fatalf("Failed to retrieve recommended gas price: %v", err)
 		}
 		if got.Cmp(c.expect) != 0 {
-			t.Fatalf("Gas price mismatch, want %d, got %d",c.expect, got)
+			t.Fatalf("Gas price mismatch, want %d, got %d", c.expect, got)
 		}
 	}
 }

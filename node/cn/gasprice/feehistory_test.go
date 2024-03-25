@@ -99,7 +99,7 @@ func TestGasUsedRatioForMagma(t *testing.T) {
 	defer backendNoMagma.teardown()
 	oracle := NewOracle(backendNoMagma, config, nil)
 
-	expectedRatio := 21000/float64(params.UpperGasLimit)
+	expectedRatio := 21000 / float64(params.UpperGasLimit)
 	_, _, _, ratio, _ := oracle.FeeHistory(context.Background(), 1, 30, nil)
 	if len(ratio) != 1 {
 		t.Fatalf("Wrong number of gas used ratio, want 1, got %d", len(ratio))
@@ -112,7 +112,7 @@ func TestGasUsedRatioForMagma(t *testing.T) {
 	defer backendWithMagma.teardown()
 	oracle = NewOracle(backendWithMagma, config, nil)
 
-	expectedRatio = 21000/float64(backendWithMagma.ChainConfig().Governance.KIP71.MaxBlockGasUsedForBaseFee)
+	expectedRatio = 21000 / float64(backendWithMagma.ChainConfig().Governance.KIP71.MaxBlockGasUsedForBaseFee)
 	_, _, _, ratio, _ = oracle.FeeHistory(context.Background(), 1, 30, nil)
 	if len(ratio) != 1 {
 		t.Fatalf("Wrong number of gas used ratio, want 1, got %d", len(ratio))

@@ -100,7 +100,7 @@ func NewOracle(backend OracleBackend, params Config, txPool TxPool) *Oracle {
 		logger.Warn("Sanitizing invalid gasprice oracle max block history", "provided", params.MaxBlockHistory, "updated", maxBlockHistory)
 	}
 	cache, _ := lru.New(2048)
-	
+
 	return &Oracle{
 		backend:          backend,
 		lastPrice:        params.Default,
