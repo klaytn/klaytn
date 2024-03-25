@@ -80,27 +80,67 @@ func (b *testBackend) SubscribeChainHeadEvent(ch chan<- blockchain.ChainHeadEven
 	return b.chain.SubscribeChainHeadEvent(ch)
 }
 
-func newTestBackend(t *testing.T) *testBackend {
+func (b *testBackend) teardown() {
+	b.chain.Stop()
+}
+
+// newTestBackend creates a test backend. OBS: don't forget to invoke tearDown
+// after use, otherwise the blockchain instance will mem-leak via goroutines.
+func newTestBackend(t *testing.T, magmaBlock, dragonBlock *big.Int) *testBackend {
 	var (
 		key, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 		addr   = crypto.PubkeyToAddress(key.PublicKey)
-
-		gspec = &blockchain.Genesis{
-			Config: params.TestChainConfig,
+		config = params.TestChainConfig.Copy() // needs copy because it is modified below
+		gspec  = &blockchain.Genesis{
+			Config: config,
 			Alloc:  blockchain.GenesisAlloc{addr: {Balance: big.NewInt(math.MaxInt64)}},
 		}
+		signer = types.LatestSignerForChainID(gspec.Config.ChainID)
 		db      = database.NewMemoryDBManager()
 		genesis = gspec.MustCommit(db)
 	)
-	// Generate testing blocks
-	blocks, _ := blockchain.GenerateChain(gspec.Config, genesis, gxhash.NewFaker(), db, testHead+1, func(i int, b *blockchain.BlockGen) {
-		b.SetRewardbase(addr)
 
+	config.EthTxTypeCompatibleBlock = magmaBlock
+	config.IstanbulCompatibleBlock = magmaBlock
+	config.MagmaCompatibleBlock = magmaBlock
+	config.KoreCompatibleBlock = dragonBlock
+	config.ShanghaiCompatibleBlock = dragonBlock
+	config.CancunCompatibleBlock = dragonBlock
+	config.DragonCompatibleBlock = dragonBlock
+	if magmaBlock != nil {
+		config.Governance = params.GetDefaultGovernanceConfig()
+		config.Istanbul = params.GetDefaultIstanbulConfig()
+		config.Governance.KIP71.LowerBoundBaseFee = 0
+	}
+	blocks, _ := blockchain.GenerateChain(gspec.Config, genesis, gxhash.NewFaker(), db, testHead+1, func(i int, b *blockchain.BlockGen) {
 		toaddr := common.Address{}
-		data := make([]byte, 1)
-		gas, _ := types.IntrinsicGas(data, nil, false, gspec.Config.Rules(big.NewInt(int64(i))))
-		signer := types.NewEIP155Signer(gspec.Config.ChainID)
-		tx, _ := types.SignTx(types.NewTransaction(b.TxNonce(addr), toaddr, big.NewInt(1), gas, big.NewInt(int64(gspec.Config.UnitPrice)), data), signer, key)
+		// To test fee history, rewardbase should be different from the sender address
+		b.SetRewardbase(toaddr)
+
+		var txdata types.TxInternalData
+		if config.MagmaCompatibleBlock != nil && b.Number().Cmp(config.MagmaCompatibleBlock) >= 0 {
+			txdata = &types.TxInternalDataEthereumDynamicFee{
+				ChainID:       gspec.Config.ChainID,
+				AccountNonce:  b.TxNonce(addr),
+				Recipient:     &common.Address{},
+				GasLimit:      30000,
+				GasFeeCap:     big.NewInt(100 * params.Ston),
+				GasTipCap:     big.NewInt(int64(i+1) * params.Ston),
+				Payload:       []byte{},
+				Amount:        big.NewInt(100),
+			}
+		} else {
+			txdata = &types.TxInternalDataLegacy{
+				AccountNonce:  b.TxNonce(addr),
+				Recipient:     &common.Address{},
+				GasLimit:      21000,
+				Price:         big.NewInt(int64(i+1) * params.Ston),
+				Amount:        big.NewInt(100),
+				Payload:       []byte{},
+			}
+		}
+		tx, _ := types.SignTx(types.NewTx(txdata), signer, key)
+
 		b.AddTx(tx)
 	})
 	// Construct testing chain
@@ -109,6 +149,7 @@ func newTestBackend(t *testing.T) *testBackend {
 		t.Fatalf("Failed to create local chain, %v", err)
 	}
 	chain.InsertChain(blocks)
+
 	return &testBackend{chain: chain}
 }
 
@@ -171,7 +212,8 @@ func TestGasPrice_SuggestPrice(t *testing.T) {
 	defer mockCtrl.Finish()
 	mockBackend := mock_api.NewMockBackend(mockCtrl)
 	params := Config{}
-	testBackend := newTestBackend(t)
+	testBackend := newTestBackend(t, nil, nil)
+	defer testBackend.teardown()
 	chainConfig := testBackend.ChainConfig()
 	chainConfig.UnitPrice = 0
 	txPoolWith0 := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain)
@@ -197,4 +239,46 @@ func TestGasPrice_SuggestPrice(t *testing.T) {
 	price, err = oracle.SuggestPrice(nil)
 	assert.Equal(t, big.NewInt(25), price)
 	assert.Nil(t, err)
+}
+
+func TestSuggestTipCap(t *testing.T) {
+	config := Config{
+		Blocks:     3,
+		Percentile: 60,
+		Default:    big.NewInt(params.Ston),
+		MaxHeaderHistory: 30,
+		MaxBlockHistory: 30,
+	}
+
+	var cases = []struct {
+		magmaBlock *big.Int // Magma fork block number
+		dragonBlock *big.Int // Dragon fork block number
+		expect *big.Int // Expected gasprice suggestion
+	}{
+		{nil, nil, big.NewInt(1)}, // If not Magma forked, should return unitPrice (which is 1 for test)
+
+		{big.NewInt(0), nil, common.Big0}, // After Magma fork and before Dragon fork, should return 0
+
+		// After Dragon fork
+		{big.NewInt(0), big.NewInt(0), big.NewInt(params.Ston * int64(30))},   // Fork point in genesis
+		{big.NewInt(1), big.NewInt(1), big.NewInt(params.Ston * int64(30))},   // Fork point in first block
+		{big.NewInt(32), big.NewInt(32), big.NewInt(params.Ston * int64(30))}, // Fork point in last block
+		{big.NewInt(33), big.NewInt(33), big.NewInt(params.Ston * int64(30))}, // Fork point in the future
+	}
+	for _, c := range cases {
+		testBackend := newTestBackend(t, c.magmaBlock, c.dragonBlock)
+		chainConfig := testBackend.ChainConfig()
+		txPool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain)
+		oracle := NewOracle(testBackend, config, txPool)
+
+		// The gas price sampled is: 32G, 31G, 30G, 29G, 28G, 27G
+		got, err := oracle.SuggestTipCap(context.Background())
+		testBackend.teardown()
+		if err != nil {
+			t.Fatalf("Failed to retrieve recommended gas price: %v", err)
+		}
+		if got.Cmp(c.expect) != 0 {
+			t.Fatalf("Gas price mismatch, want %d, got %d",c.expect, got)
+		}
+	}
 }
