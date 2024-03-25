@@ -15,8 +15,8 @@ aliases:
         - master
 
 orbs:
-  codecov: codecov/codecov@1.0.5
-  docker: circleci/docker@2.1.1
+  codecov: codecov/codecov@4.0.1
+  docker: circleci/docker@2.5.0
 
 executors:
   linux-executor: # this executor is for general testing and packaging linux binaries
@@ -39,7 +39,7 @@ executors:
         auth:
           username: $DOCKER_LOGIN
           password: $DOCKER_PASSWORD
-      - image: circleci/redis:6.0.8-alpine
+      - image: cimg/redis:6.0.8-alpine
         auth:
           username: $DOCKER_LOGIN
           password: $DOCKER_PASSWORD
