@@ -79,7 +79,7 @@ func (b *CNAPIBackend) CurrentBlock() *types.Block {
 	return b.cn.blockchain.CurrentBlock()
 }
 
-func doSetHead(bc work.BlockChain, cn consensus.Engine, gov governance.Engine, targetBlkNum uint64) error {
+func doSetHead(bc work.BlockChain, cn consensus.Engine, gov governance.Engine, gpo *gasprice.Oracle, targetBlkNum uint64) error {
 	if err := bc.SetHead(targetBlkNum); err != nil {
 		return err
 	}
@@ -90,6 +90,7 @@ func doSetHead(bc work.BlockChain, cn consensus.Engine, gov governance.Engine, t
 	}
 	gov.InitGovCache()
 	gov.InitLastGovStateBlkNum()
+	gpo.PurgeCache()
 	return nil
 }
 
@@ -97,7 +98,7 @@ func (b *CNAPIBackend) SetHead(number uint64) error {
 	b.cn.protocolManager.Downloader().Cancel()
 	b.cn.protocolManager.SetSyncStop(true)
 	defer b.cn.protocolManager.SetSyncStop(false)
-	return doSetHead(b.cn.blockchain, b.cn.engine, b.cn.governance, number)
+	return doSetHead(b.cn.blockchain, b.cn.engine, b.cn.governance, b.gpo, number)
 }
 
 func (b *CNAPIBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error) {
