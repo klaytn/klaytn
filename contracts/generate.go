@@ -28,8 +28,6 @@ package contracts
 
 //go:generate abigen --sol ./kip13/InterfaceIdentifier.sol --pkg kip13 --out ./kip13/InterfaceIdentifier.go
 
-//go:generate abigen --sol ./kip103/TreasuryRebalance.sol --pkg kip103 --out ./kip103/TreasuryRebalance.go
-
 //go:generate abigen --sol ./system_contracts/all.sol --pkg system_contracts --out ./system_contracts/all.go
 
 //`credit.sol` was compiled by solidity@0.4.24.
