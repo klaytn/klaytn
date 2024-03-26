@@ -527,12 +527,11 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 
 	reward.DistributeBlockReward(state, rewardSpec.Rewards)
 
-	// Only on the KIP-103 hardfork block, the following logic should be executed
-	if chain.Config().IsKIP103ForkBlock(header.Number) {
-		// RebalanceTreasury can modify the global state (state),
-		// so the existing state db should be used to apply the rebalancing result.
-		c := system.NewKip103ContractCaller(state, chain, header)
-		result, err := system.RebalanceTreasury(state, chain, header, c)
+	// RebalanceTreasury can modify the global state (state),
+	// so the existing state db should be used to apply the rebalancing result.
+	// Only on the KIP-103 and KIP-160 hardfork block, the following logic should be executed
+	if chain.Config().IsDragonForkBlock(header.Number) || chain.Config().IsKIP103ForkBlock(header.Number) {
+		result, err := system.RebalanceTreasury(state, chain, header)
 		if err != nil {
 			logger.Error("failed to execute treasury rebalancing (KIP-103). State not changed", "err", err)
 		} else {

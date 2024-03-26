@@ -33,12 +33,14 @@ var (
 	GovParamName    = "GovParam"
 	Kip103Name      = "KIP103"
 	Kip113Name      = "KIP113"
+	Kip160Name      = "KIP160"
 
 	AllContractNames = []string{
 		AddressBookName,
 		GovParamName,
 		Kip103Name,
 		Kip113Name,
+		Kip160Name,
 	}
 
 	// This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1 used in the
@@ -47,7 +49,7 @@ var (
 
 	// Some system contracts are allocated at special addresses.
 	CypressCreditContractAddress = common.HexToAddress("0x0000000000000000000000000000000000000000")
-	AddressBookContractAddress   = common.HexToAddress("0x0000000000000000000000000000000000000400") // TODO: replace contracts/reward/contract/utils.go
+	AddressBookContractAddress   = common.HexToAddress("0x0000000000000000000000000000000000000400")
 	RegistryAddr                 = common.HexToAddress("0x0000000000000000000000000000000000000401")
 
 	// The following addresses are only used for testing.
@@ -62,7 +64,7 @@ var (
 	// System contract binaries to be injected at hardfork or used in testing.
 	RegistryCode     = hexutil.MustDecode("0x" + contracts.RegistryBinRuntime)
 	RegistryMockCode = hexutil.MustDecode("0x" + contracts.RegistryMockBinRuntime)
-	Kip103Code       = hexutil.MustDecode("0x" + contracts.TreasuryRebalanceBinRuntime)
+	Kip160MockCode   = hexutil.MustDecode("0x" + contracts.TreasuryRebalanceMockV2BinRuntime)
 	Kip103MockCode   = hexutil.MustDecode("0x" + contracts.TreasuryRebalanceMockBinRuntime)
 	Kip113Code       = hexutil.MustDecode("0x" + contracts.KIP113BinRuntime)
 	Kip113MockCode   = hexutil.MustDecode("0x" + contracts.KIP113MockBinRuntime)

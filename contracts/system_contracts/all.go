@@ -14928,6 +14928,210 @@ func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) ParseStatusChanged(log ty
 	return event, nil
 }
 
+// IZeroedContractMetaData contains all meta data concerning the IZeroedContract contract.
+var IZeroedContractMetaData = &bind.MetaData{
+	ABI: "[{\"inputs\":[],\"name\":\"getState\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"adminList\",\"type\":\"address[]\"},{\"internalType\":\"uint256\",\"name\":\"quorom\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+	Sigs: map[string]string{
+		"1865c57d": "getState()",
+	},
+}
+
+// IZeroedContractABI is the input ABI used to generate the binding from.
+// Deprecated: Use IZeroedContractMetaData.ABI instead.
+var IZeroedContractABI = IZeroedContractMetaData.ABI
+
+// IZeroedContractBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
+const IZeroedContractBinRuntime = ``
+
+// IZeroedContractFuncSigs maps the 4-byte function signature to its string representation.
+// Deprecated: Use IZeroedContractMetaData.Sigs instead.
+var IZeroedContractFuncSigs = IZeroedContractMetaData.Sigs
+
+// IZeroedContract is an auto generated Go binding around a Klaytn contract.
+type IZeroedContract struct {
+	IZeroedContractCaller     // Read-only binding to the contract
+	IZeroedContractTransactor // Write-only binding to the contract
+	IZeroedContractFilterer   // Log filterer for contract events
+}
+
+// IZeroedContractCaller is an auto generated read-only Go binding around a Klaytn contract.
+type IZeroedContractCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// IZeroedContractTransactor is an auto generated write-only Go binding around a Klaytn contract.
+type IZeroedContractTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// IZeroedContractFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+type IZeroedContractFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// IZeroedContractSession is an auto generated Go binding around a Klaytn contract,
+// with pre-set call and transact options.
+type IZeroedContractSession struct {
+	Contract     *IZeroedContract  // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// IZeroedContractCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// with pre-set call options.
+type IZeroedContractCallerSession struct {
+	Contract *IZeroedContractCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts          // Call options to use throughout this session
+}
+
+// IZeroedContractTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// with pre-set transact options.
+type IZeroedContractTransactorSession struct {
+	Contract     *IZeroedContractTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts          // Transaction auth options to use throughout this session
+}
+
+// IZeroedContractRaw is an auto generated low-level Go binding around a Klaytn contract.
+type IZeroedContractRaw struct {
+	Contract *IZeroedContract // Generic contract binding to access the raw methods on
+}
+
+// IZeroedContractCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+type IZeroedContractCallerRaw struct {
+	Contract *IZeroedContractCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// IZeroedContractTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+type IZeroedContractTransactorRaw struct {
+	Contract *IZeroedContractTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewIZeroedContract creates a new instance of IZeroedContract, bound to a specific deployed contract.
+func NewIZeroedContract(address common.Address, backend bind.ContractBackend) (*IZeroedContract, error) {
+	contract, err := bindIZeroedContract(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &IZeroedContract{IZeroedContractCaller: IZeroedContractCaller{contract: contract}, IZeroedContractTransactor: IZeroedContractTransactor{contract: contract}, IZeroedContractFilterer: IZeroedContractFilterer{contract: contract}}, nil
+}
+
+// NewIZeroedContractCaller creates a new read-only instance of IZeroedContract, bound to a specific deployed contract.
+func NewIZeroedContractCaller(address common.Address, caller bind.ContractCaller) (*IZeroedContractCaller, error) {
+	contract, err := bindIZeroedContract(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &IZeroedContractCaller{contract: contract}, nil
+}
+
+// NewIZeroedContractTransactor creates a new write-only instance of IZeroedContract, bound to a specific deployed contract.
+func NewIZeroedContractTransactor(address common.Address, transactor bind.ContractTransactor) (*IZeroedContractTransactor, error) {
+	contract, err := bindIZeroedContract(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &IZeroedContractTransactor{contract: contract}, nil
+}
+
+// NewIZeroedContractFilterer creates a new log filterer instance of IZeroedContract, bound to a specific deployed contract.
+func NewIZeroedContractFilterer(address common.Address, filterer bind.ContractFilterer) (*IZeroedContractFilterer, error) {
+	contract, err := bindIZeroedContract(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &IZeroedContractFilterer{contract: contract}, nil
+}
+
+// bindIZeroedContract binds a generic wrapper to an already deployed contract.
+func bindIZeroedContract(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := IZeroedContractMetaData.GetAbi()
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, *parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_IZeroedContract *IZeroedContractRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _IZeroedContract.Contract.IZeroedContractCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_IZeroedContract *IZeroedContractRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _IZeroedContract.Contract.IZeroedContractTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_IZeroedContract *IZeroedContractRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _IZeroedContract.Contract.IZeroedContractTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_IZeroedContract *IZeroedContractCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _IZeroedContract.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_IZeroedContract *IZeroedContractTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _IZeroedContract.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_IZeroedContract *IZeroedContractTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _IZeroedContract.Contract.contract.Transact(opts, method, params...)
+}
+
+// GetState is a free data retrieval call binding the contract method 0x1865c57d.
+//
+// Solidity: function getState() view returns(address[] adminList, uint256 quorom)
+func (_IZeroedContract *IZeroedContractCaller) GetState(opts *bind.CallOpts) (struct {
+	AdminList []common.Address
+	Quorom    *big.Int
+}, error,
+) {
+	var out []interface{}
+	err := _IZeroedContract.contract.Call(opts, &out, "getState")
+
+	outstruct := new(struct {
+		AdminList []common.Address
+		Quorom    *big.Int
+	})
+
+	outstruct.AdminList = *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
+	outstruct.Quorom = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+	return *outstruct, err
+}
+
+// GetState is a free data retrieval call binding the contract method 0x1865c57d.
+//
+// Solidity: function getState() view returns(address[] adminList, uint256 quorom)
+func (_IZeroedContract *IZeroedContractSession) GetState() (struct {
+	AdminList []common.Address
+	Quorom    *big.Int
+}, error,
+) {
+	return _IZeroedContract.Contract.GetState(&_IZeroedContract.CallOpts)
+}
+
+// GetState is a free data retrieval call binding the contract method 0x1865c57d.
+//
+// Solidity: function getState() view returns(address[] adminList, uint256 quorom)
+func (_IZeroedContract *IZeroedContractCallerSession) GetState() (struct {
+	AdminList []common.Address
+	Quorom    *big.Int
+}, error,
+) {
+	return _IZeroedContract.Contract.GetState(&_IZeroedContract.CallOpts)
+}
+
 // OwnableMetaData contains all meta data concerning the Ownable contract.
 var OwnableMetaData = &bind.MetaData{
 	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"isOwner\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
@@ -19847,6 +20051,4538 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockFilterer) WatchStatusChanged(
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockFilterer) ParseStatusChanged(log types.Log) (*TreasuryRebalanceMockStatusChanged, error) {
 	event := new(TreasuryRebalanceMockStatusChanged)
 	if err := _TreasuryRebalanceMock.contract.UnpackLog(event, "StatusChanged", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// TreasuryRebalanceMockV2MetaData contains all meta data concerning the TreasuryRebalanceMockV2 contract.
+var TreasuryRebalanceMockV2MetaData = &bind.MetaData{
+	ABI: "[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_rebalanceBlockNumber\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"allocated\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"fundAllocation\",\"type\":\"uint256\"}],\"name\":\"AllocatedRegistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"allocated\",\"type\":\"address\"}],\"name\":\"AllocatedRemoved\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"zeroed\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"approver\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"approversCount\",\"type\":\"uint256\"}],\"name\":\"Approved\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"enumTreasuryRebalanceV2.Status\",\"name\":\"status\",\"type\":\"uint8\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"rebalanceBlockNumber\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"deployedBlockNumber\",\"type\":\"uint256\"}],\"name\":\"ContractDeployed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"memo\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"enumTreasuryRebalanceV2.Status\",\"name\":\"status\",\"type\":\"uint8\"}],\"name\":\"Finalized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"enumTreasuryRebalanceV2.Status\",\"name\":\"status\",\"type\":\"uint8\"}],\"name\":\"StatusChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"zeroed\",\"type\":\"address\"}],\"name\":\"ZeroedRegistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"zeroed\",\"type\":\"address\"}],\"name\":\"ZeroedRemoved\",\"type\":\"event\"},{\"stateMutability\":\"payable\",\"type\":\"fallback\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_allocatedAddress\",\"type\":\"address\"}],\"name\":\"allocatedExists\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"allocateds\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_zeroedAddress\",\"type\":\"address\"}],\"name\":\"approve\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"checkZeroedsApproved\",\"outputs\":[],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"finalizeApproval\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_memo\",\"type\":\"string\"}],\"name\":\"finalizeContract\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"finalizeRegistration\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_allocatedAddress\",\"type\":\"address\"}],\"name\":\"getAllocated\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllocatedCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_allocatedAddress\",\"type\":\"address\"}],\"name\":\"getAllocatedIndex\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getTreasuryAmount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"treasuryAmount\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_zeroedAddress\",\"type\":\"address\"}],\"name\":\"getZeroed\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getZeroedCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_zeroedAddress\",\"type\":\"address\"}],\"name\":\"getZeroedIndex\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_addr\",\"type\":\"address\"}],\"name\":\"isContractAddr\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"isOwner\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"memo\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"rebalanceBlockNumber\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_allocatedAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"}],\"name\":\"registerAllocated\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_zeroedAddress\",\"type\":\"address\"}],\"name\":\"registerZeroed\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_allocatedAddress\",\"type\":\"address\"}],\"name\":\"removeAllocated\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_zeroedAddress\",\"type\":\"address\"}],\"name\":\"removeZeroed\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"reset\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"status\",\"outputs\":[{\"internalType\":\"enumTreasuryRebalanceV2.Status\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"sumOfZeroedBalance\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"zeroedsBalance\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"_zeroeds\",\"type\":\"address[]\"},{\"internalType\":\"address[]\",\"name\":\"_allocateds\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"_amounts\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256\",\"name\":\"_rebalanceBlockNumber\",\"type\":\"uint256\"},{\"internalType\":\"enumTreasuryRebalanceV2.Status\",\"name\":\"_status\",\"type\":\"uint8\"}],\"name\":\"testSetAll\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_rebalanceBlockNumber\",\"type\":\"uint256\"}],\"name\":\"updateRebalanceBlocknumber\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_zeroedAddress\",\"type\":\"address\"}],\"name\":\"zeroedExists\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"zeroeds\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+	Sigs: map[string]string{
+		"bd786f57": "allocatedExists(address)",
+		"343e2c85": "allocateds(uint256)",
+		"daea85c5": "approve(address)",
+		"0287d126": "checkZeroedsApproved()",
+		"faaf9ca6": "finalizeApproval()",
+		"ea6d4a9b": "finalizeContract(string)",
+		"48409096": "finalizeRegistration()",
+		"9e59eb14": "getAllocated(address)",
+		"ed355529": "getAllocatedCount()",
+		"7bfaf7b7": "getAllocatedIndex(address)",
+		"e20fcf00": "getTreasuryAmount()",
+		"cea1c338": "getZeroed(address)",
+		"9dc954ba": "getZeroedCount()",
+		"518592da": "getZeroedIndex(address)",
+		"e2384cb3": "isContractAddr(address)",
+		"8f32d59b": "isOwner()",
+		"58c3b870": "memo()",
+		"8da5cb5b": "owner()",
+		"49a3fb45": "rebalanceBlockNumber()",
+		"ecd86778": "registerAllocated(address,uint256)",
+		"5f9b0df7": "registerZeroed(address)",
+		"27704cb5": "removeAllocated(address)",
+		"db27b50b": "removeZeroed(address)",
+		"715018a6": "renounceOwnership()",
+		"d826f88f": "reset()",
+		"200d2ed2": "status()",
+		"9ab29b70": "sumOfZeroedBalance()",
+		"cc701029": "testSetAll(address[],address[],uint256[],uint256,uint8)",
+		"f2fde38b": "transferOwnership(address)",
+		"1804692f": "updateRebalanceBlocknumber(uint256)",
+		"5f8798c0": "zeroedExists(address)",
+		"62aa3e91": "zeroeds(uint256)",
+	},
+	Bin: "0x60806040523480156200001157600080fd5b5060405162002c1d38038062002c1d833981016040819052620000349162000143565b600080546001600160a01b0319163390811782556040518392907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0908290a3438111620000ed5760405162461bcd60e51b815260206004820152603a60248201527f726562616c616e636520626c6f636b4e756d6265722073686f756c642062652060448201527f67726561746572207468616e2063757272656e7420626c6f636b000000000000606482015260840160405180910390fd5b60048190556003805460ff191690556040517f6f182006c5a12fe70c0728eedb2d1b0628c41483ca6721c606707d778d22ed0a906200013390600090849042906200015d565b60405180910390a1505062000194565b6000602082840312156200015657600080fd5b5051919050565b60608101600485106200018057634e487b7160e01b600052602160045260246000fd5b938152602081019290925260409091015290565b612a7980620001a46000396000f3fe6080604052600436106101e35760003560e01c80639ab29b7011610102578063db27b50b11610095578063ecd8677811610064578063ecd86778146105e2578063ed35552914610602578063f2fde38b14610617578063faaf9ca614610637576101e3565b8063db27b50b1461056c578063e20fcf001461058c578063e2384cb3146105a1578063ea6d4a9b146105c2576101e3565b8063cc701029116100d1578063cc701029146104e9578063cea1c33814610509578063d826f88f14610537578063daea85c51461054c576101e3565b80639ab29b701461047f5780639dc954ba146104945780639e59eb14146104a9578063bd786f57146104c9576101e3565b806358c3b8701161017a578063715018a611610149578063715018a61461040c5780637bfaf7b7146104215780638da5cb5b146104415780638f32d59b1461045f576101e3565b806358c3b870146103625780635f8798c0146103845780635f9b0df7146103b457806362aa3e91146103d4576101e3565b8063343e2c85116101b6578063343e2c85146102ca578063484090961461030957806349a3fb451461031e578063518592da14610342576101e3565b80630287d126146102435780631804692f1461025a578063200d2ed21461027a57806327704cb5146102aa575b60405162461bcd60e51b815260206004820152602a60248201527f5468697320636f6e747261637420646f6573206e6f742061636365707420616e60448201526979207061796d656e747360b01b60648201526084015b60405180910390fd5b34801561024f57600080fd5b5061025861064c565b005b34801561026657600080fd5b506102586102753660046122fd565b610830565b34801561028657600080fd5b506003546102949060ff1681565b6040516102a1919061234e565b60405180910390f35b3480156102b657600080fd5b506102586102c5366004612377565b61094b565b3480156102d657600080fd5b506102ea6102e53660046122fd565b610b00565b604080516001600160a01b0390931683526020830191909152016102a1565b34801561031557600080fd5b50610258610b38565b34801561032a57600080fd5b5061033460045481565b6040519081526020016102a1565b34801561034e57600080fd5b5061033461035d366004612377565b610bef565b34801561036e57600080fd5b50610377610c5b565b6040516102a1919061239b565b34801561039057600080fd5b506103a461039f366004612377565b610ce9565b60405190151581526020016102a1565b3480156103c057600080fd5b506102586103cf366004612377565b610d9d565b3480156103e057600080fd5b506103f46103ef3660046122fd565b610ee0565b6040516001600160a01b0390911681526020016102a1565b34801561041857600080fd5b50610258610f0f565b34801561042d57600080fd5b5061033461043c366004612377565b610f83565b34801561044d57600080fd5b506000546001600160a01b03166103f4565b34801561046b57600080fd5b506000546001600160a01b031633146103a4565b34801561048b57600080fd5b50610334610fe5565b3480156104a057600080fd5b50600154610334565b3480156104b557600080fd5b506102ea6104c4366004612377565b611043565b3480156104d557600080fd5b506103a46104e4366004612377565b6110f6565b3480156104f557600080fd5b50610258610504366004612435565b6111a4565b34801561051557600080fd5b50610529610524366004612377565b611384565b6040516102a19291906124f0565b34801561054357600080fd5b5061025861146b565b34801561055857600080fd5b50610258610567366004612377565b611599565b34801561057857600080fd5b50610258610587366004612377565b61177f565b34801561059857600080fd5b50610334611914565b3480156105ad57600080fd5b506103a46105bc366004612377565b3b151590565b3480156105ce57600080fd5b506102586105dd366004612593565b611966565b3480156105ee57600080fd5b506102586105fd366004612628565b611a8e565b34801561060e57600080fd5b50600254610334565b34801561062357600080fd5b50610258610632366004612377565b611c7b565b34801561064357600080fd5b50610258611cae565b60005b60015481101561082d5760006001828154811061066e5761066e612654565b6000918252602091829020604080518082018252600290930290910180546001600160a01b031683526001810180548351818702810187019094528084529394919385830193928301828280156106ee57602002820191906000526020600020905b81546001600160a01b031681526001909101906020018083116106d0575b5050505050815250509050600061070982600001513b151590565b905080156107ce576000806107218460000151611dc1565b9150915080846020015151101561074a5760405162461bcd60e51b815260040161023a9061266a565b60208401516000805b82518110156107a45761077f83828151811061077157610771612654565b602002602001015186611e3a565b15610792578161078e816126c2565b9250505b8061079c816126c2565b915050610753565b50828110156107c55760405162461bcd60e51b815260040161023a9061266a565b50505050610818565b8160200151516001146108185760405162461bcd60e51b8152602060048201526012602482015271454f412073686f756c6420617070726f766560701b604482015260640161023a565b50508080610825906126c2565b91505061064f565b50565b6000546001600160a01b0316331461085a5760405162461bcd60e51b815260040161023a906126db565b60045443106108d15760405162461bcd60e51b815260206004820152603e60248201527f63757272656e7420626c6f636b2073686f756c646e277420626520706173742060448201527f7468652063757272656e746c792073657420626c6f636b206e756d6265720000606482015260840161023a565b8043106109465760405162461bcd60e51b815260206004820152603a60248201527f726562616c616e636520626c6f636b4e756d6265722073686f756c642062652060448201527f67726561746572207468616e2063757272656e7420626c6f636b000000000000606482015260840161023a565b600455565b6000546001600160a01b031633146109755760405162461bcd60e51b815260040161023a906126db565b6000806003805460ff169081111561098f5761098f612316565b146109ac5760405162461bcd60e51b815260040161023a90612710565b60006109b783610f83565b90506000198103610a055760405162461bcd60e51b8152602060048201526018602482015277105b1b1bd8d85d1959081b9bdd081c9959da5cdd195c995960421b604482015260640161023a565b60028054610a1590600190612747565b81548110610a2557610a25612654565b906000526020600020906002020160028281548110610a4657610a46612654565b600091825260209091208254600292830290910180546001600160a01b0319166001600160a01b03909216919091178155600192830154920191909155805480610a9257610a9261275a565b600082815260208082206002600019949094019384020180546001600160a01b03191681556001019190915591556040516001600160a01b03851681527ff8f67464bea52432645435be9c46c427173a75aefaa1001272e08a4b8572f06e91015b60405180910390a1505050565b60028181548110610b1057600080fd5b6000918252602090912060029091020180546001909101546001600160a01b03909116915082565b6000546001600160a01b03163314610b625760405162461bcd60e51b815260040161023a906126db565b6000806003805460ff1690811115610b7c57610b7c612316565b14610b995760405162461bcd60e51b815260040161023a90612710565b600380546001919060ff191682805b02179055506003546040517fafa725e7f44cadb687a7043853fa1a7e7b8f0da74ce87ec546e9420f04da8c1e91610be49160ff9091169061234e565b60405180910390a150565b6000805b600154811015610c5157826001600160a01b031660018281548110610c1a57610c1a612654565b60009182526020909120600290910201546001600160a01b031603610c3f5792915050565b80610c49816126c2565b915050610bf3565b5060001992915050565b60058054610c6890612770565b80601f0160208091040260200160405190810160405280929190818152602001828054610c9490612770565b8015610ce15780601f10610cb657610100808354040283529160200191610ce1565b820191906000526020600020905b815481529060010190602001808311610cc457829003601f168201915b505050505081565b60006001600160a01b038216610d335760405162461bcd60e51b815260206004820152600f60248201526e496e76616c6964206164647265737360881b604482015260640161023a565b60005b600154811015610d9757826001600160a01b031660018281548110610d5d57610d5d612654565b60009182526020909120600290910201546001600160a01b031603610d855750600192915050565b80610d8f816126c2565b915050610d36565b50919050565b6000546001600160a01b03163314610dc75760405162461bcd60e51b815260040161023a906126db565b6000806003805460ff1690811115610de157610de1612316565b14610dfe5760405162461bcd60e51b815260040161023a90612710565b610e0782610ce9565b15610e605760405162461bcd60e51b8152602060048201526024808201527f5a65726f6564206164647265737320697320616c726561647920726567697374604482015263195c995960e21b606482015260840161023a565b6001805480820182556000919091526002027fb10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf60180546001600160a01b0384166001600160a01b0319909116811782556040519081527fa9a4f3b74b03e48e76814dbc308d3f20104d608c67a42a7ae678d0945daa8e9290602001610af3565b60018181548110610ef057600080fd5b60009182526020909120600290910201546001600160a01b0316905081565b6000546001600160a01b03163314610f395760405162461bcd60e51b815260040161023a906126db565b600080546040516001600160a01b03909116907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0908390a3600080546001600160a01b0319169055565b6000805b600254811015610c5157826001600160a01b031660028281548110610fae57610fae612654565b60009182526020909120600290910201546001600160a01b031603610fd35792915050565b80610fdd816126c2565b915050610f87565b6000805b60015481101561103f576001818154811061100657611006612654565b600091825260209091206002909102015461102b906001600160a01b031631836127a4565b915080611037816126c2565b915050610fe9565b5090565b600080600061105184610f83565b9050600019810361109f5760405162461bcd60e51b8152602060048201526018602482015277105b1b1bd8d85d1959081b9bdd081c9959da5cdd195c995960421b604482015260640161023a565b6000600282815481106110b4576110b4612654565b60009182526020918290206040805180820190915260029092020180546001600160a01b03168083526001909101549190920181905290969095509350505050565b60006001600160a01b0382166111405760405162461bcd60e51b815260206004820152600f60248201526e496e76616c6964206164647265737360881b604482015260640161023a565b60005b600254811015610d9757826001600160a01b03166002828154811061116a5761116a612654565b60009182526020909120600290910201546001600160a01b0316036111925750600192915050565b8061119c816126c2565b915050611143565b6111b060016000612159565b6111bc6002600061217a565b6040805160018082528183019092526000916020808301908036833701905050905060005b8881101561129157600160405180604001604052808c8c8581811061120857611208612654565b905060200201602081019061121d9190612377565b6001600160a01b0390811682526020918201869052835460018082018655600095865294839020845160029092020180546001600160a01b031916919092161781558282015180519394919361127b9392850192919091019061219b565b5050508080611289906126c2565b9150506111e1565b5060005b8681101561135057600260405180604001604052808a8a858181106112bc576112bc612654565b90506020020160208101906112d19190612377565b6001600160a01b031681526020018888858181106112f1576112f1612654565b60209081029290920135909252835460018082018655600095865294829020845160029092020180546001600160a01b0319166001600160a01b0390921691909117815592015191909201555080611348816126c2565b915050611295565b5060048390556003805483919060ff19166001838381111561137457611374612316565b0217905550505050505050505050565b60006060600061139384610bef565b905060001981036113b65760405162461bcd60e51b815260040161023a906127b7565b6000600182815481106113cb576113cb612654565b6000918252602091829020604080518082018252600290930290910180546001600160a01b0316835260018101805483518187028101870190945280845293949193858301939283018282801561144b57602002820191906000526020600020905b81546001600160a01b0316815260019091019060200180831161142d575b505050505081525050905080600001518160200151935093505050915091565b6000546001600160a01b031633146114955760405162461bcd60e51b815260040161023a906126db565b6003805460ff16818111156114ac576114ac612316565b0361150c5760405162461bcd60e51b815260206004820152602a60248201527f436f6e74726163742069732066696e616c697a65642c2063616e6e6f742072656044820152697365742076616c75657360b01b606482015260840161023a565b60045443106115695760405162461bcd60e51b8152602060048201526024808201527f526562616c616e636520626c6f636b6e756d62657220616c72656164792070616044820152631cdcd95960e21b606482015260840161023a565b61157560016000612159565b6115816002600061217a565b61158d600560006121fc565b6003805460ff19169055565b6001806003805460ff16908111156115b3576115b3612316565b146115d05760405162461bcd60e51b815260040161023a90612710565b6115d982610ce9565b61163b5760405162461bcd60e51b815260206004820152602d60248201527f7a65726f6564206e6565647320746f206265207265676973746572656420626560448201526c199bdc9948185c1c1c9bdd985b609a1b606482015260840161023a565b813b1515806116b757336001600160a01b038416146116a85760405162461bcd60e51b815260206004820152602360248201527f7a65726f656441646472657373206973206e6f7420746865206d73672e73656e6044820152623232b960e91b606482015260840161023a565b6116b28333611e97565b505050565b6000806116c385611dc1565b9150915081516000036117185760405162461bcd60e51b815260206004820152601a60248201527f61646d696e206c6973742063616e6e6f7420626520656d707479000000000000604482015260640161023a565b6117223383611e3a565b61176e5760405162461bcd60e51b815260206004820152601b60248201527f6d73672e73656e646572206973206e6f74207468652061646d696e0000000000604482015260640161023a565b6117788533611e97565b5050505050565b6000546001600160a01b031633146117a95760405162461bcd60e51b815260040161023a906126db565b6000806003805460ff16908111156117c3576117c3612316565b146117e05760405162461bcd60e51b815260040161023a90612710565b60006117eb83610bef565b9050600019810361180e5760405162461bcd60e51b815260040161023a906127b7565b6001805461181d908290612747565b8154811061182d5761182d612654565b90600052602060002090600202016001828154811061184e5761184e612654565b60009182526020909120825460029092020180546001600160a01b0319166001600160a01b03909216919091178155600180830180546118919284019190612236565b5090505060018054806118a6576118a661275a565b60008281526020812060026000199093019283020180546001600160a01b0319168155906118d76001830182612276565b505090556040516001600160a01b03841681527f8a654c98d0a7856a8d216c621bb8073316efcaa2b65774d2050c4c1fc7a85a0c90602001610af3565b6000805b60025481101561103f576002818154811061193557611935612654565b9060005260206000209060020201600101548261195291906127a4565b91508061195e816126c2565b915050611918565b6000546001600160a01b031633146119905760405162461bcd60e51b815260040161023a906126db565b6002806003805460ff16908111156119aa576119aa612316565b146119c75760405162461bcd60e51b815260040161023a90612710565b60056119d38382612834565b506003805460ff1916811781556040517f8f8636c7757ca9b7d154e1d44ca90d8e8c885b9eac417c59bbf8eb7779ca640491611a1291600591906128f4565b60405180910390a16004544311611a8a5760405162461bcd60e51b815260206004820152603660248201527f436f6e74726163742063616e206f6e6c792066696e616c697a6520616674657260448201527520657865637574696e6720726562616c616e63696e6760501b606482015260840161023a565b5050565b6000546001600160a01b03163314611ab85760405162461bcd60e51b815260040161023a906126db565b6000806003805460ff1690811115611ad257611ad2612316565b14611aef5760405162461bcd60e51b815260040161023a90612710565b611af8836110f6565b15611b555760405162461bcd60e51b815260206004820152602760248201527f416c6c6f6361746564206164647265737320697320616c7265616479207265676044820152661a5cdd195c995960ca1b606482015260840161023a565b81600003611ba55760405162461bcd60e51b815260206004820152601960248201527f416d6f756e742063616e6e6f742062652073657420746f203000000000000000604482015260640161023a565b6040805180820182526001600160a01b038581168083526020808401878152600280546001810182556000829052865191027f405787fa12a823e0f2b7631cc41b3ba8828b3321ca811111fa75cd3aa3bb5ace81018054929096166001600160a01b031990921691909117909455517f405787fa12a823e0f2b7631cc41b3ba8828b3321ca811111fa75cd3aa3bb5acf90930192909255835190815290810185905290917fab5b2126f71ee7e0b39eadc53fb5d08a8f6c68dc61795fa05ed7d176cd2665ed91015b60405180910390a150505050565b6000546001600160a01b03163314611ca55760405162461bcd60e51b815260040161023a906126db565b61082d81612099565b6000546001600160a01b03163314611cd85760405162461bcd60e51b815260040161023a906126db565b6001806003805460ff1690811115611cf257611cf2612316565b14611d0f5760405162461bcd60e51b815260040161023a90612710565b611d17610fe5565b611d1f611914565b10611da55760405162461bcd60e51b815260206004820152604a60248201527f747265617375727920616d6f756e742073686f756c64206265206c657373207460448201527f68616e207468652073756d206f6620616c6c207a65726f656420616464726573606482015269732062616c616e63657360b01b608482015260a40161023a565b611dad61064c565b600380546002919060ff1916600183610ba8565b6060600080839050806001600160a01b0316631865c57d6040518163ffffffff1660e01b8152600401600060405180830381865afa158015611e07573d6000803e3d6000fd5b505050506040513d6000823e601f3d908101601f19168201604052611e2f9190810190612989565b909590945092505050565b6000805b8251811015611e9057828181518110611e5957611e59612654565b60200260200101516001600160a01b0316846001600160a01b031603611e7e57600191505b80611e88816126c2565b915050611e3e565b5092915050565b6000611ea283610bef565b90506000198103611ec55760405162461bcd60e51b815260040161023a906127b7565b600060018281548110611eda57611eda612654565b9060005260206000209060020201600101805480602002602001604051908101604052809291908181526020018280548015611f3f57602002820191906000526020600020905b81546001600160a01b03168152600190910190602001808311611f21575b5050505050905060005b8151811015611fd157836001600160a01b0316828281518110611f6e57611f6e612654565b60200260200101516001600160a01b031603611fbf5760405162461bcd60e51b815260206004820152601060248201526f105b1c9958591e48185c1c1c9bdd995960821b604482015260640161023a565b80611fc9816126c2565b915050611f49565b5060018281548110611fe557611fe5612654565b600091825260208083206001600290930201820180548084018255908452922090910180546001600160a01b0386166001600160a01b031990911617905580547f80da462ebfbe41cfc9bc015e7a9a3c7a2a73dbccede72d8ceb583606c27f8f909186918691908690811061205c5761205c612654565b600091825260209182902060016002909202010154604080516001600160a01b039586168152949093169184019190915290820152606001611c6d565b6001600160a01b0381166120fe5760405162461bcd60e51b815260206004820152602660248201527f4f776e61626c653a206e6577206f776e657220697320746865207a65726f206160448201526564647265737360d01b606482015260840161023a565b600080546040516001600160a01b03808516939216917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e091a3600080546001600160a01b0319166001600160a01b0392909216919091179055565b508054600082556002029060005260206000209081019061082d9190612294565b508054600082556002029060005260206000209081019061082d91906122c2565b8280548282559060005260206000209081019282156121f0579160200282015b828111156121f057825182546001600160a01b0319166001600160a01b039091161782556020909201916001909101906121bb565b5061103f9291506122e8565b50805461220890612770565b6000825580601f10612218575050565b601f01602090049060005260206000209081019061082d91906122e8565b8280548282559060005260206000209081019282156121f05760005260206000209182015b828111156121f057825482559160010191906001019061225b565b508054600082559060005260206000209081019061082d91906122e8565b8082111561103f5780546001600160a01b031916815560006122b96001830182612276565b50600201612294565b5b8082111561103f5780546001600160a01b0319168155600060018201556002016122c3565b5b8082111561103f57600081556001016122e9565b60006020828403121561230f57600080fd5b5035919050565b634e487b7160e01b600052602160045260246000fd5b6004811061234a57634e487b7160e01b600052602160045260246000fd5b9052565b6020810161235c828461232c565b92915050565b6001600160a01b038116811461082d57600080fd5b60006020828403121561238957600080fd5b813561239481612362565b9392505050565b600060208083528351808285015260005b818110156123c8578581018301518582016040015282016123ac565b506000604082860101526040601f19601f8301168501019250505092915050565b60008083601f8401126123fb57600080fd5b50813567ffffffffffffffff81111561241357600080fd5b6020830191508360208260051b850101111561242e57600080fd5b9250929050565b60008060008060008060008060a0898b03121561245157600080fd5b883567ffffffffffffffff8082111561246957600080fd5b6124758c838d016123e9565b909a50985060208b013591508082111561248e57600080fd5b61249a8c838d016123e9565b909850965060408b01359150808211156124b357600080fd5b506124c08b828c016123e9565b909550935050606089013591506080890135600481106124df57600080fd5b809150509295985092959890939650565b6001600160a01b038381168252604060208084018290528451918401829052600092858201929091906060860190855b8181101561253e578551851683529483019491830191600101612520565b509098975050505050505050565b634e487b7160e01b600052604160045260246000fd5b604051601f8201601f1916810167ffffffffffffffff8111828210171561258b5761258b61254c565b604052919050565b600060208083850312156125a657600080fd5b823567ffffffffffffffff808211156125be57600080fd5b818501915085601f8301126125d257600080fd5b8135818111156125e4576125e461254c565b6125f6601f8201601f19168501612562565b9150808252868482850101111561260c57600080fd5b8084840185840137600090820190930192909252509392505050565b6000806040838503121561263b57600080fd5b823561264681612362565b946020939093013593505050565b634e487b7160e01b600052603260045260246000fd5b60208082526022908201527f6d696e2072657175697265642061646d696e732073686f756c6420617070726f604082015261766560f01b606082015260800190565b634e487b7160e01b600052601160045260246000fd5b6000600182016126d4576126d46126ac565b5060010190565b6020808252818101527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e6572604082015260600190565b6020808252601c908201527f4e6f7420696e207468652064657369676e617465642073746174757300000000604082015260600190565b8181038181111561235c5761235c6126ac565b634e487b7160e01b600052603160045260246000fd5b600181811c9082168061278457607f821691505b602082108103610d9757634e487b7160e01b600052602260045260246000fd5b8082018082111561235c5761235c6126ac565b60208082526015908201527416995c9bd959081b9bdd081c9959da5cdd195c9959605a1b604082015260600190565b601f8211156116b257600081815260208120601f850160051c8101602086101561280d5750805b601f850160051c820191505b8181101561282c57828155600101612819565b505050505050565b815167ffffffffffffffff81111561284e5761284e61254c565b6128628161285c8454612770565b846127e6565b602080601f831160018114612897576000841561287f5750858301515b600019600386901b1c1916600185901b17855561282c565b600085815260208120601f198616915b828110156128c6578886015182559484019460019091019084016128a7565b50858210156128e45787850151600019600388901b60f8161c191681555b5050505050600190811b01905550565b60408152600080845461290681612770565b8060408601526060600180841660008114612928576001811461294257612973565b60ff1985168884015283151560051b880183019550612973565b8960005260208060002060005b8681101561296a5781548b820187015290840190820161294f565b8a018501975050505b505050505080915050612394602083018461232c565b6000806040838503121561299c57600080fd5b825167ffffffffffffffff808211156129b457600080fd5b818501915085601f8301126129c857600080fd5b81516020828211156129dc576129dc61254c565b8160051b92506129ed818401612562565b8281529284018101928181019089851115612a0757600080fd5b948201945b84861015612a315785519350612a2184612362565b8382529482019490820190612a0c565b9790910151969896975050505050505056fea2646970667358221220950406bd66fa71222edb3f99e07fdb0896c28f619a09e9285a551c529d6c67c264736f6c63430008120033",
+}
+
+// TreasuryRebalanceMockV2ABI is the input ABI used to generate the binding from.
+// Deprecated: Use TreasuryRebalanceMockV2MetaData.ABI instead.
+var TreasuryRebalanceMockV2ABI = TreasuryRebalanceMockV2MetaData.ABI
+
+// TreasuryRebalanceMockV2BinRuntime is the compiled bytecode used for adding genesis block without deploying code.
+const TreasuryRebalanceMockV2BinRuntime = `6080604052600436106101e35760003560e01c80639ab29b7011610102578063db27b50b11610095578063ecd8677811610064578063ecd86778146105e2578063ed35552914610602578063f2fde38b14610617578063faaf9ca614610637576101e3565b8063db27b50b1461056c578063e20fcf001461058c578063e2384cb3146105a1578063ea6d4a9b146105c2576101e3565b8063cc701029116100d1578063cc701029146104e9578063cea1c33814610509578063d826f88f14610537578063daea85c51461054c576101e3565b80639ab29b701461047f5780639dc954ba146104945780639e59eb14146104a9578063bd786f57146104c9576101e3565b806358c3b8701161017a578063715018a611610149578063715018a61461040c5780637bfaf7b7146104215780638da5cb5b146104415780638f32d59b1461045f576101e3565b806358c3b870146103625780635f8798c0146103845780635f9b0df7146103b457806362aa3e91146103d4576101e3565b8063343e2c85116101b6578063343e2c85146102ca578063484090961461030957806349a3fb451461031e578063518592da14610342576101e3565b80630287d126146102435780631804692f1461025a578063200d2ed21461027a57806327704cb5146102aa575b60405162461bcd60e51b815260206004820152602a60248201527f5468697320636f6e747261637420646f6573206e6f742061636365707420616e60448201526979207061796d656e747360b01b60648201526084015b60405180910390fd5b34801561024f57600080fd5b5061025861064c565b005b34801561026657600080fd5b506102586102753660046122fd565b610830565b34801561028657600080fd5b506003546102949060ff1681565b6040516102a1919061234e565b60405180910390f35b3480156102b657600080fd5b506102586102c5366004612377565b61094b565b3480156102d657600080fd5b506102ea6102e53660046122fd565b610b00565b604080516001600160a01b0390931683526020830191909152016102a1565b34801561031557600080fd5b50610258610b38565b34801561032a57600080fd5b5061033460045481565b6040519081526020016102a1565b34801561034e57600080fd5b5061033461035d366004612377565b610bef565b34801561036e57600080fd5b50610377610c5b565b6040516102a1919061239b565b34801561039057600080fd5b506103a461039f366004612377565b610ce9565b60405190151581526020016102a1565b3480156103c057600080fd5b506102586103cf366004612377565b610d9d565b3480156103e057600080fd5b506103f46103ef3660046122fd565b610ee0565b6040516001600160a01b0390911681526020016102a1565b34801561041857600080fd5b50610258610f0f565b34801561042d57600080fd5b5061033461043c366004612377565b610f83565b34801561044d57600080fd5b506000546001600160a01b03166103f4565b34801561046b57600080fd5b506000546001600160a01b031633146103a4565b34801561048b57600080fd5b50610334610fe5565b3480156104a057600080fd5b50600154610334565b3480156104b557600080fd5b506102ea6104c4366004612377565b611043565b3480156104d557600080fd5b506103a46104e4366004612377565b6110f6565b3480156104f557600080fd5b50610258610504366004612435565b6111a4565b34801561051557600080fd5b50610529610524366004612377565b611384565b6040516102a19291906124f0565b34801561054357600080fd5b5061025861146b565b34801561055857600080fd5b50610258610567366004612377565b611599565b34801561057857600080fd5b50610258610587366004612377565b61177f565b34801561059857600080fd5b50610334611914565b3480156105ad57600080fd5b506103a46105bc366004612377565b3b151590565b3480156105ce57600080fd5b506102586105dd366004612593565b611966565b3480156105ee57600080fd5b506102586105fd366004612628565b611a8e565b34801561060e57600080fd5b50600254610334565b34801561062357600080fd5b50610258610632366004612377565b611c7b565b34801561064357600080fd5b50610258611cae565b60005b60015481101561082d5760006001828154811061066e5761066e612654565b6000918252602091829020604080518082018252600290930290910180546001600160a01b031683526001810180548351818702810187019094528084529394919385830193928301828280156106ee57602002820191906000526020600020905b81546001600160a01b031681526001909101906020018083116106d0575b5050505050815250509050600061070982600001513b151590565b905080156107ce576000806107218460000151611dc1565b9150915080846020015151101561074a5760405162461bcd60e51b815260040161023a9061266a565b60208401516000805b82518110156107a45761077f83828151811061077157610771612654565b602002602001015186611e3a565b15610792578161078e816126c2565b9250505b8061079c816126c2565b915050610753565b50828110156107c55760405162461bcd60e51b815260040161023a9061266a565b50505050610818565b8160200151516001146108185760405162461bcd60e51b8152602060048201526012602482015271454f412073686f756c6420617070726f766560701b604482015260640161023a565b50508080610825906126c2565b91505061064f565b50565b6000546001600160a01b0316331461085a5760405162461bcd60e51b815260040161023a906126db565b60045443106108d15760405162461bcd60e51b815260206004820152603e60248201527f63757272656e7420626c6f636b2073686f756c646e277420626520706173742060448201527f7468652063757272656e746c792073657420626c6f636b206e756d6265720000606482015260840161023a565b8043106109465760405162461bcd60e51b815260206004820152603a60248201527f726562616c616e636520626c6f636b4e756d6265722073686f756c642062652060448201527f67726561746572207468616e2063757272656e7420626c6f636b000000000000606482015260840161023a565b600455565b6000546001600160a01b031633146109755760405162461bcd60e51b815260040161023a906126db565b6000806003805460ff169081111561098f5761098f612316565b146109ac5760405162461bcd60e51b815260040161023a90612710565b60006109b783610f83565b90506000198103610a055760405162461bcd60e51b8152602060048201526018602482015277105b1b1bd8d85d1959081b9bdd081c9959da5cdd195c995960421b604482015260640161023a565b60028054610a1590600190612747565b81548110610a2557610a25612654565b906000526020600020906002020160028281548110610a4657610a46612654565b600091825260209091208254600292830290910180546001600160a01b0319166001600160a01b03909216919091178155600192830154920191909155805480610a9257610a9261275a565b600082815260208082206002600019949094019384020180546001600160a01b03191681556001019190915591556040516001600160a01b03851681527ff8f67464bea52432645435be9c46c427173a75aefaa1001272e08a4b8572f06e91015b60405180910390a1505050565b60028181548110610b1057600080fd5b6000918252602090912060029091020180546001909101546001600160a01b03909116915082565b6000546001600160a01b03163314610b625760405162461bcd60e51b815260040161023a906126db565b6000806003805460ff1690811115610b7c57610b7c612316565b14610b995760405162461bcd60e51b815260040161023a90612710565b600380546001919060ff191682805b02179055506003546040517fafa725e7f44cadb687a7043853fa1a7e7b8f0da74ce87ec546e9420f04da8c1e91610be49160ff9091169061234e565b60405180910390a150565b6000805b600154811015610c5157826001600160a01b031660018281548110610c1a57610c1a612654565b60009182526020909120600290910201546001600160a01b031603610c3f5792915050565b80610c49816126c2565b915050610bf3565b5060001992915050565b60058054610c6890612770565b80601f0160208091040260200160405190810160405280929190818152602001828054610c9490612770565b8015610ce15780601f10610cb657610100808354040283529160200191610ce1565b820191906000526020600020905b815481529060010190602001808311610cc457829003601f168201915b505050505081565b60006001600160a01b038216610d335760405162461bcd60e51b815260206004820152600f60248201526e496e76616c6964206164647265737360881b604482015260640161023a565b60005b600154811015610d9757826001600160a01b031660018281548110610d5d57610d5d612654565b60009182526020909120600290910201546001600160a01b031603610d855750600192915050565b80610d8f816126c2565b915050610d36565b50919050565b6000546001600160a01b03163314610dc75760405162461bcd60e51b815260040161023a906126db565b6000806003805460ff1690811115610de157610de1612316565b14610dfe5760405162461bcd60e51b815260040161023a90612710565b610e0782610ce9565b15610e605760405162461bcd60e51b8152602060048201526024808201527f5a65726f6564206164647265737320697320616c726561647920726567697374604482015263195c995960e21b606482015260840161023a565b6001805480820182556000919091526002027fb10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf60180546001600160a01b0384166001600160a01b0319909116811782556040519081527fa9a4f3b74b03e48e76814dbc308d3f20104d608c67a42a7ae678d0945daa8e9290602001610af3565b60018181548110610ef057600080fd5b60009182526020909120600290910201546001600160a01b0316905081565b6000546001600160a01b03163314610f395760405162461bcd60e51b815260040161023a906126db565b600080546040516001600160a01b03909116907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0908390a3600080546001600160a01b0319169055565b6000805b600254811015610c5157826001600160a01b031660028281548110610fae57610fae612654565b60009182526020909120600290910201546001600160a01b031603610fd35792915050565b80610fdd816126c2565b915050610f87565b6000805b60015481101561103f576001818154811061100657611006612654565b600091825260209091206002909102015461102b906001600160a01b031631836127a4565b915080611037816126c2565b915050610fe9565b5090565b600080600061105184610f83565b9050600019810361109f5760405162461bcd60e51b8152602060048201526018602482015277105b1b1bd8d85d1959081b9bdd081c9959da5cdd195c995960421b604482015260640161023a565b6000600282815481106110b4576110b4612654565b60009182526020918290206040805180820190915260029092020180546001600160a01b03168083526001909101549190920181905290969095509350505050565b60006001600160a01b0382166111405760405162461bcd60e51b815260206004820152600f60248201526e496e76616c6964206164647265737360881b604482015260640161023a565b60005b600254811015610d9757826001600160a01b03166002828154811061116a5761116a612654565b60009182526020909120600290910201546001600160a01b0316036111925750600192915050565b8061119c816126c2565b915050611143565b6111b060016000612159565b6111bc6002600061217a565b6040805160018082528183019092526000916020808301908036833701905050905060005b8881101561129157600160405180604001604052808c8c8581811061120857611208612654565b905060200201602081019061121d9190612377565b6001600160a01b0390811682526020918201869052835460018082018655600095865294839020845160029092020180546001600160a01b031916919092161781558282015180519394919361127b9392850192919091019061219b565b5050508080611289906126c2565b9150506111e1565b5060005b8681101561135057600260405180604001604052808a8a858181106112bc576112bc612654565b90506020020160208101906112d19190612377565b6001600160a01b031681526020018888858181106112f1576112f1612654565b60209081029290920135909252835460018082018655600095865294829020845160029092020180546001600160a01b0319166001600160a01b0390921691909117815592015191909201555080611348816126c2565b915050611295565b5060048390556003805483919060ff19166001838381111561137457611374612316565b0217905550505050505050505050565b60006060600061139384610bef565b905060001981036113b65760405162461bcd60e51b815260040161023a906127b7565b6000600182815481106113cb576113cb612654565b6000918252602091829020604080518082018252600290930290910180546001600160a01b0316835260018101805483518187028101870190945280845293949193858301939283018282801561144b57602002820191906000526020600020905b81546001600160a01b0316815260019091019060200180831161142d575b505050505081525050905080600001518160200151935093505050915091565b6000546001600160a01b031633146114955760405162461bcd60e51b815260040161023a906126db565b6003805460ff16818111156114ac576114ac612316565b0361150c5760405162461bcd60e51b815260206004820152602a60248201527f436f6e74726163742069732066696e616c697a65642c2063616e6e6f742072656044820152697365742076616c75657360b01b606482015260840161023a565b60045443106115695760405162461bcd60e51b8152602060048201526024808201527f526562616c616e636520626c6f636b6e756d62657220616c72656164792070616044820152631cdcd95960e21b606482015260840161023a565b61157560016000612159565b6115816002600061217a565b61158d600560006121fc565b6003805460ff19169055565b6001806003805460ff16908111156115b3576115b3612316565b146115d05760405162461bcd60e51b815260040161023a90612710565b6115d982610ce9565b61163b5760405162461bcd60e51b815260206004820152602d60248201527f7a65726f6564206e6565647320746f206265207265676973746572656420626560448201526c199bdc9948185c1c1c9bdd985b609a1b606482015260840161023a565b813b1515806116b757336001600160a01b038416146116a85760405162461bcd60e51b815260206004820152602360248201527f7a65726f656441646472657373206973206e6f7420746865206d73672e73656e6044820152623232b960e91b606482015260840161023a565b6116b28333611e97565b505050565b6000806116c385611dc1565b9150915081516000036117185760405162461bcd60e51b815260206004820152601a60248201527f61646d696e206c6973742063616e6e6f7420626520656d707479000000000000604482015260640161023a565b6117223383611e3a565b61176e5760405162461bcd60e51b815260206004820152601b60248201527f6d73672e73656e646572206973206e6f74207468652061646d696e0000000000604482015260640161023a565b6117788533611e97565b5050505050565b6000546001600160a01b031633146117a95760405162461bcd60e51b815260040161023a906126db565b6000806003805460ff16908111156117c3576117c3612316565b146117e05760405162461bcd60e51b815260040161023a90612710565b60006117eb83610bef565b9050600019810361180e5760405162461bcd60e51b815260040161023a906127b7565b6001805461181d908290612747565b8154811061182d5761182d612654565b90600052602060002090600202016001828154811061184e5761184e612654565b60009182526020909120825460029092020180546001600160a01b0319166001600160a01b03909216919091178155600180830180546118919284019190612236565b5090505060018054806118a6576118a661275a565b60008281526020812060026000199093019283020180546001600160a01b0319168155906118d76001830182612276565b505090556040516001600160a01b03841681527f8a654c98d0a7856a8d216c621bb8073316efcaa2b65774d2050c4c1fc7a85a0c90602001610af3565b6000805b60025481101561103f576002818154811061193557611935612654565b9060005260206000209060020201600101548261195291906127a4565b91508061195e816126c2565b915050611918565b6000546001600160a01b031633146119905760405162461bcd60e51b815260040161023a906126db565b6002806003805460ff16908111156119aa576119aa612316565b146119c75760405162461bcd60e51b815260040161023a90612710565b60056119d38382612834565b506003805460ff1916811781556040517f8f8636c7757ca9b7d154e1d44ca90d8e8c885b9eac417c59bbf8eb7779ca640491611a1291600591906128f4565b60405180910390a16004544311611a8a5760405162461bcd60e51b815260206004820152603660248201527f436f6e74726163742063616e206f6e6c792066696e616c697a6520616674657260448201527520657865637574696e6720726562616c616e63696e6760501b606482015260840161023a565b5050565b6000546001600160a01b03163314611ab85760405162461bcd60e51b815260040161023a906126db565b6000806003805460ff1690811115611ad257611ad2612316565b14611aef5760405162461bcd60e51b815260040161023a90612710565b611af8836110f6565b15611b555760405162461bcd60e51b815260206004820152602760248201527f416c6c6f6361746564206164647265737320697320616c7265616479207265676044820152661a5cdd195c995960ca1b606482015260840161023a565b81600003611ba55760405162461bcd60e51b815260206004820152601960248201527f416d6f756e742063616e6e6f742062652073657420746f203000000000000000604482015260640161023a565b6040805180820182526001600160a01b038581168083526020808401878152600280546001810182556000829052865191027f405787fa12a823e0f2b7631cc41b3ba8828b3321ca811111fa75cd3aa3bb5ace81018054929096166001600160a01b031990921691909117909455517f405787fa12a823e0f2b7631cc41b3ba8828b3321ca811111fa75cd3aa3bb5acf90930192909255835190815290810185905290917fab5b2126f71ee7e0b39eadc53fb5d08a8f6c68dc61795fa05ed7d176cd2665ed91015b60405180910390a150505050565b6000546001600160a01b03163314611ca55760405162461bcd60e51b815260040161023a906126db565b61082d81612099565b6000546001600160a01b03163314611cd85760405162461bcd60e51b815260040161023a906126db565b6001806003805460ff1690811115611cf257611cf2612316565b14611d0f5760405162461bcd60e51b815260040161023a90612710565b611d17610fe5565b611d1f611914565b10611da55760405162461bcd60e51b815260206004820152604a60248201527f747265617375727920616d6f756e742073686f756c64206265206c657373207460448201527f68616e207468652073756d206f6620616c6c207a65726f656420616464726573606482015269732062616c616e63657360b01b608482015260a40161023a565b611dad61064c565b600380546002919060ff1916600183610ba8565b6060600080839050806001600160a01b0316631865c57d6040518163ffffffff1660e01b8152600401600060405180830381865afa158015611e07573d6000803e3d6000fd5b505050506040513d6000823e601f3d908101601f19168201604052611e2f9190810190612989565b909590945092505050565b6000805b8251811015611e9057828181518110611e5957611e59612654565b60200260200101516001600160a01b0316846001600160a01b031603611e7e57600191505b80611e88816126c2565b915050611e3e565b5092915050565b6000611ea283610bef565b90506000198103611ec55760405162461bcd60e51b815260040161023a906127b7565b600060018281548110611eda57611eda612654565b9060005260206000209060020201600101805480602002602001604051908101604052809291908181526020018280548015611f3f57602002820191906000526020600020905b81546001600160a01b03168152600190910190602001808311611f21575b5050505050905060005b8151811015611fd157836001600160a01b0316828281518110611f6e57611f6e612654565b60200260200101516001600160a01b031603611fbf5760405162461bcd60e51b815260206004820152601060248201526f105b1c9958591e48185c1c1c9bdd995960821b604482015260640161023a565b80611fc9816126c2565b915050611f49565b5060018281548110611fe557611fe5612654565b600091825260208083206001600290930201820180548084018255908452922090910180546001600160a01b0386166001600160a01b031990911617905580547f80da462ebfbe41cfc9bc015e7a9a3c7a2a73dbccede72d8ceb583606c27f8f909186918691908690811061205c5761205c612654565b600091825260209182902060016002909202010154604080516001600160a01b039586168152949093169184019190915290820152606001611c6d565b6001600160a01b0381166120fe5760405162461bcd60e51b815260206004820152602660248201527f4f776e61626c653a206e6577206f776e657220697320746865207a65726f206160448201526564647265737360d01b606482015260840161023a565b600080546040516001600160a01b03808516939216917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e091a3600080546001600160a01b0319166001600160a01b0392909216919091179055565b508054600082556002029060005260206000209081019061082d9190612294565b508054600082556002029060005260206000209081019061082d91906122c2565b8280548282559060005260206000209081019282156121f0579160200282015b828111156121f057825182546001600160a01b0319166001600160a01b039091161782556020909201916001909101906121bb565b5061103f9291506122e8565b50805461220890612770565b6000825580601f10612218575050565b601f01602090049060005260206000209081019061082d91906122e8565b8280548282559060005260206000209081019282156121f05760005260206000209182015b828111156121f057825482559160010191906001019061225b565b508054600082559060005260206000209081019061082d91906122e8565b8082111561103f5780546001600160a01b031916815560006122b96001830182612276565b50600201612294565b5b8082111561103f5780546001600160a01b0319168155600060018201556002016122c3565b5b8082111561103f57600081556001016122e9565b60006020828403121561230f57600080fd5b5035919050565b634e487b7160e01b600052602160045260246000fd5b6004811061234a57634e487b7160e01b600052602160045260246000fd5b9052565b6020810161235c828461232c565b92915050565b6001600160a01b038116811461082d57600080fd5b60006020828403121561238957600080fd5b813561239481612362565b9392505050565b600060208083528351808285015260005b818110156123c8578581018301518582016040015282016123ac565b506000604082860101526040601f19601f8301168501019250505092915050565b60008083601f8401126123fb57600080fd5b50813567ffffffffffffffff81111561241357600080fd5b6020830191508360208260051b850101111561242e57600080fd5b9250929050565b60008060008060008060008060a0898b03121561245157600080fd5b883567ffffffffffffffff8082111561246957600080fd5b6124758c838d016123e9565b909a50985060208b013591508082111561248e57600080fd5b61249a8c838d016123e9565b909850965060408b01359150808211156124b357600080fd5b506124c08b828c016123e9565b909550935050606089013591506080890135600481106124df57600080fd5b809150509295985092959890939650565b6001600160a01b038381168252604060208084018290528451918401829052600092858201929091906060860190855b8181101561253e578551851683529483019491830191600101612520565b509098975050505050505050565b634e487b7160e01b600052604160045260246000fd5b604051601f8201601f1916810167ffffffffffffffff8111828210171561258b5761258b61254c565b604052919050565b600060208083850312156125a657600080fd5b823567ffffffffffffffff808211156125be57600080fd5b818501915085601f8301126125d257600080fd5b8135818111156125e4576125e461254c565b6125f6601f8201601f19168501612562565b9150808252868482850101111561260c57600080fd5b8084840185840137600090820190930192909252509392505050565b6000806040838503121561263b57600080fd5b823561264681612362565b946020939093013593505050565b634e487b7160e01b600052603260045260246000fd5b60208082526022908201527f6d696e2072657175697265642061646d696e732073686f756c6420617070726f604082015261766560f01b606082015260800190565b634e487b7160e01b600052601160045260246000fd5b6000600182016126d4576126d46126ac565b5060010190565b6020808252818101527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e6572604082015260600190565b6020808252601c908201527f4e6f7420696e207468652064657369676e617465642073746174757300000000604082015260600190565b8181038181111561235c5761235c6126ac565b634e487b7160e01b600052603160045260246000fd5b600181811c9082168061278457607f821691505b602082108103610d9757634e487b7160e01b600052602260045260246000fd5b8082018082111561235c5761235c6126ac565b60208082526015908201527416995c9bd959081b9bdd081c9959da5cdd195c9959605a1b604082015260600190565b601f8211156116b257600081815260208120601f850160051c8101602086101561280d5750805b601f850160051c820191505b8181101561282c57828155600101612819565b505050505050565b815167ffffffffffffffff81111561284e5761284e61254c565b6128628161285c8454612770565b846127e6565b602080601f831160018114612897576000841561287f5750858301515b600019600386901b1c1916600185901b17855561282c565b600085815260208120601f198616915b828110156128c6578886015182559484019460019091019084016128a7565b50858210156128e45787850151600019600388901b60f8161c191681555b5050505050600190811b01905550565b60408152600080845461290681612770565b8060408601526060600180841660008114612928576001811461294257612973565b60ff1985168884015283151560051b880183019550612973565b8960005260208060002060005b8681101561296a5781548b820187015290840190820161294f565b8a018501975050505b505050505080915050612394602083018461232c565b6000806040838503121561299c57600080fd5b825167ffffffffffffffff808211156129b457600080fd5b818501915085601f8301126129c857600080fd5b81516020828211156129dc576129dc61254c565b8160051b92506129ed818401612562565b8281529284018101928181019089851115612a0757600080fd5b948201945b84861015612a315785519350612a2184612362565b8382529482019490820190612a0c565b9790910151969896975050505050505056fea2646970667358221220950406bd66fa71222edb3f99e07fdb0896c28f619a09e9285a551c529d6c67c264736f6c63430008120033`
+
+// TreasuryRebalanceMockV2FuncSigs maps the 4-byte function signature to its string representation.
+// Deprecated: Use TreasuryRebalanceMockV2MetaData.Sigs instead.
+var TreasuryRebalanceMockV2FuncSigs = TreasuryRebalanceMockV2MetaData.Sigs
+
+// TreasuryRebalanceMockV2Bin is the compiled bytecode used for deploying new contracts.
+// Deprecated: Use TreasuryRebalanceMockV2MetaData.Bin instead.
+var TreasuryRebalanceMockV2Bin = TreasuryRebalanceMockV2MetaData.Bin
+
+// DeployTreasuryRebalanceMockV2 deploys a new Klaytn contract, binding an instance of TreasuryRebalanceMockV2 to it.
+func DeployTreasuryRebalanceMockV2(auth *bind.TransactOpts, backend bind.ContractBackend, _rebalanceBlockNumber *big.Int) (common.Address, *types.Transaction, *TreasuryRebalanceMockV2, error) {
+	parsed, err := TreasuryRebalanceMockV2MetaData.GetAbi()
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	if parsed == nil {
+		return common.Address{}, nil, nil, errors.New("GetABI returned nil")
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(TreasuryRebalanceMockV2Bin), backend, _rebalanceBlockNumber)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &TreasuryRebalanceMockV2{TreasuryRebalanceMockV2Caller: TreasuryRebalanceMockV2Caller{contract: contract}, TreasuryRebalanceMockV2Transactor: TreasuryRebalanceMockV2Transactor{contract: contract}, TreasuryRebalanceMockV2Filterer: TreasuryRebalanceMockV2Filterer{contract: contract}}, nil
+}
+
+// TreasuryRebalanceMockV2 is an auto generated Go binding around a Klaytn contract.
+type TreasuryRebalanceMockV2 struct {
+	TreasuryRebalanceMockV2Caller     // Read-only binding to the contract
+	TreasuryRebalanceMockV2Transactor // Write-only binding to the contract
+	TreasuryRebalanceMockV2Filterer   // Log filterer for contract events
+}
+
+// TreasuryRebalanceMockV2Caller is an auto generated read-only Go binding around a Klaytn contract.
+type TreasuryRebalanceMockV2Caller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// TreasuryRebalanceMockV2Transactor is an auto generated write-only Go binding around a Klaytn contract.
+type TreasuryRebalanceMockV2Transactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// TreasuryRebalanceMockV2Filterer is an auto generated log filtering Go binding around a Klaytn contract events.
+type TreasuryRebalanceMockV2Filterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// TreasuryRebalanceMockV2Session is an auto generated Go binding around a Klaytn contract,
+// with pre-set call and transact options.
+type TreasuryRebalanceMockV2Session struct {
+	Contract     *TreasuryRebalanceMockV2 // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts            // Call options to use throughout this session
+	TransactOpts bind.TransactOpts        // Transaction auth options to use throughout this session
+}
+
+// TreasuryRebalanceMockV2CallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// with pre-set call options.
+type TreasuryRebalanceMockV2CallerSession struct {
+	Contract *TreasuryRebalanceMockV2Caller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts                  // Call options to use throughout this session
+}
+
+// TreasuryRebalanceMockV2TransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// with pre-set transact options.
+type TreasuryRebalanceMockV2TransactorSession struct {
+	Contract     *TreasuryRebalanceMockV2Transactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts                  // Transaction auth options to use throughout this session
+}
+
+// TreasuryRebalanceMockV2Raw is an auto generated low-level Go binding around a Klaytn contract.
+type TreasuryRebalanceMockV2Raw struct {
+	Contract *TreasuryRebalanceMockV2 // Generic contract binding to access the raw methods on
+}
+
+// TreasuryRebalanceMockV2CallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+type TreasuryRebalanceMockV2CallerRaw struct {
+	Contract *TreasuryRebalanceMockV2Caller // Generic read-only contract binding to access the raw methods on
+}
+
+// TreasuryRebalanceMockV2TransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+type TreasuryRebalanceMockV2TransactorRaw struct {
+	Contract *TreasuryRebalanceMockV2Transactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewTreasuryRebalanceMockV2 creates a new instance of TreasuryRebalanceMockV2, bound to a specific deployed contract.
+func NewTreasuryRebalanceMockV2(address common.Address, backend bind.ContractBackend) (*TreasuryRebalanceMockV2, error) {
+	contract, err := bindTreasuryRebalanceMockV2(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &TreasuryRebalanceMockV2{TreasuryRebalanceMockV2Caller: TreasuryRebalanceMockV2Caller{contract: contract}, TreasuryRebalanceMockV2Transactor: TreasuryRebalanceMockV2Transactor{contract: contract}, TreasuryRebalanceMockV2Filterer: TreasuryRebalanceMockV2Filterer{contract: contract}}, nil
+}
+
+// NewTreasuryRebalanceMockV2Caller creates a new read-only instance of TreasuryRebalanceMockV2, bound to a specific deployed contract.
+func NewTreasuryRebalanceMockV2Caller(address common.Address, caller bind.ContractCaller) (*TreasuryRebalanceMockV2Caller, error) {
+	contract, err := bindTreasuryRebalanceMockV2(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &TreasuryRebalanceMockV2Caller{contract: contract}, nil
+}
+
+// NewTreasuryRebalanceMockV2Transactor creates a new write-only instance of TreasuryRebalanceMockV2, bound to a specific deployed contract.
+func NewTreasuryRebalanceMockV2Transactor(address common.Address, transactor bind.ContractTransactor) (*TreasuryRebalanceMockV2Transactor, error) {
+	contract, err := bindTreasuryRebalanceMockV2(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &TreasuryRebalanceMockV2Transactor{contract: contract}, nil
+}
+
+// NewTreasuryRebalanceMockV2Filterer creates a new log filterer instance of TreasuryRebalanceMockV2, bound to a specific deployed contract.
+func NewTreasuryRebalanceMockV2Filterer(address common.Address, filterer bind.ContractFilterer) (*TreasuryRebalanceMockV2Filterer, error) {
+	contract, err := bindTreasuryRebalanceMockV2(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &TreasuryRebalanceMockV2Filterer{contract: contract}, nil
+}
+
+// bindTreasuryRebalanceMockV2 binds a generic wrapper to an already deployed contract.
+func bindTreasuryRebalanceMockV2(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := TreasuryRebalanceMockV2MetaData.GetAbi()
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, *parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Raw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _TreasuryRebalanceMockV2.Contract.TreasuryRebalanceMockV2Caller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Raw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.Contract.TreasuryRebalanceMockV2Transactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Raw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.Contract.TreasuryRebalanceMockV2Transactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _TreasuryRebalanceMockV2.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2TransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2TransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.Contract.contract.Transact(opts, method, params...)
+}
+
+// AllocatedExists is a free data retrieval call binding the contract method 0xbd786f57.
+//
+// Solidity: function allocatedExists(address _allocatedAddress) view returns(bool)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) AllocatedExists(opts *bind.CallOpts, _allocatedAddress common.Address) (bool, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "allocatedExists", _allocatedAddress)
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+}
+
+// AllocatedExists is a free data retrieval call binding the contract method 0xbd786f57.
+//
+// Solidity: function allocatedExists(address _allocatedAddress) view returns(bool)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) AllocatedExists(_allocatedAddress common.Address) (bool, error) {
+	return _TreasuryRebalanceMockV2.Contract.AllocatedExists(&_TreasuryRebalanceMockV2.CallOpts, _allocatedAddress)
+}
+
+// AllocatedExists is a free data retrieval call binding the contract method 0xbd786f57.
+//
+// Solidity: function allocatedExists(address _allocatedAddress) view returns(bool)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) AllocatedExists(_allocatedAddress common.Address) (bool, error) {
+	return _TreasuryRebalanceMockV2.Contract.AllocatedExists(&_TreasuryRebalanceMockV2.CallOpts, _allocatedAddress)
+}
+
+// Allocateds is a free data retrieval call binding the contract method 0x343e2c85.
+//
+// Solidity: function allocateds(uint256 ) view returns(address addr, uint256 amount)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) Allocateds(opts *bind.CallOpts, arg0 *big.Int) (struct {
+	Addr   common.Address
+	Amount *big.Int
+}, error,
+) {
+	var out []interface{}
+	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "allocateds", arg0)
+
+	outstruct := new(struct {
+		Addr   common.Address
+		Amount *big.Int
+	})
+
+	outstruct.Addr = *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+	outstruct.Amount = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+	return *outstruct, err
+}
+
+// Allocateds is a free data retrieval call binding the contract method 0x343e2c85.
+//
+// Solidity: function allocateds(uint256 ) view returns(address addr, uint256 amount)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) Allocateds(arg0 *big.Int) (struct {
+	Addr   common.Address
+	Amount *big.Int
+}, error,
+) {
+	return _TreasuryRebalanceMockV2.Contract.Allocateds(&_TreasuryRebalanceMockV2.CallOpts, arg0)
+}
+
+// Allocateds is a free data retrieval call binding the contract method 0x343e2c85.
+//
+// Solidity: function allocateds(uint256 ) view returns(address addr, uint256 amount)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) Allocateds(arg0 *big.Int) (struct {
+	Addr   common.Address
+	Amount *big.Int
+}, error,
+) {
+	return _TreasuryRebalanceMockV2.Contract.Allocateds(&_TreasuryRebalanceMockV2.CallOpts, arg0)
+}
+
+// CheckZeroedsApproved is a free data retrieval call binding the contract method 0x0287d126.
+//
+// Solidity: function checkZeroedsApproved() view returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) CheckZeroedsApproved(opts *bind.CallOpts) error {
+	var out []interface{}
+	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "checkZeroedsApproved")
+	if err != nil {
+		return err
+	}
+
+	return err
+}
+
+// CheckZeroedsApproved is a free data retrieval call binding the contract method 0x0287d126.
+//
+// Solidity: function checkZeroedsApproved() view returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) CheckZeroedsApproved() error {
+	return _TreasuryRebalanceMockV2.Contract.CheckZeroedsApproved(&_TreasuryRebalanceMockV2.CallOpts)
+}
+
+// CheckZeroedsApproved is a free data retrieval call binding the contract method 0x0287d126.
+//
+// Solidity: function checkZeroedsApproved() view returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) CheckZeroedsApproved() error {
+	return _TreasuryRebalanceMockV2.Contract.CheckZeroedsApproved(&_TreasuryRebalanceMockV2.CallOpts)
+}
+
+// GetAllocated is a free data retrieval call binding the contract method 0x9e59eb14.
+//
+// Solidity: function getAllocated(address _allocatedAddress) view returns(address, uint256)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) GetAllocated(opts *bind.CallOpts, _allocatedAddress common.Address) (common.Address, *big.Int, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "getAllocated", _allocatedAddress)
+	if err != nil {
+		return *new(common.Address), *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+	out1 := *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+
+	return out0, out1, err
+}
+
+// GetAllocated is a free data retrieval call binding the contract method 0x9e59eb14.
+//
+// Solidity: function getAllocated(address _allocatedAddress) view returns(address, uint256)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) GetAllocated(_allocatedAddress common.Address) (common.Address, *big.Int, error) {
+	return _TreasuryRebalanceMockV2.Contract.GetAllocated(&_TreasuryRebalanceMockV2.CallOpts, _allocatedAddress)
+}
+
+// GetAllocated is a free data retrieval call binding the contract method 0x9e59eb14.
+//
+// Solidity: function getAllocated(address _allocatedAddress) view returns(address, uint256)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) GetAllocated(_allocatedAddress common.Address) (common.Address, *big.Int, error) {
+	return _TreasuryRebalanceMockV2.Contract.GetAllocated(&_TreasuryRebalanceMockV2.CallOpts, _allocatedAddress)
+}
+
+// GetAllocatedCount is a free data retrieval call binding the contract method 0xed355529.
+//
+// Solidity: function getAllocatedCount() view returns(uint256)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) GetAllocatedCount(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "getAllocatedCount")
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+}
+
+// GetAllocatedCount is a free data retrieval call binding the contract method 0xed355529.
+//
+// Solidity: function getAllocatedCount() view returns(uint256)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) GetAllocatedCount() (*big.Int, error) {
+	return _TreasuryRebalanceMockV2.Contract.GetAllocatedCount(&_TreasuryRebalanceMockV2.CallOpts)
+}
+
+// GetAllocatedCount is a free data retrieval call binding the contract method 0xed355529.
+//
+// Solidity: function getAllocatedCount() view returns(uint256)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) GetAllocatedCount() (*big.Int, error) {
+	return _TreasuryRebalanceMockV2.Contract.GetAllocatedCount(&_TreasuryRebalanceMockV2.CallOpts)
+}
+
+// GetAllocatedIndex is a free data retrieval call binding the contract method 0x7bfaf7b7.
+//
+// Solidity: function getAllocatedIndex(address _allocatedAddress) view returns(uint256)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) GetAllocatedIndex(opts *bind.CallOpts, _allocatedAddress common.Address) (*big.Int, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "getAllocatedIndex", _allocatedAddress)
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+}
+
+// GetAllocatedIndex is a free data retrieval call binding the contract method 0x7bfaf7b7.
+//
+// Solidity: function getAllocatedIndex(address _allocatedAddress) view returns(uint256)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) GetAllocatedIndex(_allocatedAddress common.Address) (*big.Int, error) {
+	return _TreasuryRebalanceMockV2.Contract.GetAllocatedIndex(&_TreasuryRebalanceMockV2.CallOpts, _allocatedAddress)
+}
+
+// GetAllocatedIndex is a free data retrieval call binding the contract method 0x7bfaf7b7.
+//
+// Solidity: function getAllocatedIndex(address _allocatedAddress) view returns(uint256)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) GetAllocatedIndex(_allocatedAddress common.Address) (*big.Int, error) {
+	return _TreasuryRebalanceMockV2.Contract.GetAllocatedIndex(&_TreasuryRebalanceMockV2.CallOpts, _allocatedAddress)
+}
+
+// GetTreasuryAmount is a free data retrieval call binding the contract method 0xe20fcf00.
+//
+// Solidity: function getTreasuryAmount() view returns(uint256 treasuryAmount)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) GetTreasuryAmount(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "getTreasuryAmount")
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+}
+
+// GetTreasuryAmount is a free data retrieval call binding the contract method 0xe20fcf00.
+//
+// Solidity: function getTreasuryAmount() view returns(uint256 treasuryAmount)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) GetTreasuryAmount() (*big.Int, error) {
+	return _TreasuryRebalanceMockV2.Contract.GetTreasuryAmount(&_TreasuryRebalanceMockV2.CallOpts)
+}
+
+// GetTreasuryAmount is a free data retrieval call binding the contract method 0xe20fcf00.
+//
+// Solidity: function getTreasuryAmount() view returns(uint256 treasuryAmount)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) GetTreasuryAmount() (*big.Int, error) {
+	return _TreasuryRebalanceMockV2.Contract.GetTreasuryAmount(&_TreasuryRebalanceMockV2.CallOpts)
+}
+
+// GetZeroed is a free data retrieval call binding the contract method 0xcea1c338.
+//
+// Solidity: function getZeroed(address _zeroedAddress) view returns(address, address[])
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) GetZeroed(opts *bind.CallOpts, _zeroedAddress common.Address) (common.Address, []common.Address, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "getZeroed", _zeroedAddress)
+	if err != nil {
+		return *new(common.Address), *new([]common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+	out1 := *abi.ConvertType(out[1], new([]common.Address)).(*[]common.Address)
+
+	return out0, out1, err
+}
+
+// GetZeroed is a free data retrieval call binding the contract method 0xcea1c338.
+//
+// Solidity: function getZeroed(address _zeroedAddress) view returns(address, address[])
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) GetZeroed(_zeroedAddress common.Address) (common.Address, []common.Address, error) {
+	return _TreasuryRebalanceMockV2.Contract.GetZeroed(&_TreasuryRebalanceMockV2.CallOpts, _zeroedAddress)
+}
+
+// GetZeroed is a free data retrieval call binding the contract method 0xcea1c338.
+//
+// Solidity: function getZeroed(address _zeroedAddress) view returns(address, address[])
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) GetZeroed(_zeroedAddress common.Address) (common.Address, []common.Address, error) {
+	return _TreasuryRebalanceMockV2.Contract.GetZeroed(&_TreasuryRebalanceMockV2.CallOpts, _zeroedAddress)
+}
+
+// GetZeroedCount is a free data retrieval call binding the contract method 0x9dc954ba.
+//
+// Solidity: function getZeroedCount() view returns(uint256)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) GetZeroedCount(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "getZeroedCount")
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+}
+
+// GetZeroedCount is a free data retrieval call binding the contract method 0x9dc954ba.
+//
+// Solidity: function getZeroedCount() view returns(uint256)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) GetZeroedCount() (*big.Int, error) {
+	return _TreasuryRebalanceMockV2.Contract.GetZeroedCount(&_TreasuryRebalanceMockV2.CallOpts)
+}
+
+// GetZeroedCount is a free data retrieval call binding the contract method 0x9dc954ba.
+//
+// Solidity: function getZeroedCount() view returns(uint256)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) GetZeroedCount() (*big.Int, error) {
+	return _TreasuryRebalanceMockV2.Contract.GetZeroedCount(&_TreasuryRebalanceMockV2.CallOpts)
+}
+
+// GetZeroedIndex is a free data retrieval call binding the contract method 0x518592da.
+//
+// Solidity: function getZeroedIndex(address _zeroedAddress) view returns(uint256)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) GetZeroedIndex(opts *bind.CallOpts, _zeroedAddress common.Address) (*big.Int, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "getZeroedIndex", _zeroedAddress)
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+}
+
+// GetZeroedIndex is a free data retrieval call binding the contract method 0x518592da.
+//
+// Solidity: function getZeroedIndex(address _zeroedAddress) view returns(uint256)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) GetZeroedIndex(_zeroedAddress common.Address) (*big.Int, error) {
+	return _TreasuryRebalanceMockV2.Contract.GetZeroedIndex(&_TreasuryRebalanceMockV2.CallOpts, _zeroedAddress)
+}
+
+// GetZeroedIndex is a free data retrieval call binding the contract method 0x518592da.
+//
+// Solidity: function getZeroedIndex(address _zeroedAddress) view returns(uint256)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) GetZeroedIndex(_zeroedAddress common.Address) (*big.Int, error) {
+	return _TreasuryRebalanceMockV2.Contract.GetZeroedIndex(&_TreasuryRebalanceMockV2.CallOpts, _zeroedAddress)
+}
+
+// IsContractAddr is a free data retrieval call binding the contract method 0xe2384cb3.
+//
+// Solidity: function isContractAddr(address _addr) view returns(bool)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) IsContractAddr(opts *bind.CallOpts, _addr common.Address) (bool, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "isContractAddr", _addr)
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+}
+
+// IsContractAddr is a free data retrieval call binding the contract method 0xe2384cb3.
+//
+// Solidity: function isContractAddr(address _addr) view returns(bool)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) IsContractAddr(_addr common.Address) (bool, error) {
+	return _TreasuryRebalanceMockV2.Contract.IsContractAddr(&_TreasuryRebalanceMockV2.CallOpts, _addr)
+}
+
+// IsContractAddr is a free data retrieval call binding the contract method 0xe2384cb3.
+//
+// Solidity: function isContractAddr(address _addr) view returns(bool)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) IsContractAddr(_addr common.Address) (bool, error) {
+	return _TreasuryRebalanceMockV2.Contract.IsContractAddr(&_TreasuryRebalanceMockV2.CallOpts, _addr)
+}
+
+// IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
+//
+// Solidity: function isOwner() view returns(bool)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) IsOwner(opts *bind.CallOpts) (bool, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "isOwner")
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+}
+
+// IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
+//
+// Solidity: function isOwner() view returns(bool)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) IsOwner() (bool, error) {
+	return _TreasuryRebalanceMockV2.Contract.IsOwner(&_TreasuryRebalanceMockV2.CallOpts)
+}
+
+// IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
+//
+// Solidity: function isOwner() view returns(bool)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) IsOwner() (bool, error) {
+	return _TreasuryRebalanceMockV2.Contract.IsOwner(&_TreasuryRebalanceMockV2.CallOpts)
+}
+
+// Memo is a free data retrieval call binding the contract method 0x58c3b870.
+//
+// Solidity: function memo() view returns(string)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) Memo(opts *bind.CallOpts) (string, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "memo")
+	if err != nil {
+		return *new(string), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(string)).(*string)
+
+	return out0, err
+}
+
+// Memo is a free data retrieval call binding the contract method 0x58c3b870.
+//
+// Solidity: function memo() view returns(string)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) Memo() (string, error) {
+	return _TreasuryRebalanceMockV2.Contract.Memo(&_TreasuryRebalanceMockV2.CallOpts)
+}
+
+// Memo is a free data retrieval call binding the contract method 0x58c3b870.
+//
+// Solidity: function memo() view returns(string)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) Memo() (string, error) {
+	return _TreasuryRebalanceMockV2.Contract.Memo(&_TreasuryRebalanceMockV2.CallOpts)
+}
+
+// Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
+//
+// Solidity: function owner() view returns(address)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) Owner(opts *bind.CallOpts) (common.Address, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "owner")
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+}
+
+// Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
+//
+// Solidity: function owner() view returns(address)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) Owner() (common.Address, error) {
+	return _TreasuryRebalanceMockV2.Contract.Owner(&_TreasuryRebalanceMockV2.CallOpts)
+}
+
+// Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
+//
+// Solidity: function owner() view returns(address)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) Owner() (common.Address, error) {
+	return _TreasuryRebalanceMockV2.Contract.Owner(&_TreasuryRebalanceMockV2.CallOpts)
+}
+
+// RebalanceBlockNumber is a free data retrieval call binding the contract method 0x49a3fb45.
+//
+// Solidity: function rebalanceBlockNumber() view returns(uint256)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) RebalanceBlockNumber(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "rebalanceBlockNumber")
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+}
+
+// RebalanceBlockNumber is a free data retrieval call binding the contract method 0x49a3fb45.
+//
+// Solidity: function rebalanceBlockNumber() view returns(uint256)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) RebalanceBlockNumber() (*big.Int, error) {
+	return _TreasuryRebalanceMockV2.Contract.RebalanceBlockNumber(&_TreasuryRebalanceMockV2.CallOpts)
+}
+
+// RebalanceBlockNumber is a free data retrieval call binding the contract method 0x49a3fb45.
+//
+// Solidity: function rebalanceBlockNumber() view returns(uint256)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) RebalanceBlockNumber() (*big.Int, error) {
+	return _TreasuryRebalanceMockV2.Contract.RebalanceBlockNumber(&_TreasuryRebalanceMockV2.CallOpts)
+}
+
+// Status is a free data retrieval call binding the contract method 0x200d2ed2.
+//
+// Solidity: function status() view returns(uint8)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) Status(opts *bind.CallOpts) (uint8, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "status")
+	if err != nil {
+		return *new(uint8), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
+
+	return out0, err
+}
+
+// Status is a free data retrieval call binding the contract method 0x200d2ed2.
+//
+// Solidity: function status() view returns(uint8)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) Status() (uint8, error) {
+	return _TreasuryRebalanceMockV2.Contract.Status(&_TreasuryRebalanceMockV2.CallOpts)
+}
+
+// Status is a free data retrieval call binding the contract method 0x200d2ed2.
+//
+// Solidity: function status() view returns(uint8)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) Status() (uint8, error) {
+	return _TreasuryRebalanceMockV2.Contract.Status(&_TreasuryRebalanceMockV2.CallOpts)
+}
+
+// SumOfZeroedBalance is a free data retrieval call binding the contract method 0x9ab29b70.
+//
+// Solidity: function sumOfZeroedBalance() view returns(uint256 zeroedsBalance)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) SumOfZeroedBalance(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "sumOfZeroedBalance")
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+}
+
+// SumOfZeroedBalance is a free data retrieval call binding the contract method 0x9ab29b70.
+//
+// Solidity: function sumOfZeroedBalance() view returns(uint256 zeroedsBalance)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) SumOfZeroedBalance() (*big.Int, error) {
+	return _TreasuryRebalanceMockV2.Contract.SumOfZeroedBalance(&_TreasuryRebalanceMockV2.CallOpts)
+}
+
+// SumOfZeroedBalance is a free data retrieval call binding the contract method 0x9ab29b70.
+//
+// Solidity: function sumOfZeroedBalance() view returns(uint256 zeroedsBalance)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) SumOfZeroedBalance() (*big.Int, error) {
+	return _TreasuryRebalanceMockV2.Contract.SumOfZeroedBalance(&_TreasuryRebalanceMockV2.CallOpts)
+}
+
+// ZeroedExists is a free data retrieval call binding the contract method 0x5f8798c0.
+//
+// Solidity: function zeroedExists(address _zeroedAddress) view returns(bool)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) ZeroedExists(opts *bind.CallOpts, _zeroedAddress common.Address) (bool, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "zeroedExists", _zeroedAddress)
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+}
+
+// ZeroedExists is a free data retrieval call binding the contract method 0x5f8798c0.
+//
+// Solidity: function zeroedExists(address _zeroedAddress) view returns(bool)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) ZeroedExists(_zeroedAddress common.Address) (bool, error) {
+	return _TreasuryRebalanceMockV2.Contract.ZeroedExists(&_TreasuryRebalanceMockV2.CallOpts, _zeroedAddress)
+}
+
+// ZeroedExists is a free data retrieval call binding the contract method 0x5f8798c0.
+//
+// Solidity: function zeroedExists(address _zeroedAddress) view returns(bool)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) ZeroedExists(_zeroedAddress common.Address) (bool, error) {
+	return _TreasuryRebalanceMockV2.Contract.ZeroedExists(&_TreasuryRebalanceMockV2.CallOpts, _zeroedAddress)
+}
+
+// Zeroeds is a free data retrieval call binding the contract method 0x62aa3e91.
+//
+// Solidity: function zeroeds(uint256 ) view returns(address addr)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) Zeroeds(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "zeroeds", arg0)
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+}
+
+// Zeroeds is a free data retrieval call binding the contract method 0x62aa3e91.
+//
+// Solidity: function zeroeds(uint256 ) view returns(address addr)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) Zeroeds(arg0 *big.Int) (common.Address, error) {
+	return _TreasuryRebalanceMockV2.Contract.Zeroeds(&_TreasuryRebalanceMockV2.CallOpts, arg0)
+}
+
+// Zeroeds is a free data retrieval call binding the contract method 0x62aa3e91.
+//
+// Solidity: function zeroeds(uint256 ) view returns(address addr)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) Zeroeds(arg0 *big.Int) (common.Address, error) {
+	return _TreasuryRebalanceMockV2.Contract.Zeroeds(&_TreasuryRebalanceMockV2.CallOpts, arg0)
+}
+
+// Approve is a paid mutator transaction binding the contract method 0xdaea85c5.
+//
+// Solidity: function approve(address _zeroedAddress) returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Transactor) Approve(opts *bind.TransactOpts, _zeroedAddress common.Address) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.contract.Transact(opts, "approve", _zeroedAddress)
+}
+
+// Approve is a paid mutator transaction binding the contract method 0xdaea85c5.
+//
+// Solidity: function approve(address _zeroedAddress) returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) Approve(_zeroedAddress common.Address) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.Contract.Approve(&_TreasuryRebalanceMockV2.TransactOpts, _zeroedAddress)
+}
+
+// Approve is a paid mutator transaction binding the contract method 0xdaea85c5.
+//
+// Solidity: function approve(address _zeroedAddress) returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2TransactorSession) Approve(_zeroedAddress common.Address) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.Contract.Approve(&_TreasuryRebalanceMockV2.TransactOpts, _zeroedAddress)
+}
+
+// FinalizeApproval is a paid mutator transaction binding the contract method 0xfaaf9ca6.
+//
+// Solidity: function finalizeApproval() returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Transactor) FinalizeApproval(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.contract.Transact(opts, "finalizeApproval")
+}
+
+// FinalizeApproval is a paid mutator transaction binding the contract method 0xfaaf9ca6.
+//
+// Solidity: function finalizeApproval() returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) FinalizeApproval() (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.Contract.FinalizeApproval(&_TreasuryRebalanceMockV2.TransactOpts)
+}
+
+// FinalizeApproval is a paid mutator transaction binding the contract method 0xfaaf9ca6.
+//
+// Solidity: function finalizeApproval() returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2TransactorSession) FinalizeApproval() (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.Contract.FinalizeApproval(&_TreasuryRebalanceMockV2.TransactOpts)
+}
+
+// FinalizeContract is a paid mutator transaction binding the contract method 0xea6d4a9b.
+//
+// Solidity: function finalizeContract(string _memo) returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Transactor) FinalizeContract(opts *bind.TransactOpts, _memo string) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.contract.Transact(opts, "finalizeContract", _memo)
+}
+
+// FinalizeContract is a paid mutator transaction binding the contract method 0xea6d4a9b.
+//
+// Solidity: function finalizeContract(string _memo) returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) FinalizeContract(_memo string) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.Contract.FinalizeContract(&_TreasuryRebalanceMockV2.TransactOpts, _memo)
+}
+
+// FinalizeContract is a paid mutator transaction binding the contract method 0xea6d4a9b.
+//
+// Solidity: function finalizeContract(string _memo) returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2TransactorSession) FinalizeContract(_memo string) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.Contract.FinalizeContract(&_TreasuryRebalanceMockV2.TransactOpts, _memo)
+}
+
+// FinalizeRegistration is a paid mutator transaction binding the contract method 0x48409096.
+//
+// Solidity: function finalizeRegistration() returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Transactor) FinalizeRegistration(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.contract.Transact(opts, "finalizeRegistration")
+}
+
+// FinalizeRegistration is a paid mutator transaction binding the contract method 0x48409096.
+//
+// Solidity: function finalizeRegistration() returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) FinalizeRegistration() (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.Contract.FinalizeRegistration(&_TreasuryRebalanceMockV2.TransactOpts)
+}
+
+// FinalizeRegistration is a paid mutator transaction binding the contract method 0x48409096.
+//
+// Solidity: function finalizeRegistration() returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2TransactorSession) FinalizeRegistration() (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.Contract.FinalizeRegistration(&_TreasuryRebalanceMockV2.TransactOpts)
+}
+
+// RegisterAllocated is a paid mutator transaction binding the contract method 0xecd86778.
+//
+// Solidity: function registerAllocated(address _allocatedAddress, uint256 _amount) returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Transactor) RegisterAllocated(opts *bind.TransactOpts, _allocatedAddress common.Address, _amount *big.Int) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.contract.Transact(opts, "registerAllocated", _allocatedAddress, _amount)
+}
+
+// RegisterAllocated is a paid mutator transaction binding the contract method 0xecd86778.
+//
+// Solidity: function registerAllocated(address _allocatedAddress, uint256 _amount) returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) RegisterAllocated(_allocatedAddress common.Address, _amount *big.Int) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.Contract.RegisterAllocated(&_TreasuryRebalanceMockV2.TransactOpts, _allocatedAddress, _amount)
+}
+
+// RegisterAllocated is a paid mutator transaction binding the contract method 0xecd86778.
+//
+// Solidity: function registerAllocated(address _allocatedAddress, uint256 _amount) returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2TransactorSession) RegisterAllocated(_allocatedAddress common.Address, _amount *big.Int) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.Contract.RegisterAllocated(&_TreasuryRebalanceMockV2.TransactOpts, _allocatedAddress, _amount)
+}
+
+// RegisterZeroed is a paid mutator transaction binding the contract method 0x5f9b0df7.
+//
+// Solidity: function registerZeroed(address _zeroedAddress) returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Transactor) RegisterZeroed(opts *bind.TransactOpts, _zeroedAddress common.Address) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.contract.Transact(opts, "registerZeroed", _zeroedAddress)
+}
+
+// RegisterZeroed is a paid mutator transaction binding the contract method 0x5f9b0df7.
+//
+// Solidity: function registerZeroed(address _zeroedAddress) returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) RegisterZeroed(_zeroedAddress common.Address) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.Contract.RegisterZeroed(&_TreasuryRebalanceMockV2.TransactOpts, _zeroedAddress)
+}
+
+// RegisterZeroed is a paid mutator transaction binding the contract method 0x5f9b0df7.
+//
+// Solidity: function registerZeroed(address _zeroedAddress) returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2TransactorSession) RegisterZeroed(_zeroedAddress common.Address) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.Contract.RegisterZeroed(&_TreasuryRebalanceMockV2.TransactOpts, _zeroedAddress)
+}
+
+// RemoveAllocated is a paid mutator transaction binding the contract method 0x27704cb5.
+//
+// Solidity: function removeAllocated(address _allocatedAddress) returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Transactor) RemoveAllocated(opts *bind.TransactOpts, _allocatedAddress common.Address) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.contract.Transact(opts, "removeAllocated", _allocatedAddress)
+}
+
+// RemoveAllocated is a paid mutator transaction binding the contract method 0x27704cb5.
+//
+// Solidity: function removeAllocated(address _allocatedAddress) returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) RemoveAllocated(_allocatedAddress common.Address) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.Contract.RemoveAllocated(&_TreasuryRebalanceMockV2.TransactOpts, _allocatedAddress)
+}
+
+// RemoveAllocated is a paid mutator transaction binding the contract method 0x27704cb5.
+//
+// Solidity: function removeAllocated(address _allocatedAddress) returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2TransactorSession) RemoveAllocated(_allocatedAddress common.Address) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.Contract.RemoveAllocated(&_TreasuryRebalanceMockV2.TransactOpts, _allocatedAddress)
+}
+
+// RemoveZeroed is a paid mutator transaction binding the contract method 0xdb27b50b.
+//
+// Solidity: function removeZeroed(address _zeroedAddress) returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Transactor) RemoveZeroed(opts *bind.TransactOpts, _zeroedAddress common.Address) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.contract.Transact(opts, "removeZeroed", _zeroedAddress)
+}
+
+// RemoveZeroed is a paid mutator transaction binding the contract method 0xdb27b50b.
+//
+// Solidity: function removeZeroed(address _zeroedAddress) returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) RemoveZeroed(_zeroedAddress common.Address) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.Contract.RemoveZeroed(&_TreasuryRebalanceMockV2.TransactOpts, _zeroedAddress)
+}
+
+// RemoveZeroed is a paid mutator transaction binding the contract method 0xdb27b50b.
+//
+// Solidity: function removeZeroed(address _zeroedAddress) returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2TransactorSession) RemoveZeroed(_zeroedAddress common.Address) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.Contract.RemoveZeroed(&_TreasuryRebalanceMockV2.TransactOpts, _zeroedAddress)
+}
+
+// RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
+//
+// Solidity: function renounceOwnership() returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Transactor) RenounceOwnership(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.contract.Transact(opts, "renounceOwnership")
+}
+
+// RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
+//
+// Solidity: function renounceOwnership() returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) RenounceOwnership() (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.Contract.RenounceOwnership(&_TreasuryRebalanceMockV2.TransactOpts)
+}
+
+// RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
+//
+// Solidity: function renounceOwnership() returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2TransactorSession) RenounceOwnership() (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.Contract.RenounceOwnership(&_TreasuryRebalanceMockV2.TransactOpts)
+}
+
+// Reset is a paid mutator transaction binding the contract method 0xd826f88f.
+//
+// Solidity: function reset() returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Transactor) Reset(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.contract.Transact(opts, "reset")
+}
+
+// Reset is a paid mutator transaction binding the contract method 0xd826f88f.
+//
+// Solidity: function reset() returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) Reset() (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.Contract.Reset(&_TreasuryRebalanceMockV2.TransactOpts)
+}
+
+// Reset is a paid mutator transaction binding the contract method 0xd826f88f.
+//
+// Solidity: function reset() returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2TransactorSession) Reset() (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.Contract.Reset(&_TreasuryRebalanceMockV2.TransactOpts)
+}
+
+// TestSetAll is a paid mutator transaction binding the contract method 0xcc701029.
+//
+// Solidity: function testSetAll(address[] _zeroeds, address[] _allocateds, uint256[] _amounts, uint256 _rebalanceBlockNumber, uint8 _status) returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Transactor) TestSetAll(opts *bind.TransactOpts, _zeroeds []common.Address, _allocateds []common.Address, _amounts []*big.Int, _rebalanceBlockNumber *big.Int, _status uint8) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.contract.Transact(opts, "testSetAll", _zeroeds, _allocateds, _amounts, _rebalanceBlockNumber, _status)
+}
+
+// TestSetAll is a paid mutator transaction binding the contract method 0xcc701029.
+//
+// Solidity: function testSetAll(address[] _zeroeds, address[] _allocateds, uint256[] _amounts, uint256 _rebalanceBlockNumber, uint8 _status) returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) TestSetAll(_zeroeds []common.Address, _allocateds []common.Address, _amounts []*big.Int, _rebalanceBlockNumber *big.Int, _status uint8) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.Contract.TestSetAll(&_TreasuryRebalanceMockV2.TransactOpts, _zeroeds, _allocateds, _amounts, _rebalanceBlockNumber, _status)
+}
+
+// TestSetAll is a paid mutator transaction binding the contract method 0xcc701029.
+//
+// Solidity: function testSetAll(address[] _zeroeds, address[] _allocateds, uint256[] _amounts, uint256 _rebalanceBlockNumber, uint8 _status) returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2TransactorSession) TestSetAll(_zeroeds []common.Address, _allocateds []common.Address, _amounts []*big.Int, _rebalanceBlockNumber *big.Int, _status uint8) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.Contract.TestSetAll(&_TreasuryRebalanceMockV2.TransactOpts, _zeroeds, _allocateds, _amounts, _rebalanceBlockNumber, _status)
+}
+
+// TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
+//
+// Solidity: function transferOwnership(address newOwner) returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Transactor) TransferOwnership(opts *bind.TransactOpts, newOwner common.Address) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.contract.Transact(opts, "transferOwnership", newOwner)
+}
+
+// TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
+//
+// Solidity: function transferOwnership(address newOwner) returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) TransferOwnership(newOwner common.Address) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.Contract.TransferOwnership(&_TreasuryRebalanceMockV2.TransactOpts, newOwner)
+}
+
+// TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
+//
+// Solidity: function transferOwnership(address newOwner) returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2TransactorSession) TransferOwnership(newOwner common.Address) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.Contract.TransferOwnership(&_TreasuryRebalanceMockV2.TransactOpts, newOwner)
+}
+
+// UpdateRebalanceBlocknumber is a paid mutator transaction binding the contract method 0x1804692f.
+//
+// Solidity: function updateRebalanceBlocknumber(uint256 _rebalanceBlockNumber) returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Transactor) UpdateRebalanceBlocknumber(opts *bind.TransactOpts, _rebalanceBlockNumber *big.Int) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.contract.Transact(opts, "updateRebalanceBlocknumber", _rebalanceBlockNumber)
+}
+
+// UpdateRebalanceBlocknumber is a paid mutator transaction binding the contract method 0x1804692f.
+//
+// Solidity: function updateRebalanceBlocknumber(uint256 _rebalanceBlockNumber) returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) UpdateRebalanceBlocknumber(_rebalanceBlockNumber *big.Int) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.Contract.UpdateRebalanceBlocknumber(&_TreasuryRebalanceMockV2.TransactOpts, _rebalanceBlockNumber)
+}
+
+// UpdateRebalanceBlocknumber is a paid mutator transaction binding the contract method 0x1804692f.
+//
+// Solidity: function updateRebalanceBlocknumber(uint256 _rebalanceBlockNumber) returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2TransactorSession) UpdateRebalanceBlocknumber(_rebalanceBlockNumber *big.Int) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.Contract.UpdateRebalanceBlocknumber(&_TreasuryRebalanceMockV2.TransactOpts, _rebalanceBlockNumber)
+}
+
+// Fallback is a paid mutator transaction binding the contract fallback function.
+//
+// Solidity: fallback() payable returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Transactor) Fallback(opts *bind.TransactOpts, calldata []byte) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.contract.RawTransact(opts, calldata)
+}
+
+// Fallback is a paid mutator transaction binding the contract fallback function.
+//
+// Solidity: fallback() payable returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) Fallback(calldata []byte) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.Contract.Fallback(&_TreasuryRebalanceMockV2.TransactOpts, calldata)
+}
+
+// Fallback is a paid mutator transaction binding the contract fallback function.
+//
+// Solidity: fallback() payable returns()
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2TransactorSession) Fallback(calldata []byte) (*types.Transaction, error) {
+	return _TreasuryRebalanceMockV2.Contract.Fallback(&_TreasuryRebalanceMockV2.TransactOpts, calldata)
+}
+
+// TreasuryRebalanceMockV2AllocatedRegisteredIterator is returned from FilterAllocatedRegistered and is used to iterate over the raw logs and unpacked data for AllocatedRegistered events raised by the TreasuryRebalanceMockV2 contract.
+type TreasuryRebalanceMockV2AllocatedRegisteredIterator struct {
+	Event *TreasuryRebalanceMockV2AllocatedRegistered // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *TreasuryRebalanceMockV2AllocatedRegisteredIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(TreasuryRebalanceMockV2AllocatedRegistered)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(TreasuryRebalanceMockV2AllocatedRegistered)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *TreasuryRebalanceMockV2AllocatedRegisteredIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *TreasuryRebalanceMockV2AllocatedRegisteredIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// TreasuryRebalanceMockV2AllocatedRegistered represents a AllocatedRegistered event raised by the TreasuryRebalanceMockV2 contract.
+type TreasuryRebalanceMockV2AllocatedRegistered struct {
+	Allocated      common.Address
+	FundAllocation *big.Int
+	Raw            types.Log // Blockchain specific contextual infos
+}
+
+// FilterAllocatedRegistered is a free log retrieval operation binding the contract event 0xab5b2126f71ee7e0b39eadc53fb5d08a8f6c68dc61795fa05ed7d176cd2665ed.
+//
+// Solidity: event AllocatedRegistered(address allocated, uint256 fundAllocation)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) FilterAllocatedRegistered(opts *bind.FilterOpts) (*TreasuryRebalanceMockV2AllocatedRegisteredIterator, error) {
+	logs, sub, err := _TreasuryRebalanceMockV2.contract.FilterLogs(opts, "AllocatedRegistered")
+	if err != nil {
+		return nil, err
+	}
+	return &TreasuryRebalanceMockV2AllocatedRegisteredIterator{contract: _TreasuryRebalanceMockV2.contract, event: "AllocatedRegistered", logs: logs, sub: sub}, nil
+}
+
+// WatchAllocatedRegistered is a free log subscription operation binding the contract event 0xab5b2126f71ee7e0b39eadc53fb5d08a8f6c68dc61795fa05ed7d176cd2665ed.
+//
+// Solidity: event AllocatedRegistered(address allocated, uint256 fundAllocation)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) WatchAllocatedRegistered(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceMockV2AllocatedRegistered) (event.Subscription, error) {
+	logs, sub, err := _TreasuryRebalanceMockV2.contract.WatchLogs(opts, "AllocatedRegistered")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(TreasuryRebalanceMockV2AllocatedRegistered)
+				if err := _TreasuryRebalanceMockV2.contract.UnpackLog(event, "AllocatedRegistered", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseAllocatedRegistered is a log parse operation binding the contract event 0xab5b2126f71ee7e0b39eadc53fb5d08a8f6c68dc61795fa05ed7d176cd2665ed.
+//
+// Solidity: event AllocatedRegistered(address allocated, uint256 fundAllocation)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) ParseAllocatedRegistered(log types.Log) (*TreasuryRebalanceMockV2AllocatedRegistered, error) {
+	event := new(TreasuryRebalanceMockV2AllocatedRegistered)
+	if err := _TreasuryRebalanceMockV2.contract.UnpackLog(event, "AllocatedRegistered", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// TreasuryRebalanceMockV2AllocatedRemovedIterator is returned from FilterAllocatedRemoved and is used to iterate over the raw logs and unpacked data for AllocatedRemoved events raised by the TreasuryRebalanceMockV2 contract.
+type TreasuryRebalanceMockV2AllocatedRemovedIterator struct {
+	Event *TreasuryRebalanceMockV2AllocatedRemoved // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *TreasuryRebalanceMockV2AllocatedRemovedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(TreasuryRebalanceMockV2AllocatedRemoved)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(TreasuryRebalanceMockV2AllocatedRemoved)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *TreasuryRebalanceMockV2AllocatedRemovedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *TreasuryRebalanceMockV2AllocatedRemovedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// TreasuryRebalanceMockV2AllocatedRemoved represents a AllocatedRemoved event raised by the TreasuryRebalanceMockV2 contract.
+type TreasuryRebalanceMockV2AllocatedRemoved struct {
+	Allocated common.Address
+	Raw       types.Log // Blockchain specific contextual infos
+}
+
+// FilterAllocatedRemoved is a free log retrieval operation binding the contract event 0xf8f67464bea52432645435be9c46c427173a75aefaa1001272e08a4b8572f06e.
+//
+// Solidity: event AllocatedRemoved(address allocated)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) FilterAllocatedRemoved(opts *bind.FilterOpts) (*TreasuryRebalanceMockV2AllocatedRemovedIterator, error) {
+	logs, sub, err := _TreasuryRebalanceMockV2.contract.FilterLogs(opts, "AllocatedRemoved")
+	if err != nil {
+		return nil, err
+	}
+	return &TreasuryRebalanceMockV2AllocatedRemovedIterator{contract: _TreasuryRebalanceMockV2.contract, event: "AllocatedRemoved", logs: logs, sub: sub}, nil
+}
+
+// WatchAllocatedRemoved is a free log subscription operation binding the contract event 0xf8f67464bea52432645435be9c46c427173a75aefaa1001272e08a4b8572f06e.
+//
+// Solidity: event AllocatedRemoved(address allocated)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) WatchAllocatedRemoved(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceMockV2AllocatedRemoved) (event.Subscription, error) {
+	logs, sub, err := _TreasuryRebalanceMockV2.contract.WatchLogs(opts, "AllocatedRemoved")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(TreasuryRebalanceMockV2AllocatedRemoved)
+				if err := _TreasuryRebalanceMockV2.contract.UnpackLog(event, "AllocatedRemoved", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseAllocatedRemoved is a log parse operation binding the contract event 0xf8f67464bea52432645435be9c46c427173a75aefaa1001272e08a4b8572f06e.
+//
+// Solidity: event AllocatedRemoved(address allocated)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) ParseAllocatedRemoved(log types.Log) (*TreasuryRebalanceMockV2AllocatedRemoved, error) {
+	event := new(TreasuryRebalanceMockV2AllocatedRemoved)
+	if err := _TreasuryRebalanceMockV2.contract.UnpackLog(event, "AllocatedRemoved", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// TreasuryRebalanceMockV2ApprovedIterator is returned from FilterApproved and is used to iterate over the raw logs and unpacked data for Approved events raised by the TreasuryRebalanceMockV2 contract.
+type TreasuryRebalanceMockV2ApprovedIterator struct {
+	Event *TreasuryRebalanceMockV2Approved // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *TreasuryRebalanceMockV2ApprovedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(TreasuryRebalanceMockV2Approved)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(TreasuryRebalanceMockV2Approved)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *TreasuryRebalanceMockV2ApprovedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *TreasuryRebalanceMockV2ApprovedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// TreasuryRebalanceMockV2Approved represents a Approved event raised by the TreasuryRebalanceMockV2 contract.
+type TreasuryRebalanceMockV2Approved struct {
+	Zeroed         common.Address
+	Approver       common.Address
+	ApproversCount *big.Int
+	Raw            types.Log // Blockchain specific contextual infos
+}
+
+// FilterApproved is a free log retrieval operation binding the contract event 0x80da462ebfbe41cfc9bc015e7a9a3c7a2a73dbccede72d8ceb583606c27f8f90.
+//
+// Solidity: event Approved(address zeroed, address approver, uint256 approversCount)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) FilterApproved(opts *bind.FilterOpts) (*TreasuryRebalanceMockV2ApprovedIterator, error) {
+	logs, sub, err := _TreasuryRebalanceMockV2.contract.FilterLogs(opts, "Approved")
+	if err != nil {
+		return nil, err
+	}
+	return &TreasuryRebalanceMockV2ApprovedIterator{contract: _TreasuryRebalanceMockV2.contract, event: "Approved", logs: logs, sub: sub}, nil
+}
+
+// WatchApproved is a free log subscription operation binding the contract event 0x80da462ebfbe41cfc9bc015e7a9a3c7a2a73dbccede72d8ceb583606c27f8f90.
+//
+// Solidity: event Approved(address zeroed, address approver, uint256 approversCount)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) WatchApproved(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceMockV2Approved) (event.Subscription, error) {
+	logs, sub, err := _TreasuryRebalanceMockV2.contract.WatchLogs(opts, "Approved")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(TreasuryRebalanceMockV2Approved)
+				if err := _TreasuryRebalanceMockV2.contract.UnpackLog(event, "Approved", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseApproved is a log parse operation binding the contract event 0x80da462ebfbe41cfc9bc015e7a9a3c7a2a73dbccede72d8ceb583606c27f8f90.
+//
+// Solidity: event Approved(address zeroed, address approver, uint256 approversCount)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) ParseApproved(log types.Log) (*TreasuryRebalanceMockV2Approved, error) {
+	event := new(TreasuryRebalanceMockV2Approved)
+	if err := _TreasuryRebalanceMockV2.contract.UnpackLog(event, "Approved", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// TreasuryRebalanceMockV2ContractDeployedIterator is returned from FilterContractDeployed and is used to iterate over the raw logs and unpacked data for ContractDeployed events raised by the TreasuryRebalanceMockV2 contract.
+type TreasuryRebalanceMockV2ContractDeployedIterator struct {
+	Event *TreasuryRebalanceMockV2ContractDeployed // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *TreasuryRebalanceMockV2ContractDeployedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(TreasuryRebalanceMockV2ContractDeployed)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(TreasuryRebalanceMockV2ContractDeployed)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *TreasuryRebalanceMockV2ContractDeployedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *TreasuryRebalanceMockV2ContractDeployedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// TreasuryRebalanceMockV2ContractDeployed represents a ContractDeployed event raised by the TreasuryRebalanceMockV2 contract.
+type TreasuryRebalanceMockV2ContractDeployed struct {
+	Status               uint8
+	RebalanceBlockNumber *big.Int
+	DeployedBlockNumber  *big.Int
+	Raw                  types.Log // Blockchain specific contextual infos
+}
+
+// FilterContractDeployed is a free log retrieval operation binding the contract event 0x6f182006c5a12fe70c0728eedb2d1b0628c41483ca6721c606707d778d22ed0a.
+//
+// Solidity: event ContractDeployed(uint8 status, uint256 rebalanceBlockNumber, uint256 deployedBlockNumber)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) FilterContractDeployed(opts *bind.FilterOpts) (*TreasuryRebalanceMockV2ContractDeployedIterator, error) {
+	logs, sub, err := _TreasuryRebalanceMockV2.contract.FilterLogs(opts, "ContractDeployed")
+	if err != nil {
+		return nil, err
+	}
+	return &TreasuryRebalanceMockV2ContractDeployedIterator{contract: _TreasuryRebalanceMockV2.contract, event: "ContractDeployed", logs: logs, sub: sub}, nil
+}
+
+// WatchContractDeployed is a free log subscription operation binding the contract event 0x6f182006c5a12fe70c0728eedb2d1b0628c41483ca6721c606707d778d22ed0a.
+//
+// Solidity: event ContractDeployed(uint8 status, uint256 rebalanceBlockNumber, uint256 deployedBlockNumber)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) WatchContractDeployed(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceMockV2ContractDeployed) (event.Subscription, error) {
+	logs, sub, err := _TreasuryRebalanceMockV2.contract.WatchLogs(opts, "ContractDeployed")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(TreasuryRebalanceMockV2ContractDeployed)
+				if err := _TreasuryRebalanceMockV2.contract.UnpackLog(event, "ContractDeployed", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseContractDeployed is a log parse operation binding the contract event 0x6f182006c5a12fe70c0728eedb2d1b0628c41483ca6721c606707d778d22ed0a.
+//
+// Solidity: event ContractDeployed(uint8 status, uint256 rebalanceBlockNumber, uint256 deployedBlockNumber)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) ParseContractDeployed(log types.Log) (*TreasuryRebalanceMockV2ContractDeployed, error) {
+	event := new(TreasuryRebalanceMockV2ContractDeployed)
+	if err := _TreasuryRebalanceMockV2.contract.UnpackLog(event, "ContractDeployed", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// TreasuryRebalanceMockV2FinalizedIterator is returned from FilterFinalized and is used to iterate over the raw logs and unpacked data for Finalized events raised by the TreasuryRebalanceMockV2 contract.
+type TreasuryRebalanceMockV2FinalizedIterator struct {
+	Event *TreasuryRebalanceMockV2Finalized // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *TreasuryRebalanceMockV2FinalizedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(TreasuryRebalanceMockV2Finalized)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(TreasuryRebalanceMockV2Finalized)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *TreasuryRebalanceMockV2FinalizedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *TreasuryRebalanceMockV2FinalizedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// TreasuryRebalanceMockV2Finalized represents a Finalized event raised by the TreasuryRebalanceMockV2 contract.
+type TreasuryRebalanceMockV2Finalized struct {
+	Memo   string
+	Status uint8
+	Raw    types.Log // Blockchain specific contextual infos
+}
+
+// FilterFinalized is a free log retrieval operation binding the contract event 0x8f8636c7757ca9b7d154e1d44ca90d8e8c885b9eac417c59bbf8eb7779ca6404.
+//
+// Solidity: event Finalized(string memo, uint8 status)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) FilterFinalized(opts *bind.FilterOpts) (*TreasuryRebalanceMockV2FinalizedIterator, error) {
+	logs, sub, err := _TreasuryRebalanceMockV2.contract.FilterLogs(opts, "Finalized")
+	if err != nil {
+		return nil, err
+	}
+	return &TreasuryRebalanceMockV2FinalizedIterator{contract: _TreasuryRebalanceMockV2.contract, event: "Finalized", logs: logs, sub: sub}, nil
+}
+
+// WatchFinalized is a free log subscription operation binding the contract event 0x8f8636c7757ca9b7d154e1d44ca90d8e8c885b9eac417c59bbf8eb7779ca6404.
+//
+// Solidity: event Finalized(string memo, uint8 status)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) WatchFinalized(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceMockV2Finalized) (event.Subscription, error) {
+	logs, sub, err := _TreasuryRebalanceMockV2.contract.WatchLogs(opts, "Finalized")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(TreasuryRebalanceMockV2Finalized)
+				if err := _TreasuryRebalanceMockV2.contract.UnpackLog(event, "Finalized", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseFinalized is a log parse operation binding the contract event 0x8f8636c7757ca9b7d154e1d44ca90d8e8c885b9eac417c59bbf8eb7779ca6404.
+//
+// Solidity: event Finalized(string memo, uint8 status)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) ParseFinalized(log types.Log) (*TreasuryRebalanceMockV2Finalized, error) {
+	event := new(TreasuryRebalanceMockV2Finalized)
+	if err := _TreasuryRebalanceMockV2.contract.UnpackLog(event, "Finalized", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// TreasuryRebalanceMockV2OwnershipTransferredIterator is returned from FilterOwnershipTransferred and is used to iterate over the raw logs and unpacked data for OwnershipTransferred events raised by the TreasuryRebalanceMockV2 contract.
+type TreasuryRebalanceMockV2OwnershipTransferredIterator struct {
+	Event *TreasuryRebalanceMockV2OwnershipTransferred // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *TreasuryRebalanceMockV2OwnershipTransferredIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(TreasuryRebalanceMockV2OwnershipTransferred)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(TreasuryRebalanceMockV2OwnershipTransferred)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *TreasuryRebalanceMockV2OwnershipTransferredIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *TreasuryRebalanceMockV2OwnershipTransferredIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// TreasuryRebalanceMockV2OwnershipTransferred represents a OwnershipTransferred event raised by the TreasuryRebalanceMockV2 contract.
+type TreasuryRebalanceMockV2OwnershipTransferred struct {
+	PreviousOwner common.Address
+	NewOwner      common.Address
+	Raw           types.Log // Blockchain specific contextual infos
+}
+
+// FilterOwnershipTransferred is a free log retrieval operation binding the contract event 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0.
+//
+// Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*TreasuryRebalanceMockV2OwnershipTransferredIterator, error) {
+	var previousOwnerRule []interface{}
+	for _, previousOwnerItem := range previousOwner {
+		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
+	}
+	var newOwnerRule []interface{}
+	for _, newOwnerItem := range newOwner {
+		newOwnerRule = append(newOwnerRule, newOwnerItem)
+	}
+
+	logs, sub, err := _TreasuryRebalanceMockV2.contract.FilterLogs(opts, "OwnershipTransferred", previousOwnerRule, newOwnerRule)
+	if err != nil {
+		return nil, err
+	}
+	return &TreasuryRebalanceMockV2OwnershipTransferredIterator{contract: _TreasuryRebalanceMockV2.contract, event: "OwnershipTransferred", logs: logs, sub: sub}, nil
+}
+
+// WatchOwnershipTransferred is a free log subscription operation binding the contract event 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0.
+//
+// Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceMockV2OwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
+	var previousOwnerRule []interface{}
+	for _, previousOwnerItem := range previousOwner {
+		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
+	}
+	var newOwnerRule []interface{}
+	for _, newOwnerItem := range newOwner {
+		newOwnerRule = append(newOwnerRule, newOwnerItem)
+	}
+
+	logs, sub, err := _TreasuryRebalanceMockV2.contract.WatchLogs(opts, "OwnershipTransferred", previousOwnerRule, newOwnerRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(TreasuryRebalanceMockV2OwnershipTransferred)
+				if err := _TreasuryRebalanceMockV2.contract.UnpackLog(event, "OwnershipTransferred", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseOwnershipTransferred is a log parse operation binding the contract event 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0.
+//
+// Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) ParseOwnershipTransferred(log types.Log) (*TreasuryRebalanceMockV2OwnershipTransferred, error) {
+	event := new(TreasuryRebalanceMockV2OwnershipTransferred)
+	if err := _TreasuryRebalanceMockV2.contract.UnpackLog(event, "OwnershipTransferred", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// TreasuryRebalanceMockV2StatusChangedIterator is returned from FilterStatusChanged and is used to iterate over the raw logs and unpacked data for StatusChanged events raised by the TreasuryRebalanceMockV2 contract.
+type TreasuryRebalanceMockV2StatusChangedIterator struct {
+	Event *TreasuryRebalanceMockV2StatusChanged // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *TreasuryRebalanceMockV2StatusChangedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(TreasuryRebalanceMockV2StatusChanged)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(TreasuryRebalanceMockV2StatusChanged)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *TreasuryRebalanceMockV2StatusChangedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *TreasuryRebalanceMockV2StatusChangedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// TreasuryRebalanceMockV2StatusChanged represents a StatusChanged event raised by the TreasuryRebalanceMockV2 contract.
+type TreasuryRebalanceMockV2StatusChanged struct {
+	Status uint8
+	Raw    types.Log // Blockchain specific contextual infos
+}
+
+// FilterStatusChanged is a free log retrieval operation binding the contract event 0xafa725e7f44cadb687a7043853fa1a7e7b8f0da74ce87ec546e9420f04da8c1e.
+//
+// Solidity: event StatusChanged(uint8 status)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) FilterStatusChanged(opts *bind.FilterOpts) (*TreasuryRebalanceMockV2StatusChangedIterator, error) {
+	logs, sub, err := _TreasuryRebalanceMockV2.contract.FilterLogs(opts, "StatusChanged")
+	if err != nil {
+		return nil, err
+	}
+	return &TreasuryRebalanceMockV2StatusChangedIterator{contract: _TreasuryRebalanceMockV2.contract, event: "StatusChanged", logs: logs, sub: sub}, nil
+}
+
+// WatchStatusChanged is a free log subscription operation binding the contract event 0xafa725e7f44cadb687a7043853fa1a7e7b8f0da74ce87ec546e9420f04da8c1e.
+//
+// Solidity: event StatusChanged(uint8 status)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) WatchStatusChanged(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceMockV2StatusChanged) (event.Subscription, error) {
+	logs, sub, err := _TreasuryRebalanceMockV2.contract.WatchLogs(opts, "StatusChanged")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(TreasuryRebalanceMockV2StatusChanged)
+				if err := _TreasuryRebalanceMockV2.contract.UnpackLog(event, "StatusChanged", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseStatusChanged is a log parse operation binding the contract event 0xafa725e7f44cadb687a7043853fa1a7e7b8f0da74ce87ec546e9420f04da8c1e.
+//
+// Solidity: event StatusChanged(uint8 status)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) ParseStatusChanged(log types.Log) (*TreasuryRebalanceMockV2StatusChanged, error) {
+	event := new(TreasuryRebalanceMockV2StatusChanged)
+	if err := _TreasuryRebalanceMockV2.contract.UnpackLog(event, "StatusChanged", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// TreasuryRebalanceMockV2ZeroedRegisteredIterator is returned from FilterZeroedRegistered and is used to iterate over the raw logs and unpacked data for ZeroedRegistered events raised by the TreasuryRebalanceMockV2 contract.
+type TreasuryRebalanceMockV2ZeroedRegisteredIterator struct {
+	Event *TreasuryRebalanceMockV2ZeroedRegistered // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *TreasuryRebalanceMockV2ZeroedRegisteredIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(TreasuryRebalanceMockV2ZeroedRegistered)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(TreasuryRebalanceMockV2ZeroedRegistered)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *TreasuryRebalanceMockV2ZeroedRegisteredIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *TreasuryRebalanceMockV2ZeroedRegisteredIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// TreasuryRebalanceMockV2ZeroedRegistered represents a ZeroedRegistered event raised by the TreasuryRebalanceMockV2 contract.
+type TreasuryRebalanceMockV2ZeroedRegistered struct {
+	Zeroed common.Address
+	Raw    types.Log // Blockchain specific contextual infos
+}
+
+// FilterZeroedRegistered is a free log retrieval operation binding the contract event 0xa9a4f3b74b03e48e76814dbc308d3f20104d608c67a42a7ae678d0945daa8e92.
+//
+// Solidity: event ZeroedRegistered(address zeroed)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) FilterZeroedRegistered(opts *bind.FilterOpts) (*TreasuryRebalanceMockV2ZeroedRegisteredIterator, error) {
+	logs, sub, err := _TreasuryRebalanceMockV2.contract.FilterLogs(opts, "ZeroedRegistered")
+	if err != nil {
+		return nil, err
+	}
+	return &TreasuryRebalanceMockV2ZeroedRegisteredIterator{contract: _TreasuryRebalanceMockV2.contract, event: "ZeroedRegistered", logs: logs, sub: sub}, nil
+}
+
+// WatchZeroedRegistered is a free log subscription operation binding the contract event 0xa9a4f3b74b03e48e76814dbc308d3f20104d608c67a42a7ae678d0945daa8e92.
+//
+// Solidity: event ZeroedRegistered(address zeroed)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) WatchZeroedRegistered(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceMockV2ZeroedRegistered) (event.Subscription, error) {
+	logs, sub, err := _TreasuryRebalanceMockV2.contract.WatchLogs(opts, "ZeroedRegistered")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(TreasuryRebalanceMockV2ZeroedRegistered)
+				if err := _TreasuryRebalanceMockV2.contract.UnpackLog(event, "ZeroedRegistered", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseZeroedRegistered is a log parse operation binding the contract event 0xa9a4f3b74b03e48e76814dbc308d3f20104d608c67a42a7ae678d0945daa8e92.
+//
+// Solidity: event ZeroedRegistered(address zeroed)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) ParseZeroedRegistered(log types.Log) (*TreasuryRebalanceMockV2ZeroedRegistered, error) {
+	event := new(TreasuryRebalanceMockV2ZeroedRegistered)
+	if err := _TreasuryRebalanceMockV2.contract.UnpackLog(event, "ZeroedRegistered", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// TreasuryRebalanceMockV2ZeroedRemovedIterator is returned from FilterZeroedRemoved and is used to iterate over the raw logs and unpacked data for ZeroedRemoved events raised by the TreasuryRebalanceMockV2 contract.
+type TreasuryRebalanceMockV2ZeroedRemovedIterator struct {
+	Event *TreasuryRebalanceMockV2ZeroedRemoved // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *TreasuryRebalanceMockV2ZeroedRemovedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(TreasuryRebalanceMockV2ZeroedRemoved)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(TreasuryRebalanceMockV2ZeroedRemoved)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *TreasuryRebalanceMockV2ZeroedRemovedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *TreasuryRebalanceMockV2ZeroedRemovedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// TreasuryRebalanceMockV2ZeroedRemoved represents a ZeroedRemoved event raised by the TreasuryRebalanceMockV2 contract.
+type TreasuryRebalanceMockV2ZeroedRemoved struct {
+	Zeroed common.Address
+	Raw    types.Log // Blockchain specific contextual infos
+}
+
+// FilterZeroedRemoved is a free log retrieval operation binding the contract event 0x8a654c98d0a7856a8d216c621bb8073316efcaa2b65774d2050c4c1fc7a85a0c.
+//
+// Solidity: event ZeroedRemoved(address zeroed)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) FilterZeroedRemoved(opts *bind.FilterOpts) (*TreasuryRebalanceMockV2ZeroedRemovedIterator, error) {
+	logs, sub, err := _TreasuryRebalanceMockV2.contract.FilterLogs(opts, "ZeroedRemoved")
+	if err != nil {
+		return nil, err
+	}
+	return &TreasuryRebalanceMockV2ZeroedRemovedIterator{contract: _TreasuryRebalanceMockV2.contract, event: "ZeroedRemoved", logs: logs, sub: sub}, nil
+}
+
+// WatchZeroedRemoved is a free log subscription operation binding the contract event 0x8a654c98d0a7856a8d216c621bb8073316efcaa2b65774d2050c4c1fc7a85a0c.
+//
+// Solidity: event ZeroedRemoved(address zeroed)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) WatchZeroedRemoved(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceMockV2ZeroedRemoved) (event.Subscription, error) {
+	logs, sub, err := _TreasuryRebalanceMockV2.contract.WatchLogs(opts, "ZeroedRemoved")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(TreasuryRebalanceMockV2ZeroedRemoved)
+				if err := _TreasuryRebalanceMockV2.contract.UnpackLog(event, "ZeroedRemoved", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseZeroedRemoved is a log parse operation binding the contract event 0x8a654c98d0a7856a8d216c621bb8073316efcaa2b65774d2050c4c1fc7a85a0c.
+//
+// Solidity: event ZeroedRemoved(address zeroed)
+func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) ParseZeroedRemoved(log types.Log) (*TreasuryRebalanceMockV2ZeroedRemoved, error) {
+	event := new(TreasuryRebalanceMockV2ZeroedRemoved)
+	if err := _TreasuryRebalanceMockV2.contract.UnpackLog(event, "ZeroedRemoved", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// TreasuryRebalanceV2MetaData contains all meta data concerning the TreasuryRebalanceV2 contract.
+var TreasuryRebalanceV2MetaData = &bind.MetaData{
+	ABI: "[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_rebalanceBlockNumber\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"allocated\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"fundAllocation\",\"type\":\"uint256\"}],\"name\":\"AllocatedRegistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"allocated\",\"type\":\"address\"}],\"name\":\"AllocatedRemoved\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"zeroed\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"approver\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"approversCount\",\"type\":\"uint256\"}],\"name\":\"Approved\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"enumTreasuryRebalanceV2.Status\",\"name\":\"status\",\"type\":\"uint8\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"rebalanceBlockNumber\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"deployedBlockNumber\",\"type\":\"uint256\"}],\"name\":\"ContractDeployed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"memo\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"enumTreasuryRebalanceV2.Status\",\"name\":\"status\",\"type\":\"uint8\"}],\"name\":\"Finalized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"enumTreasuryRebalanceV2.Status\",\"name\":\"status\",\"type\":\"uint8\"}],\"name\":\"StatusChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"zeroed\",\"type\":\"address\"}],\"name\":\"ZeroedRegistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"zeroed\",\"type\":\"address\"}],\"name\":\"ZeroedRemoved\",\"type\":\"event\"},{\"stateMutability\":\"payable\",\"type\":\"fallback\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_allocatedAddress\",\"type\":\"address\"}],\"name\":\"allocatedExists\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"allocateds\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_zeroedAddress\",\"type\":\"address\"}],\"name\":\"approve\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"checkZeroedsApproved\",\"outputs\":[],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"finalizeApproval\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_memo\",\"type\":\"string\"}],\"name\":\"finalizeContract\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"finalizeRegistration\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_allocatedAddress\",\"type\":\"address\"}],\"name\":\"getAllocated\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllocatedCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_allocatedAddress\",\"type\":\"address\"}],\"name\":\"getAllocatedIndex\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getTreasuryAmount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"treasuryAmount\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_zeroedAddress\",\"type\":\"address\"}],\"name\":\"getZeroed\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getZeroedCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_zeroedAddress\",\"type\":\"address\"}],\"name\":\"getZeroedIndex\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_addr\",\"type\":\"address\"}],\"name\":\"isContractAddr\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"isOwner\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"memo\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"rebalanceBlockNumber\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_allocatedAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"}],\"name\":\"registerAllocated\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_zeroedAddress\",\"type\":\"address\"}],\"name\":\"registerZeroed\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_allocatedAddress\",\"type\":\"address\"}],\"name\":\"removeAllocated\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_zeroedAddress\",\"type\":\"address\"}],\"name\":\"removeZeroed\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"reset\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"status\",\"outputs\":[{\"internalType\":\"enumTreasuryRebalanceV2.Status\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"sumOfZeroedBalance\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"zeroedsBalance\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_rebalanceBlockNumber\",\"type\":\"uint256\"}],\"name\":\"updateRebalanceBlocknumber\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_zeroedAddress\",\"type\":\"address\"}],\"name\":\"zeroedExists\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"zeroeds\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+	Sigs: map[string]string{
+		"bd786f57": "allocatedExists(address)",
+		"343e2c85": "allocateds(uint256)",
+		"daea85c5": "approve(address)",
+		"0287d126": "checkZeroedsApproved()",
+		"faaf9ca6": "finalizeApproval()",
+		"ea6d4a9b": "finalizeContract(string)",
+		"48409096": "finalizeRegistration()",
+		"9e59eb14": "getAllocated(address)",
+		"ed355529": "getAllocatedCount()",
+		"7bfaf7b7": "getAllocatedIndex(address)",
+		"e20fcf00": "getTreasuryAmount()",
+		"cea1c338": "getZeroed(address)",
+		"9dc954ba": "getZeroedCount()",
+		"518592da": "getZeroedIndex(address)",
+		"e2384cb3": "isContractAddr(address)",
+		"8f32d59b": "isOwner()",
+		"58c3b870": "memo()",
+		"8da5cb5b": "owner()",
+		"49a3fb45": "rebalanceBlockNumber()",
+		"ecd86778": "registerAllocated(address,uint256)",
+		"5f9b0df7": "registerZeroed(address)",
+		"27704cb5": "removeAllocated(address)",
+		"db27b50b": "removeZeroed(address)",
+		"715018a6": "renounceOwnership()",
+		"d826f88f": "reset()",
+		"200d2ed2": "status()",
+		"9ab29b70": "sumOfZeroedBalance()",
+		"f2fde38b": "transferOwnership(address)",
+		"1804692f": "updateRebalanceBlocknumber(uint256)",
+		"5f8798c0": "zeroedExists(address)",
+		"62aa3e91": "zeroeds(uint256)",
+	},
+	Bin: "0x60806040523480156200001157600080fd5b50604051620028b5380380620028b5833981016040819052620000349162000142565b600080546001600160a01b0319163390811782556040519091907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0908290a3438111620000ed5760405162461bcd60e51b815260206004820152603a60248201527f726562616c616e636520626c6f636b4e756d6265722073686f756c642062652060448201527f67726561746572207468616e2063757272656e7420626c6f636b000000000000606482015260840160405180910390fd5b60048190556003805460ff191690556040517f6f182006c5a12fe70c0728eedb2d1b0628c41483ca6721c606707d778d22ed0a906200013390600090849042906200015c565b60405180910390a15062000193565b6000602082840312156200015557600080fd5b5051919050565b60608101600485106200017f57634e487b7160e01b600052602160045260246000fd5b938152602081019290925260409091015290565b61271280620001a36000396000f3fe6080604052600436106101d85760003560e01c80638f32d59b11610102578063db27b50b11610095578063ecd8677811610064578063ecd86778146105b7578063ed355529146105d7578063f2fde38b146105ec578063faaf9ca61461060c576101d8565b8063db27b50b14610541578063e20fcf0014610561578063e2384cb314610576578063ea6d4a9b14610597576101d8565b8063bd786f57116100d1578063bd786f57146104be578063cea1c338146104de578063d826f88f1461050c578063daea85c514610521576101d8565b80638f32d59b146104545780639ab29b70146104745780639dc954ba146104895780639e59eb141461049e576101d8565b8063518592da1161017a57806362aa3e911161014957806362aa3e91146103c9578063715018a6146104015780637bfaf7b7146104165780638da5cb5b14610436576101d8565b8063518592da1461033757806358c3b870146103575780635f8798c0146103795780635f9b0df7146103a9576101d8565b806327704cb5116101b657806327704cb51461029f578063343e2c85146102bf57806348409096146102fe57806349a3fb4514610313576101d8565b80630287d126146102385780631804692f1461024f578063200d2ed21461026f575b60405162461bcd60e51b815260206004820152602a60248201527f5468697320636f6e747261637420646f6573206e6f742061636365707420616e60448201526979207061796d656e747360b01b60648201526084015b60405180910390fd5b34801561024457600080fd5b5061024d610621565b005b34801561025b57600080fd5b5061024d61026a36600461209d565b610805565b34801561027b57600080fd5b506003546102899060ff1681565b60405161029691906120ee565b60405180910390f35b3480156102ab57600080fd5b5061024d6102ba366004612117565b610920565b3480156102cb57600080fd5b506102df6102da36600461209d565b610ad5565b604080516001600160a01b039093168352602083019190915201610296565b34801561030a57600080fd5b5061024d610b0d565b34801561031f57600080fd5b5061032960045481565b604051908152602001610296565b34801561034357600080fd5b50610329610352366004612117565b610bc4565b34801561036357600080fd5b5061036c610c30565b604051610296919061213b565b34801561038557600080fd5b50610399610394366004612117565b610cbe565b6040519015158152602001610296565b3480156103b557600080fd5b5061024d6103c4366004612117565b610d72565b3480156103d557600080fd5b506103e96103e436600461209d565b610eb5565b6040516001600160a01b039091168152602001610296565b34801561040d57600080fd5b5061024d610ee4565b34801561042257600080fd5b50610329610431366004612117565b610f58565b34801561044257600080fd5b506000546001600160a01b03166103e9565b34801561046057600080fd5b506000546001600160a01b03163314610399565b34801561048057600080fd5b50610329610fba565b34801561049557600080fd5b50600154610329565b3480156104aa57600080fd5b506102df6104b9366004612117565b611018565b3480156104ca57600080fd5b506103996104d9366004612117565b6110cb565b3480156104ea57600080fd5b506104fe6104f9366004612117565b611179565b604051610296929190612189565b34801561051857600080fd5b5061024d611260565b34801561052d57600080fd5b5061024d61053c366004612117565b61138e565b34801561054d57600080fd5b5061024d61055c366004612117565b611574565b34801561056d57600080fd5b50610329611709565b34801561058257600080fd5b50610399610591366004612117565b3b151590565b3480156105a357600080fd5b5061024d6105b236600461222c565b61175b565b3480156105c357600080fd5b5061024d6105d23660046122c1565b611883565b3480156105e357600080fd5b50600254610329565b3480156105f857600080fd5b5061024d610607366004612117565b611a70565b34801561061857600080fd5b5061024d611aa3565b60005b60015481101561080257600060018281548110610643576106436122ed565b6000918252602091829020604080518082018252600290930290910180546001600160a01b031683526001810180548351818702810187019094528084529394919385830193928301828280156106c357602002820191906000526020600020905b81546001600160a01b031681526001909101906020018083116106a5575b505050505081525050905060006106de82600001513b151590565b905080156107a3576000806106f68460000151611bb6565b9150915080846020015151101561071f5760405162461bcd60e51b815260040161022f90612303565b60208401516000805b825181101561077957610754838281518110610746576107466122ed565b602002602001015186611c2f565b1561076757816107638161235b565b9250505b806107718161235b565b915050610728565b508281101561079a5760405162461bcd60e51b815260040161022f90612303565b505050506107ed565b8160200151516001146107ed5760405162461bcd60e51b8152602060048201526012602482015271454f412073686f756c6420617070726f766560701b604482015260640161022f565b505080806107fa9061235b565b915050610624565b50565b6000546001600160a01b0316331461082f5760405162461bcd60e51b815260040161022f90612374565b60045443106108a65760405162461bcd60e51b815260206004820152603e60248201527f63757272656e7420626c6f636b2073686f756c646e277420626520706173742060448201527f7468652063757272656e746c792073657420626c6f636b206e756d6265720000606482015260840161022f565b80431061091b5760405162461bcd60e51b815260206004820152603a60248201527f726562616c616e636520626c6f636b4e756d6265722073686f756c642062652060448201527f67726561746572207468616e2063757272656e7420626c6f636b000000000000606482015260840161022f565b600455565b6000546001600160a01b0316331461094a5760405162461bcd60e51b815260040161022f90612374565b6000806003805460ff1690811115610964576109646120b6565b146109815760405162461bcd60e51b815260040161022f906123a9565b600061098c83610f58565b905060001981036109da5760405162461bcd60e51b8152602060048201526018602482015277105b1b1bd8d85d1959081b9bdd081c9959da5cdd195c995960421b604482015260640161022f565b600280546109ea906001906123e0565b815481106109fa576109fa6122ed565b906000526020600020906002020160028281548110610a1b57610a1b6122ed565b600091825260209091208254600292830290910180546001600160a01b0319166001600160a01b03909216919091178155600192830154920191909155805480610a6757610a676123f3565b600082815260208082206002600019949094019384020180546001600160a01b03191681556001019190915591556040516001600160a01b03851681527ff8f67464bea52432645435be9c46c427173a75aefaa1001272e08a4b8572f06e91015b60405180910390a1505050565b60028181548110610ae557600080fd5b6000918252602090912060029091020180546001909101546001600160a01b03909116915082565b6000546001600160a01b03163314610b375760405162461bcd60e51b815260040161022f90612374565b6000806003805460ff1690811115610b5157610b516120b6565b14610b6e5760405162461bcd60e51b815260040161022f906123a9565b600380546001919060ff191682805b02179055506003546040517fafa725e7f44cadb687a7043853fa1a7e7b8f0da74ce87ec546e9420f04da8c1e91610bb99160ff909116906120ee565b60405180910390a150565b6000805b600154811015610c2657826001600160a01b031660018281548110610bef57610bef6122ed565b60009182526020909120600290910201546001600160a01b031603610c145792915050565b80610c1e8161235b565b915050610bc8565b5060001992915050565b60058054610c3d90612409565b80601f0160208091040260200160405190810160405280929190818152602001828054610c6990612409565b8015610cb65780601f10610c8b57610100808354040283529160200191610cb6565b820191906000526020600020905b815481529060010190602001808311610c9957829003601f168201915b505050505081565b60006001600160a01b038216610d085760405162461bcd60e51b815260206004820152600f60248201526e496e76616c6964206164647265737360881b604482015260640161022f565b60005b600154811015610d6c57826001600160a01b031660018281548110610d3257610d326122ed565b60009182526020909120600290910201546001600160a01b031603610d5a5750600192915050565b80610d648161235b565b915050610d0b565b50919050565b6000546001600160a01b03163314610d9c5760405162461bcd60e51b815260040161022f90612374565b6000806003805460ff1690811115610db657610db66120b6565b14610dd35760405162461bcd60e51b815260040161022f906123a9565b610ddc82610cbe565b15610e355760405162461bcd60e51b8152602060048201526024808201527f5a65726f6564206164647265737320697320616c726561647920726567697374604482015263195c995960e21b606482015260840161022f565b6001805480820182556000919091526002027fb10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf60180546001600160a01b0384166001600160a01b0319909116811782556040519081527fa9a4f3b74b03e48e76814dbc308d3f20104d608c67a42a7ae678d0945daa8e9290602001610ac8565b60018181548110610ec557600080fd5b60009182526020909120600290910201546001600160a01b0316905081565b6000546001600160a01b03163314610f0e5760405162461bcd60e51b815260040161022f90612374565b600080546040516001600160a01b03909116907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0908390a3600080546001600160a01b0319169055565b6000805b600254811015610c2657826001600160a01b031660028281548110610f8357610f836122ed565b60009182526020909120600290910201546001600160a01b031603610fa85792915050565b80610fb28161235b565b915050610f5c565b6000805b6001548110156110145760018181548110610fdb57610fdb6122ed565b6000918252602090912060029091020154611000906001600160a01b0316318361243d565b91508061100c8161235b565b915050610fbe565b5090565b600080600061102684610f58565b905060001981036110745760405162461bcd60e51b8152602060048201526018602482015277105b1b1bd8d85d1959081b9bdd081c9959da5cdd195c995960421b604482015260640161022f565b600060028281548110611089576110896122ed565b60009182526020918290206040805180820190915260029092020180546001600160a01b03168083526001909101549190920181905290969095509350505050565b60006001600160a01b0382166111155760405162461bcd60e51b815260206004820152600f60248201526e496e76616c6964206164647265737360881b604482015260640161022f565b60005b600254811015610d6c57826001600160a01b03166002828154811061113f5761113f6122ed565b60009182526020909120600290910201546001600160a01b0316036111675750600192915050565b806111718161235b565b915050611118565b60006060600061118884610bc4565b905060001981036111ab5760405162461bcd60e51b815260040161022f90612450565b6000600182815481106111c0576111c06122ed565b6000918252602091829020604080518082018252600290930290910180546001600160a01b0316835260018101805483518187028101870190945280845293949193858301939283018282801561124057602002820191906000526020600020905b81546001600160a01b03168152600190910190602001808311611222575b505050505081525050905080600001518160200151935093505050915091565b6000546001600160a01b0316331461128a5760405162461bcd60e51b815260040161022f90612374565b6003805460ff16818111156112a1576112a16120b6565b036113015760405162461bcd60e51b815260206004820152602a60248201527f436f6e74726163742069732066696e616c697a65642c2063616e6e6f742072656044820152697365742076616c75657360b01b606482015260840161022f565b600454431061135e5760405162461bcd60e51b8152602060048201526024808201527f526562616c616e636520626c6f636b6e756d62657220616c72656164792070616044820152631cdcd95960e21b606482015260840161022f565b61136a60016000611f4e565b61137660026000611f6f565b61138260056000611f90565b6003805460ff19169055565b6001806003805460ff16908111156113a8576113a86120b6565b146113c55760405162461bcd60e51b815260040161022f906123a9565b6113ce82610cbe565b6114305760405162461bcd60e51b815260206004820152602d60248201527f7a65726f6564206e6565647320746f206265207265676973746572656420626560448201526c199bdc9948185c1c1c9bdd985b609a1b606482015260840161022f565b813b1515806114ac57336001600160a01b0384161461149d5760405162461bcd60e51b815260206004820152602360248201527f7a65726f656441646472657373206973206e6f7420746865206d73672e73656e6044820152623232b960e91b606482015260840161022f565b6114a78333611c8c565b505050565b6000806114b885611bb6565b91509150815160000361150d5760405162461bcd60e51b815260206004820152601a60248201527f61646d696e206c6973742063616e6e6f7420626520656d707479000000000000604482015260640161022f565b6115173383611c2f565b6115635760405162461bcd60e51b815260206004820152601b60248201527f6d73672e73656e646572206973206e6f74207468652061646d696e0000000000604482015260640161022f565b61156d8533611c8c565b5050505050565b6000546001600160a01b0316331461159e5760405162461bcd60e51b815260040161022f90612374565b6000806003805460ff16908111156115b8576115b86120b6565b146115d55760405162461bcd60e51b815260040161022f906123a9565b60006115e083610bc4565b905060001981036116035760405162461bcd60e51b815260040161022f90612450565b600180546116129082906123e0565b81548110611622576116226122ed565b906000526020600020906002020160018281548110611643576116436122ed565b60009182526020909120825460029092020180546001600160a01b0319166001600160a01b03909216919091178155600180830180546116869284019190611fca565b50905050600180548061169b5761169b6123f3565b60008281526020812060026000199093019283020180546001600160a01b0319168155906116cc6001830182612016565b505090556040516001600160a01b03841681527f8a654c98d0a7856a8d216c621bb8073316efcaa2b65774d2050c4c1fc7a85a0c90602001610ac8565b6000805b600254811015611014576002818154811061172a5761172a6122ed565b90600052602060002090600202016001015482611747919061243d565b9150806117538161235b565b91505061170d565b6000546001600160a01b031633146117855760405162461bcd60e51b815260040161022f90612374565b6002806003805460ff169081111561179f5761179f6120b6565b146117bc5760405162461bcd60e51b815260040161022f906123a9565b60056117c883826124cd565b506003805460ff1916811781556040517f8f8636c7757ca9b7d154e1d44ca90d8e8c885b9eac417c59bbf8eb7779ca640491611807916005919061258d565b60405180910390a1600454431161187f5760405162461bcd60e51b815260206004820152603660248201527f436f6e74726163742063616e206f6e6c792066696e616c697a6520616674657260448201527520657865637574696e6720726562616c616e63696e6760501b606482015260840161022f565b5050565b6000546001600160a01b031633146118ad5760405162461bcd60e51b815260040161022f90612374565b6000806003805460ff16908111156118c7576118c76120b6565b146118e45760405162461bcd60e51b815260040161022f906123a9565b6118ed836110cb565b1561194a5760405162461bcd60e51b815260206004820152602760248201527f416c6c6f6361746564206164647265737320697320616c7265616479207265676044820152661a5cdd195c995960ca1b606482015260840161022f565b8160000361199a5760405162461bcd60e51b815260206004820152601960248201527f416d6f756e742063616e6e6f742062652073657420746f203000000000000000604482015260640161022f565b6040805180820182526001600160a01b038581168083526020808401878152600280546001810182556000829052865191027f405787fa12a823e0f2b7631cc41b3ba8828b3321ca811111fa75cd3aa3bb5ace81018054929096166001600160a01b031990921691909117909455517f405787fa12a823e0f2b7631cc41b3ba8828b3321ca811111fa75cd3aa3bb5acf90930192909255835190815290810185905290917fab5b2126f71ee7e0b39eadc53fb5d08a8f6c68dc61795fa05ed7d176cd2665ed91015b60405180910390a150505050565b6000546001600160a01b03163314611a9a5760405162461bcd60e51b815260040161022f90612374565b61080281611e8e565b6000546001600160a01b03163314611acd5760405162461bcd60e51b815260040161022f90612374565b6001806003805460ff1690811115611ae757611ae76120b6565b14611b045760405162461bcd60e51b815260040161022f906123a9565b611b0c610fba565b611b14611709565b10611b9a5760405162461bcd60e51b815260206004820152604a60248201527f747265617375727920616d6f756e742073686f756c64206265206c657373207460448201527f68616e207468652073756d206f6620616c6c207a65726f656420616464726573606482015269732062616c616e63657360b01b608482015260a40161022f565b611ba2610621565b600380546002919060ff1916600183610b7d565b6060600080839050806001600160a01b0316631865c57d6040518163ffffffff1660e01b8152600401600060405180830381865afa158015611bfc573d6000803e3d6000fd5b505050506040513d6000823e601f3d908101601f19168201604052611c249190810190612622565b909590945092505050565b6000805b8251811015611c8557828181518110611c4e57611c4e6122ed565b60200260200101516001600160a01b0316846001600160a01b031603611c7357600191505b80611c7d8161235b565b915050611c33565b5092915050565b6000611c9783610bc4565b90506000198103611cba5760405162461bcd60e51b815260040161022f90612450565b600060018281548110611ccf57611ccf6122ed565b9060005260206000209060020201600101805480602002602001604051908101604052809291908181526020018280548015611d3457602002820191906000526020600020905b81546001600160a01b03168152600190910190602001808311611d16575b5050505050905060005b8151811015611dc657836001600160a01b0316828281518110611d6357611d636122ed565b60200260200101516001600160a01b031603611db45760405162461bcd60e51b815260206004820152601060248201526f105b1c9958591e48185c1c1c9bdd995960821b604482015260640161022f565b80611dbe8161235b565b915050611d3e565b5060018281548110611dda57611dda6122ed565b600091825260208083206001600290930201820180548084018255908452922090910180546001600160a01b0386166001600160a01b031990911617905580547f80da462ebfbe41cfc9bc015e7a9a3c7a2a73dbccede72d8ceb583606c27f8f9091869186919086908110611e5157611e516122ed565b600091825260209182902060016002909202010154604080516001600160a01b039586168152949093169184019190915290820152606001611a62565b6001600160a01b038116611ef35760405162461bcd60e51b815260206004820152602660248201527f4f776e61626c653a206e6577206f776e657220697320746865207a65726f206160448201526564647265737360d01b606482015260840161022f565b600080546040516001600160a01b03808516939216917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e091a3600080546001600160a01b0319166001600160a01b0392909216919091179055565b50805460008255600202906000526020600020908101906108029190612034565b50805460008255600202906000526020600020908101906108029190612062565b508054611f9c90612409565b6000825580601f10611fac575050565b601f0160209004906000526020600020908101906108029190612088565b82805482825590600052602060002090810192821561200a5760005260206000209182015b8281111561200a578254825591600101919060010190611fef565b50611014929150612088565b50805460008255906000526020600020908101906108029190612088565b808211156110145780546001600160a01b031916815560006120596001830182612016565b50600201612034565b5b808211156110145780546001600160a01b031916815560006001820155600201612063565b5b808211156110145760008155600101612089565b6000602082840312156120af57600080fd5b5035919050565b634e487b7160e01b600052602160045260246000fd5b600481106120ea57634e487b7160e01b600052602160045260246000fd5b9052565b602081016120fc82846120cc565b92915050565b6001600160a01b038116811461080257600080fd5b60006020828403121561212957600080fd5b813561213481612102565b9392505050565b600060208083528351808285015260005b818110156121685785810183015185820160400152820161214c565b506000604082860101526040601f19601f8301168501019250505092915050565b6001600160a01b038381168252604060208084018290528451918401829052600092858201929091906060860190855b818110156121d75785518516835294830194918301916001016121b9565b509098975050505050505050565b634e487b7160e01b600052604160045260246000fd5b604051601f8201601f1916810167ffffffffffffffff81118282101715612224576122246121e5565b604052919050565b6000602080838503121561223f57600080fd5b823567ffffffffffffffff8082111561225757600080fd5b818501915085601f83011261226b57600080fd5b81358181111561227d5761227d6121e5565b61228f601f8201601f191685016121fb565b915080825286848285010111156122a557600080fd5b8084840185840137600090820190930192909252509392505050565b600080604083850312156122d457600080fd5b82356122df81612102565b946020939093013593505050565b634e487b7160e01b600052603260045260246000fd5b60208082526022908201527f6d696e2072657175697265642061646d696e732073686f756c6420617070726f604082015261766560f01b606082015260800190565b634e487b7160e01b600052601160045260246000fd5b60006001820161236d5761236d612345565b5060010190565b6020808252818101527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e6572604082015260600190565b6020808252601c908201527f4e6f7420696e207468652064657369676e617465642073746174757300000000604082015260600190565b818103818111156120fc576120fc612345565b634e487b7160e01b600052603160045260246000fd5b600181811c9082168061241d57607f821691505b602082108103610d6c57634e487b7160e01b600052602260045260246000fd5b808201808211156120fc576120fc612345565b60208082526015908201527416995c9bd959081b9bdd081c9959da5cdd195c9959605a1b604082015260600190565b601f8211156114a757600081815260208120601f850160051c810160208610156124a65750805b601f850160051c820191505b818110156124c5578281556001016124b2565b505050505050565b815167ffffffffffffffff8111156124e7576124e76121e5565b6124fb816124f58454612409565b8461247f565b602080601f83116001811461253057600084156125185750858301515b600019600386901b1c1916600185901b1785556124c5565b600085815260208120601f198616915b8281101561255f57888601518255948401946001909101908401612540565b508582101561257d5787850151600019600388901b60f8161c191681555b5050505050600190811b01905550565b60408152600080845461259f81612409565b80604086015260606001808416600081146125c157600181146125db5761260c565b60ff1985168884015283151560051b88018301955061260c565b8960005260208060002060005b868110156126035781548b82018701529084019082016125e8565b8a018501975050505b50505050508091505061213460208301846120cc565b6000806040838503121561263557600080fd5b825167ffffffffffffffff8082111561264d57600080fd5b818501915085601f83011261266157600080fd5b8151602082821115612675576126756121e5565b8160051b92506126868184016121fb565b82815292840181019281810190898511156126a057600080fd5b948201945b848610156126ca57855193506126ba84612102565b83825294820194908201906126a5565b9790910151969896975050505050505056fea2646970667358221220a7316b825785b1a091a8a24ec6cd1b9d7373f485f24970add73e9468f8b6be9e64736f6c63430008120033",
+}
+
+// TreasuryRebalanceV2ABI is the input ABI used to generate the binding from.
+// Deprecated: Use TreasuryRebalanceV2MetaData.ABI instead.
+var TreasuryRebalanceV2ABI = TreasuryRebalanceV2MetaData.ABI
+
+// TreasuryRebalanceV2BinRuntime is the compiled bytecode used for adding genesis block without deploying code.
+const TreasuryRebalanceV2BinRuntime = `6080604052600436106101d85760003560e01c80638f32d59b11610102578063db27b50b11610095578063ecd8677811610064578063ecd86778146105b7578063ed355529146105d7578063f2fde38b146105ec578063faaf9ca61461060c576101d8565b8063db27b50b14610541578063e20fcf0014610561578063e2384cb314610576578063ea6d4a9b14610597576101d8565b8063bd786f57116100d1578063bd786f57146104be578063cea1c338146104de578063d826f88f1461050c578063daea85c514610521576101d8565b80638f32d59b146104545780639ab29b70146104745780639dc954ba146104895780639e59eb141461049e576101d8565b8063518592da1161017a57806362aa3e911161014957806362aa3e91146103c9578063715018a6146104015780637bfaf7b7146104165780638da5cb5b14610436576101d8565b8063518592da1461033757806358c3b870146103575780635f8798c0146103795780635f9b0df7146103a9576101d8565b806327704cb5116101b657806327704cb51461029f578063343e2c85146102bf57806348409096146102fe57806349a3fb4514610313576101d8565b80630287d126146102385780631804692f1461024f578063200d2ed21461026f575b60405162461bcd60e51b815260206004820152602a60248201527f5468697320636f6e747261637420646f6573206e6f742061636365707420616e60448201526979207061796d656e747360b01b60648201526084015b60405180910390fd5b34801561024457600080fd5b5061024d610621565b005b34801561025b57600080fd5b5061024d61026a36600461209d565b610805565b34801561027b57600080fd5b506003546102899060ff1681565b60405161029691906120ee565b60405180910390f35b3480156102ab57600080fd5b5061024d6102ba366004612117565b610920565b3480156102cb57600080fd5b506102df6102da36600461209d565b610ad5565b604080516001600160a01b039093168352602083019190915201610296565b34801561030a57600080fd5b5061024d610b0d565b34801561031f57600080fd5b5061032960045481565b604051908152602001610296565b34801561034357600080fd5b50610329610352366004612117565b610bc4565b34801561036357600080fd5b5061036c610c30565b604051610296919061213b565b34801561038557600080fd5b50610399610394366004612117565b610cbe565b6040519015158152602001610296565b3480156103b557600080fd5b5061024d6103c4366004612117565b610d72565b3480156103d557600080fd5b506103e96103e436600461209d565b610eb5565b6040516001600160a01b039091168152602001610296565b34801561040d57600080fd5b5061024d610ee4565b34801561042257600080fd5b50610329610431366004612117565b610f58565b34801561044257600080fd5b506000546001600160a01b03166103e9565b34801561046057600080fd5b506000546001600160a01b03163314610399565b34801561048057600080fd5b50610329610fba565b34801561049557600080fd5b50600154610329565b3480156104aa57600080fd5b506102df6104b9366004612117565b611018565b3480156104ca57600080fd5b506103996104d9366004612117565b6110cb565b3480156104ea57600080fd5b506104fe6104f9366004612117565b611179565b604051610296929190612189565b34801561051857600080fd5b5061024d611260565b34801561052d57600080fd5b5061024d61053c366004612117565b61138e565b34801561054d57600080fd5b5061024d61055c366004612117565b611574565b34801561056d57600080fd5b50610329611709565b34801561058257600080fd5b50610399610591366004612117565b3b151590565b3480156105a357600080fd5b5061024d6105b236600461222c565b61175b565b3480156105c357600080fd5b5061024d6105d23660046122c1565b611883565b3480156105e357600080fd5b50600254610329565b3480156105f857600080fd5b5061024d610607366004612117565b611a70565b34801561061857600080fd5b5061024d611aa3565b60005b60015481101561080257600060018281548110610643576106436122ed565b6000918252602091829020604080518082018252600290930290910180546001600160a01b031683526001810180548351818702810187019094528084529394919385830193928301828280156106c357602002820191906000526020600020905b81546001600160a01b031681526001909101906020018083116106a5575b505050505081525050905060006106de82600001513b151590565b905080156107a3576000806106f68460000151611bb6565b9150915080846020015151101561071f5760405162461bcd60e51b815260040161022f90612303565b60208401516000805b825181101561077957610754838281518110610746576107466122ed565b602002602001015186611c2f565b1561076757816107638161235b565b9250505b806107718161235b565b915050610728565b508281101561079a5760405162461bcd60e51b815260040161022f90612303565b505050506107ed565b8160200151516001146107ed5760405162461bcd60e51b8152602060048201526012602482015271454f412073686f756c6420617070726f766560701b604482015260640161022f565b505080806107fa9061235b565b915050610624565b50565b6000546001600160a01b0316331461082f5760405162461bcd60e51b815260040161022f90612374565b60045443106108a65760405162461bcd60e51b815260206004820152603e60248201527f63757272656e7420626c6f636b2073686f756c646e277420626520706173742060448201527f7468652063757272656e746c792073657420626c6f636b206e756d6265720000606482015260840161022f565b80431061091b5760405162461bcd60e51b815260206004820152603a60248201527f726562616c616e636520626c6f636b4e756d6265722073686f756c642062652060448201527f67726561746572207468616e2063757272656e7420626c6f636b000000000000606482015260840161022f565b600455565b6000546001600160a01b0316331461094a5760405162461bcd60e51b815260040161022f90612374565b6000806003805460ff1690811115610964576109646120b6565b146109815760405162461bcd60e51b815260040161022f906123a9565b600061098c83610f58565b905060001981036109da5760405162461bcd60e51b8152602060048201526018602482015277105b1b1bd8d85d1959081b9bdd081c9959da5cdd195c995960421b604482015260640161022f565b600280546109ea906001906123e0565b815481106109fa576109fa6122ed565b906000526020600020906002020160028281548110610a1b57610a1b6122ed565b600091825260209091208254600292830290910180546001600160a01b0319166001600160a01b03909216919091178155600192830154920191909155805480610a6757610a676123f3565b600082815260208082206002600019949094019384020180546001600160a01b03191681556001019190915591556040516001600160a01b03851681527ff8f67464bea52432645435be9c46c427173a75aefaa1001272e08a4b8572f06e91015b60405180910390a1505050565b60028181548110610ae557600080fd5b6000918252602090912060029091020180546001909101546001600160a01b03909116915082565b6000546001600160a01b03163314610b375760405162461bcd60e51b815260040161022f90612374565b6000806003805460ff1690811115610b5157610b516120b6565b14610b6e5760405162461bcd60e51b815260040161022f906123a9565b600380546001919060ff191682805b02179055506003546040517fafa725e7f44cadb687a7043853fa1a7e7b8f0da74ce87ec546e9420f04da8c1e91610bb99160ff909116906120ee565b60405180910390a150565b6000805b600154811015610c2657826001600160a01b031660018281548110610bef57610bef6122ed565b60009182526020909120600290910201546001600160a01b031603610c145792915050565b80610c1e8161235b565b915050610bc8565b5060001992915050565b60058054610c3d90612409565b80601f0160208091040260200160405190810160405280929190818152602001828054610c6990612409565b8015610cb65780601f10610c8b57610100808354040283529160200191610cb6565b820191906000526020600020905b815481529060010190602001808311610c9957829003601f168201915b505050505081565b60006001600160a01b038216610d085760405162461bcd60e51b815260206004820152600f60248201526e496e76616c6964206164647265737360881b604482015260640161022f565b60005b600154811015610d6c57826001600160a01b031660018281548110610d3257610d326122ed565b60009182526020909120600290910201546001600160a01b031603610d5a5750600192915050565b80610d648161235b565b915050610d0b565b50919050565b6000546001600160a01b03163314610d9c5760405162461bcd60e51b815260040161022f90612374565b6000806003805460ff1690811115610db657610db66120b6565b14610dd35760405162461bcd60e51b815260040161022f906123a9565b610ddc82610cbe565b15610e355760405162461bcd60e51b8152602060048201526024808201527f5a65726f6564206164647265737320697320616c726561647920726567697374604482015263195c995960e21b606482015260840161022f565b6001805480820182556000919091526002027fb10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf60180546001600160a01b0384166001600160a01b0319909116811782556040519081527fa9a4f3b74b03e48e76814dbc308d3f20104d608c67a42a7ae678d0945daa8e9290602001610ac8565b60018181548110610ec557600080fd5b60009182526020909120600290910201546001600160a01b0316905081565b6000546001600160a01b03163314610f0e5760405162461bcd60e51b815260040161022f90612374565b600080546040516001600160a01b03909116907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0908390a3600080546001600160a01b0319169055565b6000805b600254811015610c2657826001600160a01b031660028281548110610f8357610f836122ed565b60009182526020909120600290910201546001600160a01b031603610fa85792915050565b80610fb28161235b565b915050610f5c565b6000805b6001548110156110145760018181548110610fdb57610fdb6122ed565b6000918252602090912060029091020154611000906001600160a01b0316318361243d565b91508061100c8161235b565b915050610fbe565b5090565b600080600061102684610f58565b905060001981036110745760405162461bcd60e51b8152602060048201526018602482015277105b1b1bd8d85d1959081b9bdd081c9959da5cdd195c995960421b604482015260640161022f565b600060028281548110611089576110896122ed565b60009182526020918290206040805180820190915260029092020180546001600160a01b03168083526001909101549190920181905290969095509350505050565b60006001600160a01b0382166111155760405162461bcd60e51b815260206004820152600f60248201526e496e76616c6964206164647265737360881b604482015260640161022f565b60005b600254811015610d6c57826001600160a01b03166002828154811061113f5761113f6122ed565b60009182526020909120600290910201546001600160a01b0316036111675750600192915050565b806111718161235b565b915050611118565b60006060600061118884610bc4565b905060001981036111ab5760405162461bcd60e51b815260040161022f90612450565b6000600182815481106111c0576111c06122ed565b6000918252602091829020604080518082018252600290930290910180546001600160a01b0316835260018101805483518187028101870190945280845293949193858301939283018282801561124057602002820191906000526020600020905b81546001600160a01b03168152600190910190602001808311611222575b505050505081525050905080600001518160200151935093505050915091565b6000546001600160a01b0316331461128a5760405162461bcd60e51b815260040161022f90612374565b6003805460ff16818111156112a1576112a16120b6565b036113015760405162461bcd60e51b815260206004820152602a60248201527f436f6e74726163742069732066696e616c697a65642c2063616e6e6f742072656044820152697365742076616c75657360b01b606482015260840161022f565b600454431061135e5760405162461bcd60e51b8152602060048201526024808201527f526562616c616e636520626c6f636b6e756d62657220616c72656164792070616044820152631cdcd95960e21b606482015260840161022f565b61136a60016000611f4e565b61137660026000611f6f565b61138260056000611f90565b6003805460ff19169055565b6001806003805460ff16908111156113a8576113a86120b6565b146113c55760405162461bcd60e51b815260040161022f906123a9565b6113ce82610cbe565b6114305760405162461bcd60e51b815260206004820152602d60248201527f7a65726f6564206e6565647320746f206265207265676973746572656420626560448201526c199bdc9948185c1c1c9bdd985b609a1b606482015260840161022f565b813b1515806114ac57336001600160a01b0384161461149d5760405162461bcd60e51b815260206004820152602360248201527f7a65726f656441646472657373206973206e6f7420746865206d73672e73656e6044820152623232b960e91b606482015260840161022f565b6114a78333611c8c565b505050565b6000806114b885611bb6565b91509150815160000361150d5760405162461bcd60e51b815260206004820152601a60248201527f61646d696e206c6973742063616e6e6f7420626520656d707479000000000000604482015260640161022f565b6115173383611c2f565b6115635760405162461bcd60e51b815260206004820152601b60248201527f6d73672e73656e646572206973206e6f74207468652061646d696e0000000000604482015260640161022f565b61156d8533611c8c565b5050505050565b6000546001600160a01b0316331461159e5760405162461bcd60e51b815260040161022f90612374565b6000806003805460ff16908111156115b8576115b86120b6565b146115d55760405162461bcd60e51b815260040161022f906123a9565b60006115e083610bc4565b905060001981036116035760405162461bcd60e51b815260040161022f90612450565b600180546116129082906123e0565b81548110611622576116226122ed565b906000526020600020906002020160018281548110611643576116436122ed565b60009182526020909120825460029092020180546001600160a01b0319166001600160a01b03909216919091178155600180830180546116869284019190611fca565b50905050600180548061169b5761169b6123f3565b60008281526020812060026000199093019283020180546001600160a01b0319168155906116cc6001830182612016565b505090556040516001600160a01b03841681527f8a654c98d0a7856a8d216c621bb8073316efcaa2b65774d2050c4c1fc7a85a0c90602001610ac8565b6000805b600254811015611014576002818154811061172a5761172a6122ed565b90600052602060002090600202016001015482611747919061243d565b9150806117538161235b565b91505061170d565b6000546001600160a01b031633146117855760405162461bcd60e51b815260040161022f90612374565b6002806003805460ff169081111561179f5761179f6120b6565b146117bc5760405162461bcd60e51b815260040161022f906123a9565b60056117c883826124cd565b506003805460ff1916811781556040517f8f8636c7757ca9b7d154e1d44ca90d8e8c885b9eac417c59bbf8eb7779ca640491611807916005919061258d565b60405180910390a1600454431161187f5760405162461bcd60e51b815260206004820152603660248201527f436f6e74726163742063616e206f6e6c792066696e616c697a6520616674657260448201527520657865637574696e6720726562616c616e63696e6760501b606482015260840161022f565b5050565b6000546001600160a01b031633146118ad5760405162461bcd60e51b815260040161022f90612374565b6000806003805460ff16908111156118c7576118c76120b6565b146118e45760405162461bcd60e51b815260040161022f906123a9565b6118ed836110cb565b1561194a5760405162461bcd60e51b815260206004820152602760248201527f416c6c6f6361746564206164647265737320697320616c7265616479207265676044820152661a5cdd195c995960ca1b606482015260840161022f565b8160000361199a5760405162461bcd60e51b815260206004820152601960248201527f416d6f756e742063616e6e6f742062652073657420746f203000000000000000604482015260640161022f565b6040805180820182526001600160a01b038581168083526020808401878152600280546001810182556000829052865191027f405787fa12a823e0f2b7631cc41b3ba8828b3321ca811111fa75cd3aa3bb5ace81018054929096166001600160a01b031990921691909117909455517f405787fa12a823e0f2b7631cc41b3ba8828b3321ca811111fa75cd3aa3bb5acf90930192909255835190815290810185905290917fab5b2126f71ee7e0b39eadc53fb5d08a8f6c68dc61795fa05ed7d176cd2665ed91015b60405180910390a150505050565b6000546001600160a01b03163314611a9a5760405162461bcd60e51b815260040161022f90612374565b61080281611e8e565b6000546001600160a01b03163314611acd5760405162461bcd60e51b815260040161022f90612374565b6001806003805460ff1690811115611ae757611ae76120b6565b14611b045760405162461bcd60e51b815260040161022f906123a9565b611b0c610fba565b611b14611709565b10611b9a5760405162461bcd60e51b815260206004820152604a60248201527f747265617375727920616d6f756e742073686f756c64206265206c657373207460448201527f68616e207468652073756d206f6620616c6c207a65726f656420616464726573606482015269732062616c616e63657360b01b608482015260a40161022f565b611ba2610621565b600380546002919060ff1916600183610b7d565b6060600080839050806001600160a01b0316631865c57d6040518163ffffffff1660e01b8152600401600060405180830381865afa158015611bfc573d6000803e3d6000fd5b505050506040513d6000823e601f3d908101601f19168201604052611c249190810190612622565b909590945092505050565b6000805b8251811015611c8557828181518110611c4e57611c4e6122ed565b60200260200101516001600160a01b0316846001600160a01b031603611c7357600191505b80611c7d8161235b565b915050611c33565b5092915050565b6000611c9783610bc4565b90506000198103611cba5760405162461bcd60e51b815260040161022f90612450565b600060018281548110611ccf57611ccf6122ed565b9060005260206000209060020201600101805480602002602001604051908101604052809291908181526020018280548015611d3457602002820191906000526020600020905b81546001600160a01b03168152600190910190602001808311611d16575b5050505050905060005b8151811015611dc657836001600160a01b0316828281518110611d6357611d636122ed565b60200260200101516001600160a01b031603611db45760405162461bcd60e51b815260206004820152601060248201526f105b1c9958591e48185c1c1c9bdd995960821b604482015260640161022f565b80611dbe8161235b565b915050611d3e565b5060018281548110611dda57611dda6122ed565b600091825260208083206001600290930201820180548084018255908452922090910180546001600160a01b0386166001600160a01b031990911617905580547f80da462ebfbe41cfc9bc015e7a9a3c7a2a73dbccede72d8ceb583606c27f8f9091869186919086908110611e5157611e516122ed565b600091825260209182902060016002909202010154604080516001600160a01b039586168152949093169184019190915290820152606001611a62565b6001600160a01b038116611ef35760405162461bcd60e51b815260206004820152602660248201527f4f776e61626c653a206e6577206f776e657220697320746865207a65726f206160448201526564647265737360d01b606482015260840161022f565b600080546040516001600160a01b03808516939216917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e091a3600080546001600160a01b0319166001600160a01b0392909216919091179055565b50805460008255600202906000526020600020908101906108029190612034565b50805460008255600202906000526020600020908101906108029190612062565b508054611f9c90612409565b6000825580601f10611fac575050565b601f0160209004906000526020600020908101906108029190612088565b82805482825590600052602060002090810192821561200a5760005260206000209182015b8281111561200a578254825591600101919060010190611fef565b50611014929150612088565b50805460008255906000526020600020908101906108029190612088565b808211156110145780546001600160a01b031916815560006120596001830182612016565b50600201612034565b5b808211156110145780546001600160a01b031916815560006001820155600201612063565b5b808211156110145760008155600101612089565b6000602082840312156120af57600080fd5b5035919050565b634e487b7160e01b600052602160045260246000fd5b600481106120ea57634e487b7160e01b600052602160045260246000fd5b9052565b602081016120fc82846120cc565b92915050565b6001600160a01b038116811461080257600080fd5b60006020828403121561212957600080fd5b813561213481612102565b9392505050565b600060208083528351808285015260005b818110156121685785810183015185820160400152820161214c565b506000604082860101526040601f19601f8301168501019250505092915050565b6001600160a01b038381168252604060208084018290528451918401829052600092858201929091906060860190855b818110156121d75785518516835294830194918301916001016121b9565b509098975050505050505050565b634e487b7160e01b600052604160045260246000fd5b604051601f8201601f1916810167ffffffffffffffff81118282101715612224576122246121e5565b604052919050565b6000602080838503121561223f57600080fd5b823567ffffffffffffffff8082111561225757600080fd5b818501915085601f83011261226b57600080fd5b81358181111561227d5761227d6121e5565b61228f601f8201601f191685016121fb565b915080825286848285010111156122a557600080fd5b8084840185840137600090820190930192909252509392505050565b600080604083850312156122d457600080fd5b82356122df81612102565b946020939093013593505050565b634e487b7160e01b600052603260045260246000fd5b60208082526022908201527f6d696e2072657175697265642061646d696e732073686f756c6420617070726f604082015261766560f01b606082015260800190565b634e487b7160e01b600052601160045260246000fd5b60006001820161236d5761236d612345565b5060010190565b6020808252818101527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e6572604082015260600190565b6020808252601c908201527f4e6f7420696e207468652064657369676e617465642073746174757300000000604082015260600190565b818103818111156120fc576120fc612345565b634e487b7160e01b600052603160045260246000fd5b600181811c9082168061241d57607f821691505b602082108103610d6c57634e487b7160e01b600052602260045260246000fd5b808201808211156120fc576120fc612345565b60208082526015908201527416995c9bd959081b9bdd081c9959da5cdd195c9959605a1b604082015260600190565b601f8211156114a757600081815260208120601f850160051c810160208610156124a65750805b601f850160051c820191505b818110156124c5578281556001016124b2565b505050505050565b815167ffffffffffffffff8111156124e7576124e76121e5565b6124fb816124f58454612409565b8461247f565b602080601f83116001811461253057600084156125185750858301515b600019600386901b1c1916600185901b1785556124c5565b600085815260208120601f198616915b8281101561255f57888601518255948401946001909101908401612540565b508582101561257d5787850151600019600388901b60f8161c191681555b5050505050600190811b01905550565b60408152600080845461259f81612409565b80604086015260606001808416600081146125c157600181146125db5761260c565b60ff1985168884015283151560051b88018301955061260c565b8960005260208060002060005b868110156126035781548b82018701529084019082016125e8565b8a018501975050505b50505050508091505061213460208301846120cc565b6000806040838503121561263557600080fd5b825167ffffffffffffffff8082111561264d57600080fd5b818501915085601f83011261266157600080fd5b8151602082821115612675576126756121e5565b8160051b92506126868184016121fb565b82815292840181019281810190898511156126a057600080fd5b948201945b848610156126ca57855193506126ba84612102565b83825294820194908201906126a5565b9790910151969896975050505050505056fea2646970667358221220a7316b825785b1a091a8a24ec6cd1b9d7373f485f24970add73e9468f8b6be9e64736f6c63430008120033`
+
+// TreasuryRebalanceV2FuncSigs maps the 4-byte function signature to its string representation.
+// Deprecated: Use TreasuryRebalanceV2MetaData.Sigs instead.
+var TreasuryRebalanceV2FuncSigs = TreasuryRebalanceV2MetaData.Sigs
+
+// TreasuryRebalanceV2Bin is the compiled bytecode used for deploying new contracts.
+// Deprecated: Use TreasuryRebalanceV2MetaData.Bin instead.
+var TreasuryRebalanceV2Bin = TreasuryRebalanceV2MetaData.Bin
+
+// DeployTreasuryRebalanceV2 deploys a new Klaytn contract, binding an instance of TreasuryRebalanceV2 to it.
+func DeployTreasuryRebalanceV2(auth *bind.TransactOpts, backend bind.ContractBackend, _rebalanceBlockNumber *big.Int) (common.Address, *types.Transaction, *TreasuryRebalanceV2, error) {
+	parsed, err := TreasuryRebalanceV2MetaData.GetAbi()
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	if parsed == nil {
+		return common.Address{}, nil, nil, errors.New("GetABI returned nil")
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(TreasuryRebalanceV2Bin), backend, _rebalanceBlockNumber)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &TreasuryRebalanceV2{TreasuryRebalanceV2Caller: TreasuryRebalanceV2Caller{contract: contract}, TreasuryRebalanceV2Transactor: TreasuryRebalanceV2Transactor{contract: contract}, TreasuryRebalanceV2Filterer: TreasuryRebalanceV2Filterer{contract: contract}}, nil
+}
+
+// TreasuryRebalanceV2 is an auto generated Go binding around a Klaytn contract.
+type TreasuryRebalanceV2 struct {
+	TreasuryRebalanceV2Caller     // Read-only binding to the contract
+	TreasuryRebalanceV2Transactor // Write-only binding to the contract
+	TreasuryRebalanceV2Filterer   // Log filterer for contract events
+}
+
+// TreasuryRebalanceV2Caller is an auto generated read-only Go binding around a Klaytn contract.
+type TreasuryRebalanceV2Caller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// TreasuryRebalanceV2Transactor is an auto generated write-only Go binding around a Klaytn contract.
+type TreasuryRebalanceV2Transactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// TreasuryRebalanceV2Filterer is an auto generated log filtering Go binding around a Klaytn contract events.
+type TreasuryRebalanceV2Filterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// TreasuryRebalanceV2Session is an auto generated Go binding around a Klaytn contract,
+// with pre-set call and transact options.
+type TreasuryRebalanceV2Session struct {
+	Contract     *TreasuryRebalanceV2 // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts        // Call options to use throughout this session
+	TransactOpts bind.TransactOpts    // Transaction auth options to use throughout this session
+}
+
+// TreasuryRebalanceV2CallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// with pre-set call options.
+type TreasuryRebalanceV2CallerSession struct {
+	Contract *TreasuryRebalanceV2Caller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts              // Call options to use throughout this session
+}
+
+// TreasuryRebalanceV2TransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// with pre-set transact options.
+type TreasuryRebalanceV2TransactorSession struct {
+	Contract     *TreasuryRebalanceV2Transactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts              // Transaction auth options to use throughout this session
+}
+
+// TreasuryRebalanceV2Raw is an auto generated low-level Go binding around a Klaytn contract.
+type TreasuryRebalanceV2Raw struct {
+	Contract *TreasuryRebalanceV2 // Generic contract binding to access the raw methods on
+}
+
+// TreasuryRebalanceV2CallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+type TreasuryRebalanceV2CallerRaw struct {
+	Contract *TreasuryRebalanceV2Caller // Generic read-only contract binding to access the raw methods on
+}
+
+// TreasuryRebalanceV2TransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+type TreasuryRebalanceV2TransactorRaw struct {
+	Contract *TreasuryRebalanceV2Transactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewTreasuryRebalanceV2 creates a new instance of TreasuryRebalanceV2, bound to a specific deployed contract.
+func NewTreasuryRebalanceV2(address common.Address, backend bind.ContractBackend) (*TreasuryRebalanceV2, error) {
+	contract, err := bindTreasuryRebalanceV2(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &TreasuryRebalanceV2{TreasuryRebalanceV2Caller: TreasuryRebalanceV2Caller{contract: contract}, TreasuryRebalanceV2Transactor: TreasuryRebalanceV2Transactor{contract: contract}, TreasuryRebalanceV2Filterer: TreasuryRebalanceV2Filterer{contract: contract}}, nil
+}
+
+// NewTreasuryRebalanceV2Caller creates a new read-only instance of TreasuryRebalanceV2, bound to a specific deployed contract.
+func NewTreasuryRebalanceV2Caller(address common.Address, caller bind.ContractCaller) (*TreasuryRebalanceV2Caller, error) {
+	contract, err := bindTreasuryRebalanceV2(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &TreasuryRebalanceV2Caller{contract: contract}, nil
+}
+
+// NewTreasuryRebalanceV2Transactor creates a new write-only instance of TreasuryRebalanceV2, bound to a specific deployed contract.
+func NewTreasuryRebalanceV2Transactor(address common.Address, transactor bind.ContractTransactor) (*TreasuryRebalanceV2Transactor, error) {
+	contract, err := bindTreasuryRebalanceV2(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &TreasuryRebalanceV2Transactor{contract: contract}, nil
+}
+
+// NewTreasuryRebalanceV2Filterer creates a new log filterer instance of TreasuryRebalanceV2, bound to a specific deployed contract.
+func NewTreasuryRebalanceV2Filterer(address common.Address, filterer bind.ContractFilterer) (*TreasuryRebalanceV2Filterer, error) {
+	contract, err := bindTreasuryRebalanceV2(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &TreasuryRebalanceV2Filterer{contract: contract}, nil
+}
+
+// bindTreasuryRebalanceV2 binds a generic wrapper to an already deployed contract.
+func bindTreasuryRebalanceV2(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := TreasuryRebalanceV2MetaData.GetAbi()
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, *parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Raw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _TreasuryRebalanceV2.Contract.TreasuryRebalanceV2Caller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Raw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.Contract.TreasuryRebalanceV2Transactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Raw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.Contract.TreasuryRebalanceV2Transactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _TreasuryRebalanceV2.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2TransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2TransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.Contract.contract.Transact(opts, method, params...)
+}
+
+// AllocatedExists is a free data retrieval call binding the contract method 0xbd786f57.
+//
+// Solidity: function allocatedExists(address _allocatedAddress) view returns(bool)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) AllocatedExists(opts *bind.CallOpts, _allocatedAddress common.Address) (bool, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "allocatedExists", _allocatedAddress)
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+}
+
+// AllocatedExists is a free data retrieval call binding the contract method 0xbd786f57.
+//
+// Solidity: function allocatedExists(address _allocatedAddress) view returns(bool)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) AllocatedExists(_allocatedAddress common.Address) (bool, error) {
+	return _TreasuryRebalanceV2.Contract.AllocatedExists(&_TreasuryRebalanceV2.CallOpts, _allocatedAddress)
+}
+
+// AllocatedExists is a free data retrieval call binding the contract method 0xbd786f57.
+//
+// Solidity: function allocatedExists(address _allocatedAddress) view returns(bool)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) AllocatedExists(_allocatedAddress common.Address) (bool, error) {
+	return _TreasuryRebalanceV2.Contract.AllocatedExists(&_TreasuryRebalanceV2.CallOpts, _allocatedAddress)
+}
+
+// Allocateds is a free data retrieval call binding the contract method 0x343e2c85.
+//
+// Solidity: function allocateds(uint256 ) view returns(address addr, uint256 amount)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) Allocateds(opts *bind.CallOpts, arg0 *big.Int) (struct {
+	Addr   common.Address
+	Amount *big.Int
+}, error,
+) {
+	var out []interface{}
+	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "allocateds", arg0)
+
+	outstruct := new(struct {
+		Addr   common.Address
+		Amount *big.Int
+	})
+
+	outstruct.Addr = *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+	outstruct.Amount = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+	return *outstruct, err
+}
+
+// Allocateds is a free data retrieval call binding the contract method 0x343e2c85.
+//
+// Solidity: function allocateds(uint256 ) view returns(address addr, uint256 amount)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) Allocateds(arg0 *big.Int) (struct {
+	Addr   common.Address
+	Amount *big.Int
+}, error,
+) {
+	return _TreasuryRebalanceV2.Contract.Allocateds(&_TreasuryRebalanceV2.CallOpts, arg0)
+}
+
+// Allocateds is a free data retrieval call binding the contract method 0x343e2c85.
+//
+// Solidity: function allocateds(uint256 ) view returns(address addr, uint256 amount)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) Allocateds(arg0 *big.Int) (struct {
+	Addr   common.Address
+	Amount *big.Int
+}, error,
+) {
+	return _TreasuryRebalanceV2.Contract.Allocateds(&_TreasuryRebalanceV2.CallOpts, arg0)
+}
+
+// CheckZeroedsApproved is a free data retrieval call binding the contract method 0x0287d126.
+//
+// Solidity: function checkZeroedsApproved() view returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) CheckZeroedsApproved(opts *bind.CallOpts) error {
+	var out []interface{}
+	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "checkZeroedsApproved")
+	if err != nil {
+		return err
+	}
+
+	return err
+}
+
+// CheckZeroedsApproved is a free data retrieval call binding the contract method 0x0287d126.
+//
+// Solidity: function checkZeroedsApproved() view returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) CheckZeroedsApproved() error {
+	return _TreasuryRebalanceV2.Contract.CheckZeroedsApproved(&_TreasuryRebalanceV2.CallOpts)
+}
+
+// CheckZeroedsApproved is a free data retrieval call binding the contract method 0x0287d126.
+//
+// Solidity: function checkZeroedsApproved() view returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) CheckZeroedsApproved() error {
+	return _TreasuryRebalanceV2.Contract.CheckZeroedsApproved(&_TreasuryRebalanceV2.CallOpts)
+}
+
+// GetAllocated is a free data retrieval call binding the contract method 0x9e59eb14.
+//
+// Solidity: function getAllocated(address _allocatedAddress) view returns(address, uint256)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetAllocated(opts *bind.CallOpts, _allocatedAddress common.Address) (common.Address, *big.Int, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "getAllocated", _allocatedAddress)
+	if err != nil {
+		return *new(common.Address), *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+	out1 := *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+
+	return out0, out1, err
+}
+
+// GetAllocated is a free data retrieval call binding the contract method 0x9e59eb14.
+//
+// Solidity: function getAllocated(address _allocatedAddress) view returns(address, uint256)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) GetAllocated(_allocatedAddress common.Address) (common.Address, *big.Int, error) {
+	return _TreasuryRebalanceV2.Contract.GetAllocated(&_TreasuryRebalanceV2.CallOpts, _allocatedAddress)
+}
+
+// GetAllocated is a free data retrieval call binding the contract method 0x9e59eb14.
+//
+// Solidity: function getAllocated(address _allocatedAddress) view returns(address, uint256)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) GetAllocated(_allocatedAddress common.Address) (common.Address, *big.Int, error) {
+	return _TreasuryRebalanceV2.Contract.GetAllocated(&_TreasuryRebalanceV2.CallOpts, _allocatedAddress)
+}
+
+// GetAllocatedCount is a free data retrieval call binding the contract method 0xed355529.
+//
+// Solidity: function getAllocatedCount() view returns(uint256)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetAllocatedCount(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "getAllocatedCount")
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+}
+
+// GetAllocatedCount is a free data retrieval call binding the contract method 0xed355529.
+//
+// Solidity: function getAllocatedCount() view returns(uint256)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) GetAllocatedCount() (*big.Int, error) {
+	return _TreasuryRebalanceV2.Contract.GetAllocatedCount(&_TreasuryRebalanceV2.CallOpts)
+}
+
+// GetAllocatedCount is a free data retrieval call binding the contract method 0xed355529.
+//
+// Solidity: function getAllocatedCount() view returns(uint256)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) GetAllocatedCount() (*big.Int, error) {
+	return _TreasuryRebalanceV2.Contract.GetAllocatedCount(&_TreasuryRebalanceV2.CallOpts)
+}
+
+// GetAllocatedIndex is a free data retrieval call binding the contract method 0x7bfaf7b7.
+//
+// Solidity: function getAllocatedIndex(address _allocatedAddress) view returns(uint256)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetAllocatedIndex(opts *bind.CallOpts, _allocatedAddress common.Address) (*big.Int, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "getAllocatedIndex", _allocatedAddress)
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+}
+
+// GetAllocatedIndex is a free data retrieval call binding the contract method 0x7bfaf7b7.
+//
+// Solidity: function getAllocatedIndex(address _allocatedAddress) view returns(uint256)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) GetAllocatedIndex(_allocatedAddress common.Address) (*big.Int, error) {
+	return _TreasuryRebalanceV2.Contract.GetAllocatedIndex(&_TreasuryRebalanceV2.CallOpts, _allocatedAddress)
+}
+
+// GetAllocatedIndex is a free data retrieval call binding the contract method 0x7bfaf7b7.
+//
+// Solidity: function getAllocatedIndex(address _allocatedAddress) view returns(uint256)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) GetAllocatedIndex(_allocatedAddress common.Address) (*big.Int, error) {
+	return _TreasuryRebalanceV2.Contract.GetAllocatedIndex(&_TreasuryRebalanceV2.CallOpts, _allocatedAddress)
+}
+
+// GetTreasuryAmount is a free data retrieval call binding the contract method 0xe20fcf00.
+//
+// Solidity: function getTreasuryAmount() view returns(uint256 treasuryAmount)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetTreasuryAmount(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "getTreasuryAmount")
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+}
+
+// GetTreasuryAmount is a free data retrieval call binding the contract method 0xe20fcf00.
+//
+// Solidity: function getTreasuryAmount() view returns(uint256 treasuryAmount)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) GetTreasuryAmount() (*big.Int, error) {
+	return _TreasuryRebalanceV2.Contract.GetTreasuryAmount(&_TreasuryRebalanceV2.CallOpts)
+}
+
+// GetTreasuryAmount is a free data retrieval call binding the contract method 0xe20fcf00.
+//
+// Solidity: function getTreasuryAmount() view returns(uint256 treasuryAmount)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) GetTreasuryAmount() (*big.Int, error) {
+	return _TreasuryRebalanceV2.Contract.GetTreasuryAmount(&_TreasuryRebalanceV2.CallOpts)
+}
+
+// GetZeroed is a free data retrieval call binding the contract method 0xcea1c338.
+//
+// Solidity: function getZeroed(address _zeroedAddress) view returns(address, address[])
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetZeroed(opts *bind.CallOpts, _zeroedAddress common.Address) (common.Address, []common.Address, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "getZeroed", _zeroedAddress)
+	if err != nil {
+		return *new(common.Address), *new([]common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+	out1 := *abi.ConvertType(out[1], new([]common.Address)).(*[]common.Address)
+
+	return out0, out1, err
+}
+
+// GetZeroed is a free data retrieval call binding the contract method 0xcea1c338.
+//
+// Solidity: function getZeroed(address _zeroedAddress) view returns(address, address[])
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) GetZeroed(_zeroedAddress common.Address) (common.Address, []common.Address, error) {
+	return _TreasuryRebalanceV2.Contract.GetZeroed(&_TreasuryRebalanceV2.CallOpts, _zeroedAddress)
+}
+
+// GetZeroed is a free data retrieval call binding the contract method 0xcea1c338.
+//
+// Solidity: function getZeroed(address _zeroedAddress) view returns(address, address[])
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) GetZeroed(_zeroedAddress common.Address) (common.Address, []common.Address, error) {
+	return _TreasuryRebalanceV2.Contract.GetZeroed(&_TreasuryRebalanceV2.CallOpts, _zeroedAddress)
+}
+
+// GetZeroedCount is a free data retrieval call binding the contract method 0x9dc954ba.
+//
+// Solidity: function getZeroedCount() view returns(uint256)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetZeroedCount(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "getZeroedCount")
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+}
+
+// GetZeroedCount is a free data retrieval call binding the contract method 0x9dc954ba.
+//
+// Solidity: function getZeroedCount() view returns(uint256)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) GetZeroedCount() (*big.Int, error) {
+	return _TreasuryRebalanceV2.Contract.GetZeroedCount(&_TreasuryRebalanceV2.CallOpts)
+}
+
+// GetZeroedCount is a free data retrieval call binding the contract method 0x9dc954ba.
+//
+// Solidity: function getZeroedCount() view returns(uint256)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) GetZeroedCount() (*big.Int, error) {
+	return _TreasuryRebalanceV2.Contract.GetZeroedCount(&_TreasuryRebalanceV2.CallOpts)
+}
+
+// GetZeroedIndex is a free data retrieval call binding the contract method 0x518592da.
+//
+// Solidity: function getZeroedIndex(address _zeroedAddress) view returns(uint256)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetZeroedIndex(opts *bind.CallOpts, _zeroedAddress common.Address) (*big.Int, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "getZeroedIndex", _zeroedAddress)
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+}
+
+// GetZeroedIndex is a free data retrieval call binding the contract method 0x518592da.
+//
+// Solidity: function getZeroedIndex(address _zeroedAddress) view returns(uint256)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) GetZeroedIndex(_zeroedAddress common.Address) (*big.Int, error) {
+	return _TreasuryRebalanceV2.Contract.GetZeroedIndex(&_TreasuryRebalanceV2.CallOpts, _zeroedAddress)
+}
+
+// GetZeroedIndex is a free data retrieval call binding the contract method 0x518592da.
+//
+// Solidity: function getZeroedIndex(address _zeroedAddress) view returns(uint256)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) GetZeroedIndex(_zeroedAddress common.Address) (*big.Int, error) {
+	return _TreasuryRebalanceV2.Contract.GetZeroedIndex(&_TreasuryRebalanceV2.CallOpts, _zeroedAddress)
+}
+
+// IsContractAddr is a free data retrieval call binding the contract method 0xe2384cb3.
+//
+// Solidity: function isContractAddr(address _addr) view returns(bool)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) IsContractAddr(opts *bind.CallOpts, _addr common.Address) (bool, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "isContractAddr", _addr)
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+}
+
+// IsContractAddr is a free data retrieval call binding the contract method 0xe2384cb3.
+//
+// Solidity: function isContractAddr(address _addr) view returns(bool)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) IsContractAddr(_addr common.Address) (bool, error) {
+	return _TreasuryRebalanceV2.Contract.IsContractAddr(&_TreasuryRebalanceV2.CallOpts, _addr)
+}
+
+// IsContractAddr is a free data retrieval call binding the contract method 0xe2384cb3.
+//
+// Solidity: function isContractAddr(address _addr) view returns(bool)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) IsContractAddr(_addr common.Address) (bool, error) {
+	return _TreasuryRebalanceV2.Contract.IsContractAddr(&_TreasuryRebalanceV2.CallOpts, _addr)
+}
+
+// IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
+//
+// Solidity: function isOwner() view returns(bool)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) IsOwner(opts *bind.CallOpts) (bool, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "isOwner")
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+}
+
+// IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
+//
+// Solidity: function isOwner() view returns(bool)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) IsOwner() (bool, error) {
+	return _TreasuryRebalanceV2.Contract.IsOwner(&_TreasuryRebalanceV2.CallOpts)
+}
+
+// IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
+//
+// Solidity: function isOwner() view returns(bool)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) IsOwner() (bool, error) {
+	return _TreasuryRebalanceV2.Contract.IsOwner(&_TreasuryRebalanceV2.CallOpts)
+}
+
+// Memo is a free data retrieval call binding the contract method 0x58c3b870.
+//
+// Solidity: function memo() view returns(string)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) Memo(opts *bind.CallOpts) (string, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "memo")
+	if err != nil {
+		return *new(string), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(string)).(*string)
+
+	return out0, err
+}
+
+// Memo is a free data retrieval call binding the contract method 0x58c3b870.
+//
+// Solidity: function memo() view returns(string)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) Memo() (string, error) {
+	return _TreasuryRebalanceV2.Contract.Memo(&_TreasuryRebalanceV2.CallOpts)
+}
+
+// Memo is a free data retrieval call binding the contract method 0x58c3b870.
+//
+// Solidity: function memo() view returns(string)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) Memo() (string, error) {
+	return _TreasuryRebalanceV2.Contract.Memo(&_TreasuryRebalanceV2.CallOpts)
+}
+
+// Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
+//
+// Solidity: function owner() view returns(address)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) Owner(opts *bind.CallOpts) (common.Address, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "owner")
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+}
+
+// Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
+//
+// Solidity: function owner() view returns(address)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) Owner() (common.Address, error) {
+	return _TreasuryRebalanceV2.Contract.Owner(&_TreasuryRebalanceV2.CallOpts)
+}
+
+// Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
+//
+// Solidity: function owner() view returns(address)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) Owner() (common.Address, error) {
+	return _TreasuryRebalanceV2.Contract.Owner(&_TreasuryRebalanceV2.CallOpts)
+}
+
+// RebalanceBlockNumber is a free data retrieval call binding the contract method 0x49a3fb45.
+//
+// Solidity: function rebalanceBlockNumber() view returns(uint256)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) RebalanceBlockNumber(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "rebalanceBlockNumber")
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+}
+
+// RebalanceBlockNumber is a free data retrieval call binding the contract method 0x49a3fb45.
+//
+// Solidity: function rebalanceBlockNumber() view returns(uint256)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) RebalanceBlockNumber() (*big.Int, error) {
+	return _TreasuryRebalanceV2.Contract.RebalanceBlockNumber(&_TreasuryRebalanceV2.CallOpts)
+}
+
+// RebalanceBlockNumber is a free data retrieval call binding the contract method 0x49a3fb45.
+//
+// Solidity: function rebalanceBlockNumber() view returns(uint256)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) RebalanceBlockNumber() (*big.Int, error) {
+	return _TreasuryRebalanceV2.Contract.RebalanceBlockNumber(&_TreasuryRebalanceV2.CallOpts)
+}
+
+// Status is a free data retrieval call binding the contract method 0x200d2ed2.
+//
+// Solidity: function status() view returns(uint8)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) Status(opts *bind.CallOpts) (uint8, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "status")
+	if err != nil {
+		return *new(uint8), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
+
+	return out0, err
+}
+
+// Status is a free data retrieval call binding the contract method 0x200d2ed2.
+//
+// Solidity: function status() view returns(uint8)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) Status() (uint8, error) {
+	return _TreasuryRebalanceV2.Contract.Status(&_TreasuryRebalanceV2.CallOpts)
+}
+
+// Status is a free data retrieval call binding the contract method 0x200d2ed2.
+//
+// Solidity: function status() view returns(uint8)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) Status() (uint8, error) {
+	return _TreasuryRebalanceV2.Contract.Status(&_TreasuryRebalanceV2.CallOpts)
+}
+
+// SumOfZeroedBalance is a free data retrieval call binding the contract method 0x9ab29b70.
+//
+// Solidity: function sumOfZeroedBalance() view returns(uint256 zeroedsBalance)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) SumOfZeroedBalance(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "sumOfZeroedBalance")
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+}
+
+// SumOfZeroedBalance is a free data retrieval call binding the contract method 0x9ab29b70.
+//
+// Solidity: function sumOfZeroedBalance() view returns(uint256 zeroedsBalance)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) SumOfZeroedBalance() (*big.Int, error) {
+	return _TreasuryRebalanceV2.Contract.SumOfZeroedBalance(&_TreasuryRebalanceV2.CallOpts)
+}
+
+// SumOfZeroedBalance is a free data retrieval call binding the contract method 0x9ab29b70.
+//
+// Solidity: function sumOfZeroedBalance() view returns(uint256 zeroedsBalance)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) SumOfZeroedBalance() (*big.Int, error) {
+	return _TreasuryRebalanceV2.Contract.SumOfZeroedBalance(&_TreasuryRebalanceV2.CallOpts)
+}
+
+// ZeroedExists is a free data retrieval call binding the contract method 0x5f8798c0.
+//
+// Solidity: function zeroedExists(address _zeroedAddress) view returns(bool)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) ZeroedExists(opts *bind.CallOpts, _zeroedAddress common.Address) (bool, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "zeroedExists", _zeroedAddress)
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+}
+
+// ZeroedExists is a free data retrieval call binding the contract method 0x5f8798c0.
+//
+// Solidity: function zeroedExists(address _zeroedAddress) view returns(bool)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) ZeroedExists(_zeroedAddress common.Address) (bool, error) {
+	return _TreasuryRebalanceV2.Contract.ZeroedExists(&_TreasuryRebalanceV2.CallOpts, _zeroedAddress)
+}
+
+// ZeroedExists is a free data retrieval call binding the contract method 0x5f8798c0.
+//
+// Solidity: function zeroedExists(address _zeroedAddress) view returns(bool)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) ZeroedExists(_zeroedAddress common.Address) (bool, error) {
+	return _TreasuryRebalanceV2.Contract.ZeroedExists(&_TreasuryRebalanceV2.CallOpts, _zeroedAddress)
+}
+
+// Zeroeds is a free data retrieval call binding the contract method 0x62aa3e91.
+//
+// Solidity: function zeroeds(uint256 ) view returns(address addr)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) Zeroeds(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
+	var out []interface{}
+	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "zeroeds", arg0)
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+}
+
+// Zeroeds is a free data retrieval call binding the contract method 0x62aa3e91.
+//
+// Solidity: function zeroeds(uint256 ) view returns(address addr)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) Zeroeds(arg0 *big.Int) (common.Address, error) {
+	return _TreasuryRebalanceV2.Contract.Zeroeds(&_TreasuryRebalanceV2.CallOpts, arg0)
+}
+
+// Zeroeds is a free data retrieval call binding the contract method 0x62aa3e91.
+//
+// Solidity: function zeroeds(uint256 ) view returns(address addr)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) Zeroeds(arg0 *big.Int) (common.Address, error) {
+	return _TreasuryRebalanceV2.Contract.Zeroeds(&_TreasuryRebalanceV2.CallOpts, arg0)
+}
+
+// Approve is a paid mutator transaction binding the contract method 0xdaea85c5.
+//
+// Solidity: function approve(address _zeroedAddress) returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Transactor) Approve(opts *bind.TransactOpts, _zeroedAddress common.Address) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.contract.Transact(opts, "approve", _zeroedAddress)
+}
+
+// Approve is a paid mutator transaction binding the contract method 0xdaea85c5.
+//
+// Solidity: function approve(address _zeroedAddress) returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) Approve(_zeroedAddress common.Address) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.Contract.Approve(&_TreasuryRebalanceV2.TransactOpts, _zeroedAddress)
+}
+
+// Approve is a paid mutator transaction binding the contract method 0xdaea85c5.
+//
+// Solidity: function approve(address _zeroedAddress) returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2TransactorSession) Approve(_zeroedAddress common.Address) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.Contract.Approve(&_TreasuryRebalanceV2.TransactOpts, _zeroedAddress)
+}
+
+// FinalizeApproval is a paid mutator transaction binding the contract method 0xfaaf9ca6.
+//
+// Solidity: function finalizeApproval() returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Transactor) FinalizeApproval(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.contract.Transact(opts, "finalizeApproval")
+}
+
+// FinalizeApproval is a paid mutator transaction binding the contract method 0xfaaf9ca6.
+//
+// Solidity: function finalizeApproval() returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) FinalizeApproval() (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.Contract.FinalizeApproval(&_TreasuryRebalanceV2.TransactOpts)
+}
+
+// FinalizeApproval is a paid mutator transaction binding the contract method 0xfaaf9ca6.
+//
+// Solidity: function finalizeApproval() returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2TransactorSession) FinalizeApproval() (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.Contract.FinalizeApproval(&_TreasuryRebalanceV2.TransactOpts)
+}
+
+// FinalizeContract is a paid mutator transaction binding the contract method 0xea6d4a9b.
+//
+// Solidity: function finalizeContract(string _memo) returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Transactor) FinalizeContract(opts *bind.TransactOpts, _memo string) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.contract.Transact(opts, "finalizeContract", _memo)
+}
+
+// FinalizeContract is a paid mutator transaction binding the contract method 0xea6d4a9b.
+//
+// Solidity: function finalizeContract(string _memo) returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) FinalizeContract(_memo string) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.Contract.FinalizeContract(&_TreasuryRebalanceV2.TransactOpts, _memo)
+}
+
+// FinalizeContract is a paid mutator transaction binding the contract method 0xea6d4a9b.
+//
+// Solidity: function finalizeContract(string _memo) returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2TransactorSession) FinalizeContract(_memo string) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.Contract.FinalizeContract(&_TreasuryRebalanceV2.TransactOpts, _memo)
+}
+
+// FinalizeRegistration is a paid mutator transaction binding the contract method 0x48409096.
+//
+// Solidity: function finalizeRegistration() returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Transactor) FinalizeRegistration(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.contract.Transact(opts, "finalizeRegistration")
+}
+
+// FinalizeRegistration is a paid mutator transaction binding the contract method 0x48409096.
+//
+// Solidity: function finalizeRegistration() returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) FinalizeRegistration() (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.Contract.FinalizeRegistration(&_TreasuryRebalanceV2.TransactOpts)
+}
+
+// FinalizeRegistration is a paid mutator transaction binding the contract method 0x48409096.
+//
+// Solidity: function finalizeRegistration() returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2TransactorSession) FinalizeRegistration() (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.Contract.FinalizeRegistration(&_TreasuryRebalanceV2.TransactOpts)
+}
+
+// RegisterAllocated is a paid mutator transaction binding the contract method 0xecd86778.
+//
+// Solidity: function registerAllocated(address _allocatedAddress, uint256 _amount) returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Transactor) RegisterAllocated(opts *bind.TransactOpts, _allocatedAddress common.Address, _amount *big.Int) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.contract.Transact(opts, "registerAllocated", _allocatedAddress, _amount)
+}
+
+// RegisterAllocated is a paid mutator transaction binding the contract method 0xecd86778.
+//
+// Solidity: function registerAllocated(address _allocatedAddress, uint256 _amount) returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) RegisterAllocated(_allocatedAddress common.Address, _amount *big.Int) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.Contract.RegisterAllocated(&_TreasuryRebalanceV2.TransactOpts, _allocatedAddress, _amount)
+}
+
+// RegisterAllocated is a paid mutator transaction binding the contract method 0xecd86778.
+//
+// Solidity: function registerAllocated(address _allocatedAddress, uint256 _amount) returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2TransactorSession) RegisterAllocated(_allocatedAddress common.Address, _amount *big.Int) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.Contract.RegisterAllocated(&_TreasuryRebalanceV2.TransactOpts, _allocatedAddress, _amount)
+}
+
+// RegisterZeroed is a paid mutator transaction binding the contract method 0x5f9b0df7.
+//
+// Solidity: function registerZeroed(address _zeroedAddress) returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Transactor) RegisterZeroed(opts *bind.TransactOpts, _zeroedAddress common.Address) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.contract.Transact(opts, "registerZeroed", _zeroedAddress)
+}
+
+// RegisterZeroed is a paid mutator transaction binding the contract method 0x5f9b0df7.
+//
+// Solidity: function registerZeroed(address _zeroedAddress) returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) RegisterZeroed(_zeroedAddress common.Address) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.Contract.RegisterZeroed(&_TreasuryRebalanceV2.TransactOpts, _zeroedAddress)
+}
+
+// RegisterZeroed is a paid mutator transaction binding the contract method 0x5f9b0df7.
+//
+// Solidity: function registerZeroed(address _zeroedAddress) returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2TransactorSession) RegisterZeroed(_zeroedAddress common.Address) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.Contract.RegisterZeroed(&_TreasuryRebalanceV2.TransactOpts, _zeroedAddress)
+}
+
+// RemoveAllocated is a paid mutator transaction binding the contract method 0x27704cb5.
+//
+// Solidity: function removeAllocated(address _allocatedAddress) returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Transactor) RemoveAllocated(opts *bind.TransactOpts, _allocatedAddress common.Address) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.contract.Transact(opts, "removeAllocated", _allocatedAddress)
+}
+
+// RemoveAllocated is a paid mutator transaction binding the contract method 0x27704cb5.
+//
+// Solidity: function removeAllocated(address _allocatedAddress) returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) RemoveAllocated(_allocatedAddress common.Address) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.Contract.RemoveAllocated(&_TreasuryRebalanceV2.TransactOpts, _allocatedAddress)
+}
+
+// RemoveAllocated is a paid mutator transaction binding the contract method 0x27704cb5.
+//
+// Solidity: function removeAllocated(address _allocatedAddress) returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2TransactorSession) RemoveAllocated(_allocatedAddress common.Address) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.Contract.RemoveAllocated(&_TreasuryRebalanceV2.TransactOpts, _allocatedAddress)
+}
+
+// RemoveZeroed is a paid mutator transaction binding the contract method 0xdb27b50b.
+//
+// Solidity: function removeZeroed(address _zeroedAddress) returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Transactor) RemoveZeroed(opts *bind.TransactOpts, _zeroedAddress common.Address) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.contract.Transact(opts, "removeZeroed", _zeroedAddress)
+}
+
+// RemoveZeroed is a paid mutator transaction binding the contract method 0xdb27b50b.
+//
+// Solidity: function removeZeroed(address _zeroedAddress) returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) RemoveZeroed(_zeroedAddress common.Address) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.Contract.RemoveZeroed(&_TreasuryRebalanceV2.TransactOpts, _zeroedAddress)
+}
+
+// RemoveZeroed is a paid mutator transaction binding the contract method 0xdb27b50b.
+//
+// Solidity: function removeZeroed(address _zeroedAddress) returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2TransactorSession) RemoveZeroed(_zeroedAddress common.Address) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.Contract.RemoveZeroed(&_TreasuryRebalanceV2.TransactOpts, _zeroedAddress)
+}
+
+// RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
+//
+// Solidity: function renounceOwnership() returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Transactor) RenounceOwnership(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.contract.Transact(opts, "renounceOwnership")
+}
+
+// RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
+//
+// Solidity: function renounceOwnership() returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) RenounceOwnership() (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.Contract.RenounceOwnership(&_TreasuryRebalanceV2.TransactOpts)
+}
+
+// RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
+//
+// Solidity: function renounceOwnership() returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2TransactorSession) RenounceOwnership() (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.Contract.RenounceOwnership(&_TreasuryRebalanceV2.TransactOpts)
+}
+
+// Reset is a paid mutator transaction binding the contract method 0xd826f88f.
+//
+// Solidity: function reset() returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Transactor) Reset(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.contract.Transact(opts, "reset")
+}
+
+// Reset is a paid mutator transaction binding the contract method 0xd826f88f.
+//
+// Solidity: function reset() returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) Reset() (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.Contract.Reset(&_TreasuryRebalanceV2.TransactOpts)
+}
+
+// Reset is a paid mutator transaction binding the contract method 0xd826f88f.
+//
+// Solidity: function reset() returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2TransactorSession) Reset() (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.Contract.Reset(&_TreasuryRebalanceV2.TransactOpts)
+}
+
+// TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
+//
+// Solidity: function transferOwnership(address newOwner) returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Transactor) TransferOwnership(opts *bind.TransactOpts, newOwner common.Address) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.contract.Transact(opts, "transferOwnership", newOwner)
+}
+
+// TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
+//
+// Solidity: function transferOwnership(address newOwner) returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) TransferOwnership(newOwner common.Address) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.Contract.TransferOwnership(&_TreasuryRebalanceV2.TransactOpts, newOwner)
+}
+
+// TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
+//
+// Solidity: function transferOwnership(address newOwner) returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2TransactorSession) TransferOwnership(newOwner common.Address) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.Contract.TransferOwnership(&_TreasuryRebalanceV2.TransactOpts, newOwner)
+}
+
+// UpdateRebalanceBlocknumber is a paid mutator transaction binding the contract method 0x1804692f.
+//
+// Solidity: function updateRebalanceBlocknumber(uint256 _rebalanceBlockNumber) returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Transactor) UpdateRebalanceBlocknumber(opts *bind.TransactOpts, _rebalanceBlockNumber *big.Int) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.contract.Transact(opts, "updateRebalanceBlocknumber", _rebalanceBlockNumber)
+}
+
+// UpdateRebalanceBlocknumber is a paid mutator transaction binding the contract method 0x1804692f.
+//
+// Solidity: function updateRebalanceBlocknumber(uint256 _rebalanceBlockNumber) returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) UpdateRebalanceBlocknumber(_rebalanceBlockNumber *big.Int) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.Contract.UpdateRebalanceBlocknumber(&_TreasuryRebalanceV2.TransactOpts, _rebalanceBlockNumber)
+}
+
+// UpdateRebalanceBlocknumber is a paid mutator transaction binding the contract method 0x1804692f.
+//
+// Solidity: function updateRebalanceBlocknumber(uint256 _rebalanceBlockNumber) returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2TransactorSession) UpdateRebalanceBlocknumber(_rebalanceBlockNumber *big.Int) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.Contract.UpdateRebalanceBlocknumber(&_TreasuryRebalanceV2.TransactOpts, _rebalanceBlockNumber)
+}
+
+// Fallback is a paid mutator transaction binding the contract fallback function.
+//
+// Solidity: fallback() payable returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Transactor) Fallback(opts *bind.TransactOpts, calldata []byte) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.contract.RawTransact(opts, calldata)
+}
+
+// Fallback is a paid mutator transaction binding the contract fallback function.
+//
+// Solidity: fallback() payable returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) Fallback(calldata []byte) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.Contract.Fallback(&_TreasuryRebalanceV2.TransactOpts, calldata)
+}
+
+// Fallback is a paid mutator transaction binding the contract fallback function.
+//
+// Solidity: fallback() payable returns()
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2TransactorSession) Fallback(calldata []byte) (*types.Transaction, error) {
+	return _TreasuryRebalanceV2.Contract.Fallback(&_TreasuryRebalanceV2.TransactOpts, calldata)
+}
+
+// TreasuryRebalanceV2AllocatedRegisteredIterator is returned from FilterAllocatedRegistered and is used to iterate over the raw logs and unpacked data for AllocatedRegistered events raised by the TreasuryRebalanceV2 contract.
+type TreasuryRebalanceV2AllocatedRegisteredIterator struct {
+	Event *TreasuryRebalanceV2AllocatedRegistered // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *TreasuryRebalanceV2AllocatedRegisteredIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(TreasuryRebalanceV2AllocatedRegistered)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(TreasuryRebalanceV2AllocatedRegistered)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *TreasuryRebalanceV2AllocatedRegisteredIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *TreasuryRebalanceV2AllocatedRegisteredIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// TreasuryRebalanceV2AllocatedRegistered represents a AllocatedRegistered event raised by the TreasuryRebalanceV2 contract.
+type TreasuryRebalanceV2AllocatedRegistered struct {
+	Allocated      common.Address
+	FundAllocation *big.Int
+	Raw            types.Log // Blockchain specific contextual infos
+}
+
+// FilterAllocatedRegistered is a free log retrieval operation binding the contract event 0xab5b2126f71ee7e0b39eadc53fb5d08a8f6c68dc61795fa05ed7d176cd2665ed.
+//
+// Solidity: event AllocatedRegistered(address allocated, uint256 fundAllocation)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterAllocatedRegistered(opts *bind.FilterOpts) (*TreasuryRebalanceV2AllocatedRegisteredIterator, error) {
+	logs, sub, err := _TreasuryRebalanceV2.contract.FilterLogs(opts, "AllocatedRegistered")
+	if err != nil {
+		return nil, err
+	}
+	return &TreasuryRebalanceV2AllocatedRegisteredIterator{contract: _TreasuryRebalanceV2.contract, event: "AllocatedRegistered", logs: logs, sub: sub}, nil
+}
+
+// WatchAllocatedRegistered is a free log subscription operation binding the contract event 0xab5b2126f71ee7e0b39eadc53fb5d08a8f6c68dc61795fa05ed7d176cd2665ed.
+//
+// Solidity: event AllocatedRegistered(address allocated, uint256 fundAllocation)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) WatchAllocatedRegistered(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceV2AllocatedRegistered) (event.Subscription, error) {
+	logs, sub, err := _TreasuryRebalanceV2.contract.WatchLogs(opts, "AllocatedRegistered")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(TreasuryRebalanceV2AllocatedRegistered)
+				if err := _TreasuryRebalanceV2.contract.UnpackLog(event, "AllocatedRegistered", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseAllocatedRegistered is a log parse operation binding the contract event 0xab5b2126f71ee7e0b39eadc53fb5d08a8f6c68dc61795fa05ed7d176cd2665ed.
+//
+// Solidity: event AllocatedRegistered(address allocated, uint256 fundAllocation)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) ParseAllocatedRegistered(log types.Log) (*TreasuryRebalanceV2AllocatedRegistered, error) {
+	event := new(TreasuryRebalanceV2AllocatedRegistered)
+	if err := _TreasuryRebalanceV2.contract.UnpackLog(event, "AllocatedRegistered", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// TreasuryRebalanceV2AllocatedRemovedIterator is returned from FilterAllocatedRemoved and is used to iterate over the raw logs and unpacked data for AllocatedRemoved events raised by the TreasuryRebalanceV2 contract.
+type TreasuryRebalanceV2AllocatedRemovedIterator struct {
+	Event *TreasuryRebalanceV2AllocatedRemoved // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *TreasuryRebalanceV2AllocatedRemovedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(TreasuryRebalanceV2AllocatedRemoved)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(TreasuryRebalanceV2AllocatedRemoved)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *TreasuryRebalanceV2AllocatedRemovedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *TreasuryRebalanceV2AllocatedRemovedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// TreasuryRebalanceV2AllocatedRemoved represents a AllocatedRemoved event raised by the TreasuryRebalanceV2 contract.
+type TreasuryRebalanceV2AllocatedRemoved struct {
+	Allocated common.Address
+	Raw       types.Log // Blockchain specific contextual infos
+}
+
+// FilterAllocatedRemoved is a free log retrieval operation binding the contract event 0xf8f67464bea52432645435be9c46c427173a75aefaa1001272e08a4b8572f06e.
+//
+// Solidity: event AllocatedRemoved(address allocated)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterAllocatedRemoved(opts *bind.FilterOpts) (*TreasuryRebalanceV2AllocatedRemovedIterator, error) {
+	logs, sub, err := _TreasuryRebalanceV2.contract.FilterLogs(opts, "AllocatedRemoved")
+	if err != nil {
+		return nil, err
+	}
+	return &TreasuryRebalanceV2AllocatedRemovedIterator{contract: _TreasuryRebalanceV2.contract, event: "AllocatedRemoved", logs: logs, sub: sub}, nil
+}
+
+// WatchAllocatedRemoved is a free log subscription operation binding the contract event 0xf8f67464bea52432645435be9c46c427173a75aefaa1001272e08a4b8572f06e.
+//
+// Solidity: event AllocatedRemoved(address allocated)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) WatchAllocatedRemoved(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceV2AllocatedRemoved) (event.Subscription, error) {
+	logs, sub, err := _TreasuryRebalanceV2.contract.WatchLogs(opts, "AllocatedRemoved")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(TreasuryRebalanceV2AllocatedRemoved)
+				if err := _TreasuryRebalanceV2.contract.UnpackLog(event, "AllocatedRemoved", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseAllocatedRemoved is a log parse operation binding the contract event 0xf8f67464bea52432645435be9c46c427173a75aefaa1001272e08a4b8572f06e.
+//
+// Solidity: event AllocatedRemoved(address allocated)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) ParseAllocatedRemoved(log types.Log) (*TreasuryRebalanceV2AllocatedRemoved, error) {
+	event := new(TreasuryRebalanceV2AllocatedRemoved)
+	if err := _TreasuryRebalanceV2.contract.UnpackLog(event, "AllocatedRemoved", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// TreasuryRebalanceV2ApprovedIterator is returned from FilterApproved and is used to iterate over the raw logs and unpacked data for Approved events raised by the TreasuryRebalanceV2 contract.
+type TreasuryRebalanceV2ApprovedIterator struct {
+	Event *TreasuryRebalanceV2Approved // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *TreasuryRebalanceV2ApprovedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(TreasuryRebalanceV2Approved)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(TreasuryRebalanceV2Approved)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *TreasuryRebalanceV2ApprovedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *TreasuryRebalanceV2ApprovedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// TreasuryRebalanceV2Approved represents a Approved event raised by the TreasuryRebalanceV2 contract.
+type TreasuryRebalanceV2Approved struct {
+	Zeroed         common.Address
+	Approver       common.Address
+	ApproversCount *big.Int
+	Raw            types.Log // Blockchain specific contextual infos
+}
+
+// FilterApproved is a free log retrieval operation binding the contract event 0x80da462ebfbe41cfc9bc015e7a9a3c7a2a73dbccede72d8ceb583606c27f8f90.
+//
+// Solidity: event Approved(address zeroed, address approver, uint256 approversCount)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterApproved(opts *bind.FilterOpts) (*TreasuryRebalanceV2ApprovedIterator, error) {
+	logs, sub, err := _TreasuryRebalanceV2.contract.FilterLogs(opts, "Approved")
+	if err != nil {
+		return nil, err
+	}
+	return &TreasuryRebalanceV2ApprovedIterator{contract: _TreasuryRebalanceV2.contract, event: "Approved", logs: logs, sub: sub}, nil
+}
+
+// WatchApproved is a free log subscription operation binding the contract event 0x80da462ebfbe41cfc9bc015e7a9a3c7a2a73dbccede72d8ceb583606c27f8f90.
+//
+// Solidity: event Approved(address zeroed, address approver, uint256 approversCount)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) WatchApproved(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceV2Approved) (event.Subscription, error) {
+	logs, sub, err := _TreasuryRebalanceV2.contract.WatchLogs(opts, "Approved")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(TreasuryRebalanceV2Approved)
+				if err := _TreasuryRebalanceV2.contract.UnpackLog(event, "Approved", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseApproved is a log parse operation binding the contract event 0x80da462ebfbe41cfc9bc015e7a9a3c7a2a73dbccede72d8ceb583606c27f8f90.
+//
+// Solidity: event Approved(address zeroed, address approver, uint256 approversCount)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) ParseApproved(log types.Log) (*TreasuryRebalanceV2Approved, error) {
+	event := new(TreasuryRebalanceV2Approved)
+	if err := _TreasuryRebalanceV2.contract.UnpackLog(event, "Approved", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// TreasuryRebalanceV2ContractDeployedIterator is returned from FilterContractDeployed and is used to iterate over the raw logs and unpacked data for ContractDeployed events raised by the TreasuryRebalanceV2 contract.
+type TreasuryRebalanceV2ContractDeployedIterator struct {
+	Event *TreasuryRebalanceV2ContractDeployed // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *TreasuryRebalanceV2ContractDeployedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(TreasuryRebalanceV2ContractDeployed)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(TreasuryRebalanceV2ContractDeployed)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *TreasuryRebalanceV2ContractDeployedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *TreasuryRebalanceV2ContractDeployedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// TreasuryRebalanceV2ContractDeployed represents a ContractDeployed event raised by the TreasuryRebalanceV2 contract.
+type TreasuryRebalanceV2ContractDeployed struct {
+	Status               uint8
+	RebalanceBlockNumber *big.Int
+	DeployedBlockNumber  *big.Int
+	Raw                  types.Log // Blockchain specific contextual infos
+}
+
+// FilterContractDeployed is a free log retrieval operation binding the contract event 0x6f182006c5a12fe70c0728eedb2d1b0628c41483ca6721c606707d778d22ed0a.
+//
+// Solidity: event ContractDeployed(uint8 status, uint256 rebalanceBlockNumber, uint256 deployedBlockNumber)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterContractDeployed(opts *bind.FilterOpts) (*TreasuryRebalanceV2ContractDeployedIterator, error) {
+	logs, sub, err := _TreasuryRebalanceV2.contract.FilterLogs(opts, "ContractDeployed")
+	if err != nil {
+		return nil, err
+	}
+	return &TreasuryRebalanceV2ContractDeployedIterator{contract: _TreasuryRebalanceV2.contract, event: "ContractDeployed", logs: logs, sub: sub}, nil
+}
+
+// WatchContractDeployed is a free log subscription operation binding the contract event 0x6f182006c5a12fe70c0728eedb2d1b0628c41483ca6721c606707d778d22ed0a.
+//
+// Solidity: event ContractDeployed(uint8 status, uint256 rebalanceBlockNumber, uint256 deployedBlockNumber)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) WatchContractDeployed(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceV2ContractDeployed) (event.Subscription, error) {
+	logs, sub, err := _TreasuryRebalanceV2.contract.WatchLogs(opts, "ContractDeployed")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(TreasuryRebalanceV2ContractDeployed)
+				if err := _TreasuryRebalanceV2.contract.UnpackLog(event, "ContractDeployed", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseContractDeployed is a log parse operation binding the contract event 0x6f182006c5a12fe70c0728eedb2d1b0628c41483ca6721c606707d778d22ed0a.
+//
+// Solidity: event ContractDeployed(uint8 status, uint256 rebalanceBlockNumber, uint256 deployedBlockNumber)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) ParseContractDeployed(log types.Log) (*TreasuryRebalanceV2ContractDeployed, error) {
+	event := new(TreasuryRebalanceV2ContractDeployed)
+	if err := _TreasuryRebalanceV2.contract.UnpackLog(event, "ContractDeployed", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// TreasuryRebalanceV2FinalizedIterator is returned from FilterFinalized and is used to iterate over the raw logs and unpacked data for Finalized events raised by the TreasuryRebalanceV2 contract.
+type TreasuryRebalanceV2FinalizedIterator struct {
+	Event *TreasuryRebalanceV2Finalized // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *TreasuryRebalanceV2FinalizedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(TreasuryRebalanceV2Finalized)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(TreasuryRebalanceV2Finalized)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *TreasuryRebalanceV2FinalizedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *TreasuryRebalanceV2FinalizedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// TreasuryRebalanceV2Finalized represents a Finalized event raised by the TreasuryRebalanceV2 contract.
+type TreasuryRebalanceV2Finalized struct {
+	Memo   string
+	Status uint8
+	Raw    types.Log // Blockchain specific contextual infos
+}
+
+// FilterFinalized is a free log retrieval operation binding the contract event 0x8f8636c7757ca9b7d154e1d44ca90d8e8c885b9eac417c59bbf8eb7779ca6404.
+//
+// Solidity: event Finalized(string memo, uint8 status)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterFinalized(opts *bind.FilterOpts) (*TreasuryRebalanceV2FinalizedIterator, error) {
+	logs, sub, err := _TreasuryRebalanceV2.contract.FilterLogs(opts, "Finalized")
+	if err != nil {
+		return nil, err
+	}
+	return &TreasuryRebalanceV2FinalizedIterator{contract: _TreasuryRebalanceV2.contract, event: "Finalized", logs: logs, sub: sub}, nil
+}
+
+// WatchFinalized is a free log subscription operation binding the contract event 0x8f8636c7757ca9b7d154e1d44ca90d8e8c885b9eac417c59bbf8eb7779ca6404.
+//
+// Solidity: event Finalized(string memo, uint8 status)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) WatchFinalized(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceV2Finalized) (event.Subscription, error) {
+	logs, sub, err := _TreasuryRebalanceV2.contract.WatchLogs(opts, "Finalized")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(TreasuryRebalanceV2Finalized)
+				if err := _TreasuryRebalanceV2.contract.UnpackLog(event, "Finalized", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseFinalized is a log parse operation binding the contract event 0x8f8636c7757ca9b7d154e1d44ca90d8e8c885b9eac417c59bbf8eb7779ca6404.
+//
+// Solidity: event Finalized(string memo, uint8 status)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) ParseFinalized(log types.Log) (*TreasuryRebalanceV2Finalized, error) {
+	event := new(TreasuryRebalanceV2Finalized)
+	if err := _TreasuryRebalanceV2.contract.UnpackLog(event, "Finalized", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// TreasuryRebalanceV2OwnershipTransferredIterator is returned from FilterOwnershipTransferred and is used to iterate over the raw logs and unpacked data for OwnershipTransferred events raised by the TreasuryRebalanceV2 contract.
+type TreasuryRebalanceV2OwnershipTransferredIterator struct {
+	Event *TreasuryRebalanceV2OwnershipTransferred // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *TreasuryRebalanceV2OwnershipTransferredIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(TreasuryRebalanceV2OwnershipTransferred)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(TreasuryRebalanceV2OwnershipTransferred)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *TreasuryRebalanceV2OwnershipTransferredIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *TreasuryRebalanceV2OwnershipTransferredIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// TreasuryRebalanceV2OwnershipTransferred represents a OwnershipTransferred event raised by the TreasuryRebalanceV2 contract.
+type TreasuryRebalanceV2OwnershipTransferred struct {
+	PreviousOwner common.Address
+	NewOwner      common.Address
+	Raw           types.Log // Blockchain specific contextual infos
+}
+
+// FilterOwnershipTransferred is a free log retrieval operation binding the contract event 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0.
+//
+// Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*TreasuryRebalanceV2OwnershipTransferredIterator, error) {
+	var previousOwnerRule []interface{}
+	for _, previousOwnerItem := range previousOwner {
+		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
+	}
+	var newOwnerRule []interface{}
+	for _, newOwnerItem := range newOwner {
+		newOwnerRule = append(newOwnerRule, newOwnerItem)
+	}
+
+	logs, sub, err := _TreasuryRebalanceV2.contract.FilterLogs(opts, "OwnershipTransferred", previousOwnerRule, newOwnerRule)
+	if err != nil {
+		return nil, err
+	}
+	return &TreasuryRebalanceV2OwnershipTransferredIterator{contract: _TreasuryRebalanceV2.contract, event: "OwnershipTransferred", logs: logs, sub: sub}, nil
+}
+
+// WatchOwnershipTransferred is a free log subscription operation binding the contract event 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0.
+//
+// Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceV2OwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
+	var previousOwnerRule []interface{}
+	for _, previousOwnerItem := range previousOwner {
+		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
+	}
+	var newOwnerRule []interface{}
+	for _, newOwnerItem := range newOwner {
+		newOwnerRule = append(newOwnerRule, newOwnerItem)
+	}
+
+	logs, sub, err := _TreasuryRebalanceV2.contract.WatchLogs(opts, "OwnershipTransferred", previousOwnerRule, newOwnerRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(TreasuryRebalanceV2OwnershipTransferred)
+				if err := _TreasuryRebalanceV2.contract.UnpackLog(event, "OwnershipTransferred", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseOwnershipTransferred is a log parse operation binding the contract event 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0.
+//
+// Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) ParseOwnershipTransferred(log types.Log) (*TreasuryRebalanceV2OwnershipTransferred, error) {
+	event := new(TreasuryRebalanceV2OwnershipTransferred)
+	if err := _TreasuryRebalanceV2.contract.UnpackLog(event, "OwnershipTransferred", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// TreasuryRebalanceV2StatusChangedIterator is returned from FilterStatusChanged and is used to iterate over the raw logs and unpacked data for StatusChanged events raised by the TreasuryRebalanceV2 contract.
+type TreasuryRebalanceV2StatusChangedIterator struct {
+	Event *TreasuryRebalanceV2StatusChanged // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *TreasuryRebalanceV2StatusChangedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(TreasuryRebalanceV2StatusChanged)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(TreasuryRebalanceV2StatusChanged)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *TreasuryRebalanceV2StatusChangedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *TreasuryRebalanceV2StatusChangedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// TreasuryRebalanceV2StatusChanged represents a StatusChanged event raised by the TreasuryRebalanceV2 contract.
+type TreasuryRebalanceV2StatusChanged struct {
+	Status uint8
+	Raw    types.Log // Blockchain specific contextual infos
+}
+
+// FilterStatusChanged is a free log retrieval operation binding the contract event 0xafa725e7f44cadb687a7043853fa1a7e7b8f0da74ce87ec546e9420f04da8c1e.
+//
+// Solidity: event StatusChanged(uint8 status)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterStatusChanged(opts *bind.FilterOpts) (*TreasuryRebalanceV2StatusChangedIterator, error) {
+	logs, sub, err := _TreasuryRebalanceV2.contract.FilterLogs(opts, "StatusChanged")
+	if err != nil {
+		return nil, err
+	}
+	return &TreasuryRebalanceV2StatusChangedIterator{contract: _TreasuryRebalanceV2.contract, event: "StatusChanged", logs: logs, sub: sub}, nil
+}
+
+// WatchStatusChanged is a free log subscription operation binding the contract event 0xafa725e7f44cadb687a7043853fa1a7e7b8f0da74ce87ec546e9420f04da8c1e.
+//
+// Solidity: event StatusChanged(uint8 status)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) WatchStatusChanged(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceV2StatusChanged) (event.Subscription, error) {
+	logs, sub, err := _TreasuryRebalanceV2.contract.WatchLogs(opts, "StatusChanged")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(TreasuryRebalanceV2StatusChanged)
+				if err := _TreasuryRebalanceV2.contract.UnpackLog(event, "StatusChanged", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseStatusChanged is a log parse operation binding the contract event 0xafa725e7f44cadb687a7043853fa1a7e7b8f0da74ce87ec546e9420f04da8c1e.
+//
+// Solidity: event StatusChanged(uint8 status)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) ParseStatusChanged(log types.Log) (*TreasuryRebalanceV2StatusChanged, error) {
+	event := new(TreasuryRebalanceV2StatusChanged)
+	if err := _TreasuryRebalanceV2.contract.UnpackLog(event, "StatusChanged", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// TreasuryRebalanceV2ZeroedRegisteredIterator is returned from FilterZeroedRegistered and is used to iterate over the raw logs and unpacked data for ZeroedRegistered events raised by the TreasuryRebalanceV2 contract.
+type TreasuryRebalanceV2ZeroedRegisteredIterator struct {
+	Event *TreasuryRebalanceV2ZeroedRegistered // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *TreasuryRebalanceV2ZeroedRegisteredIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(TreasuryRebalanceV2ZeroedRegistered)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(TreasuryRebalanceV2ZeroedRegistered)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *TreasuryRebalanceV2ZeroedRegisteredIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *TreasuryRebalanceV2ZeroedRegisteredIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// TreasuryRebalanceV2ZeroedRegistered represents a ZeroedRegistered event raised by the TreasuryRebalanceV2 contract.
+type TreasuryRebalanceV2ZeroedRegistered struct {
+	Zeroed common.Address
+	Raw    types.Log // Blockchain specific contextual infos
+}
+
+// FilterZeroedRegistered is a free log retrieval operation binding the contract event 0xa9a4f3b74b03e48e76814dbc308d3f20104d608c67a42a7ae678d0945daa8e92.
+//
+// Solidity: event ZeroedRegistered(address zeroed)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterZeroedRegistered(opts *bind.FilterOpts) (*TreasuryRebalanceV2ZeroedRegisteredIterator, error) {
+	logs, sub, err := _TreasuryRebalanceV2.contract.FilterLogs(opts, "ZeroedRegistered")
+	if err != nil {
+		return nil, err
+	}
+	return &TreasuryRebalanceV2ZeroedRegisteredIterator{contract: _TreasuryRebalanceV2.contract, event: "ZeroedRegistered", logs: logs, sub: sub}, nil
+}
+
+// WatchZeroedRegistered is a free log subscription operation binding the contract event 0xa9a4f3b74b03e48e76814dbc308d3f20104d608c67a42a7ae678d0945daa8e92.
+//
+// Solidity: event ZeroedRegistered(address zeroed)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) WatchZeroedRegistered(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceV2ZeroedRegistered) (event.Subscription, error) {
+	logs, sub, err := _TreasuryRebalanceV2.contract.WatchLogs(opts, "ZeroedRegistered")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(TreasuryRebalanceV2ZeroedRegistered)
+				if err := _TreasuryRebalanceV2.contract.UnpackLog(event, "ZeroedRegistered", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseZeroedRegistered is a log parse operation binding the contract event 0xa9a4f3b74b03e48e76814dbc308d3f20104d608c67a42a7ae678d0945daa8e92.
+//
+// Solidity: event ZeroedRegistered(address zeroed)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) ParseZeroedRegistered(log types.Log) (*TreasuryRebalanceV2ZeroedRegistered, error) {
+	event := new(TreasuryRebalanceV2ZeroedRegistered)
+	if err := _TreasuryRebalanceV2.contract.UnpackLog(event, "ZeroedRegistered", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// TreasuryRebalanceV2ZeroedRemovedIterator is returned from FilterZeroedRemoved and is used to iterate over the raw logs and unpacked data for ZeroedRemoved events raised by the TreasuryRebalanceV2 contract.
+type TreasuryRebalanceV2ZeroedRemovedIterator struct {
+	Event *TreasuryRebalanceV2ZeroedRemoved // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *TreasuryRebalanceV2ZeroedRemovedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(TreasuryRebalanceV2ZeroedRemoved)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(TreasuryRebalanceV2ZeroedRemoved)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *TreasuryRebalanceV2ZeroedRemovedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *TreasuryRebalanceV2ZeroedRemovedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// TreasuryRebalanceV2ZeroedRemoved represents a ZeroedRemoved event raised by the TreasuryRebalanceV2 contract.
+type TreasuryRebalanceV2ZeroedRemoved struct {
+	Zeroed common.Address
+	Raw    types.Log // Blockchain specific contextual infos
+}
+
+// FilterZeroedRemoved is a free log retrieval operation binding the contract event 0x8a654c98d0a7856a8d216c621bb8073316efcaa2b65774d2050c4c1fc7a85a0c.
+//
+// Solidity: event ZeroedRemoved(address zeroed)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterZeroedRemoved(opts *bind.FilterOpts) (*TreasuryRebalanceV2ZeroedRemovedIterator, error) {
+	logs, sub, err := _TreasuryRebalanceV2.contract.FilterLogs(opts, "ZeroedRemoved")
+	if err != nil {
+		return nil, err
+	}
+	return &TreasuryRebalanceV2ZeroedRemovedIterator{contract: _TreasuryRebalanceV2.contract, event: "ZeroedRemoved", logs: logs, sub: sub}, nil
+}
+
+// WatchZeroedRemoved is a free log subscription operation binding the contract event 0x8a654c98d0a7856a8d216c621bb8073316efcaa2b65774d2050c4c1fc7a85a0c.
+//
+// Solidity: event ZeroedRemoved(address zeroed)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) WatchZeroedRemoved(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceV2ZeroedRemoved) (event.Subscription, error) {
+	logs, sub, err := _TreasuryRebalanceV2.contract.WatchLogs(opts, "ZeroedRemoved")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(TreasuryRebalanceV2ZeroedRemoved)
+				if err := _TreasuryRebalanceV2.contract.UnpackLog(event, "ZeroedRemoved", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseZeroedRemoved is a log parse operation binding the contract event 0x8a654c98d0a7856a8d216c621bb8073316efcaa2b65774d2050c4c1fc7a85a0c.
+//
+// Solidity: event ZeroedRemoved(address zeroed)
+func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) ParseZeroedRemoved(log types.Log) (*TreasuryRebalanceV2ZeroedRemoved, error) {
+	event := new(TreasuryRebalanceV2ZeroedRemoved)
+	if err := _TreasuryRebalanceV2.contract.UnpackLog(event, "ZeroedRemoved", log); err != nil {
 		return nil, err
 	}
 	return event, nil
