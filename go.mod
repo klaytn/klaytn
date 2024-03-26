@@ -1,6 +1,6 @@
 module github.com/klaytn/klaytn
 
-go 1.20
+go 1.22
 
 require (
 	github.com/Shopify/sarama v1.26.4
