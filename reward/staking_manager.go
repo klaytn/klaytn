@@ -27,6 +27,7 @@ import (
 	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
+	"github.com/klaytn/klaytn/blockchain/system"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/contracts/reward/contract"
@@ -46,8 +47,6 @@ const (
 	addressTypePoCAddr // TODO-klaytn: PoC should be changed to KFF after changing AddressBook contract
 	addressTypeKIRAddr // TODO-klaytn: KIR should be changed to KCF after changing AddressBook contract
 )
-
-var addressBookContractAddress = common.HexToAddress(contract.AddressBookContractAddress)
 
 // blockChain is an interface for blockchain.Blockchain used in reward package.
 type blockChain interface {
@@ -226,7 +225,7 @@ func getStakingInfoFromAddressBook(blockNum uint64) (*StakingInfo, error) {
 	}
 
 	caller := backends.NewBlockchainContractBackend(stakingManager.blockchain, nil, nil)
-	code, err := caller.CodeAt(context.Background(), addressBookContractAddress, nil)
+	code, err := caller.CodeAt(context.Background(), system.AddressBookContractAddress, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve code of AddressBook contract. root err: %s", err)
 	}
@@ -236,7 +235,7 @@ func getStakingInfoFromAddressBook(blockNum uint64) (*StakingInfo, error) {
 		return newEmptyStakingInfo(blockNum), nil
 	}
 
-	contract, err := contract.NewAddressBookCaller(addressBookContractAddress, caller)
+	contract, err := contract.NewAddressBookCaller(system.AddressBookContractAddress, caller)
 	if err != nil {
 		return nil, fmt.Errorf("failed to call AddressBook contract. root err: %s", err)
 	}
@@ -450,7 +449,7 @@ func SetTestStakingManager(sm *StakingManager) {
 
 // SetTestAddressBookAddress is only for testing purpose.
 func SetTestAddressBookAddress(addr common.Address) {
-	addressBookContractAddress = common.HexToAddress(addr.Hex())
+	system.AddressBookContractAddress = common.HexToAddress(addr.Hex())
 }
 
 func TestGetStakingCacheSize() int {

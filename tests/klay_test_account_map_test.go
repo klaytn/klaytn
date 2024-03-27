@@ -21,15 +21,15 @@ import (
 	"math/big"
 
 	"github.com/klaytn/klaytn/blockchain/state"
+	"github.com/klaytn/klaytn/blockchain/system"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/contracts/reward/contract"
 	"github.com/klaytn/klaytn/crypto"
 )
 
-////////////////////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////////////////////
 // AddressBalanceMap
-////////////////////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////////////////////
 type AccountInfo struct {
 	balance *big.Int
 	nonce   uint64
@@ -91,9 +91,9 @@ func (a *AccountMap) Initialize(bcdata *BCData) error {
 
 	// NOTE-Klaytn-Issue973 Developing Klaytn token economy
 	// Add predefined accounts related to reward mechanism
-	rewardContractAddr := common.HexToAddress(contract.RewardContractAddress)
-	kcfContractAddr := common.HexToAddress(contract.KCFContractAddress)
-	kffContractAddr := common.HexToAddress(contract.KFFContractAddress)
+	rewardContractAddr := common.HexToAddress(system.RewardContractAddress)
+	kcfContractAddr := common.HexToAddress(system.KCFContractAddress)
+	kffContractAddr := common.HexToAddress(system.KFFContractAddress)
 	addrs := append(bcdata.addrs, &rewardContractAddr, &kcfContractAddr, &kffContractAddr)
 
 	for _, addr := range addrs {

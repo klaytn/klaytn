@@ -404,6 +404,14 @@ func (c *ChainConfig) IsDragonForkEnabled(num *big.Int) bool {
 	return isForked(c.DragonCompatibleBlock, num)
 }
 
+// IsDragonForkBlock returns whether num is equal to the dragon block.
+func (c *ChainConfig) IsDragonForkBlock(num *big.Int) bool {
+	if c.DragonCompatibleBlock == nil || num == nil {
+		return false
+	}
+	return c.DragonCompatibleBlock.Cmp(num) == 0
+}
+
 // IsRandaoForkEnabled returns whether num is either equal to the randao block or greater.
 func (c *ChainConfig) IsRandaoForkEnabled(num *big.Int) bool {
 	return isForked(c.RandaoCompatibleBlock, num)
