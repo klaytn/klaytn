@@ -251,8 +251,10 @@ func RPCMarshalHeader(head *types.Header, rules params.Rules) map[string]interfa
 			result["baseFeePerGas"] = (*hexutil.Big)(head.BaseFee)
 		}
 	}
-	if rules.IsRandao {
+	if len(head.RandomReveal) > 0 {
 		result["randomReveal"] = hexutil.Bytes(head.RandomReveal)
+	}
+	if len(head.MixHash) > 0 {
 		result["mixhash"] = hexutil.Bytes(head.MixHash)
 	}
 

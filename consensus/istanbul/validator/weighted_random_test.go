@@ -580,13 +580,13 @@ func TestWeightedCouncil_Randao(t *testing.T) {
 			expectedProposer:  SelectRandaoCommittee(validators, valSize+1, testMixHash)[0],
 			expectedCommittee: validators,
 		},
-		{ // nil MixHash
-			blockNum:          forkNum + 10, // expect log "no mixHash  number=(forkNum+10)"
+		{ // nil MixHash (expected MixHash value at fork block number)
+			blockNum:          forkNum,
 			round:             0,
 			committeeSize:     valSize - 1,
-			mixHash:           nil,
-			expectedProposer:  validators[0], // fall back to roundRobinProposer
-			expectedCommittee: nil,           // SubList fails.
+			mixHash:           nil, // If rules.IsRandao && mixHash == nil, then ZeroMixHash is used
+			expectedProposer:  SelectRandaoCommittee(validators, valSize-1, params.ZeroMixHash)[0],
+			expectedCommittee: SelectRandaoCommittee(validators, valSize-1, params.ZeroMixHash),
 		},
 		{ // IsSubset() == true
 			blockNum:          forkNum,

@@ -17,7 +17,7 @@ import (
 	"github.com/klaytn/klaytn/params"
 )
 
-// For testing without KIP-113 contract setup
+// BlsPubkeyProvider allows introducing a ChainBlsPubkeyProvider mock to be used for testing
 type BlsPubkeyProvider interface {
 	// num should be the header number of the block to be verified.
 	// Thus, since the state of num does not exist, the state of num-1 must be used.
@@ -25,6 +25,7 @@ type BlsPubkeyProvider interface {
 	ResetBlsCache()
 }
 
+// ChainBlsPubkeyProvider is the default implementation for BlsPubkeyProvider.
 type ChainBlsPubkeyProvider struct {
 	cache *lru.ARCCache // Cached BlsPublicKeyInfos
 }
@@ -36,10 +37,10 @@ func newChainBlsPubkeyProvider() *ChainBlsPubkeyProvider {
 	}
 }
 
-// The default implementation for BlsPubkeyFunc.
+// GetBlsPubkey retrieves a BLS public key stored in blockchain.
 // Queries KIP-113 contract and verifies the PoP.
 func (p *ChainBlsPubkeyProvider) GetBlsPubkey(chain consensus.ChainReader, proposer common.Address, num *big.Int) (bls.PublicKey, error) {
-	infos, err := p.getAllCached(chain, num)
+	infos, err := p.getBlsInfos(chain, num)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +55,9 @@ func (p *ChainBlsPubkeyProvider) GetBlsPubkey(chain consensus.ChainReader, propo
 	return bls.PublicKeyFromBytes(info.PublicKey)
 }
 
-func (p *ChainBlsPubkeyProvider) getAllCached(chain consensus.ChainReader, num *big.Int) (system.BlsPublicKeyInfos, error) {
+// getBlsInfos returns all registered BLS info at the given block number.
+// It retrieves cache first, and then retrieves the storage of KIP113 contract.
+func (p *ChainBlsPubkeyProvider) getBlsInfos(chain consensus.ChainReader, num *big.Int) (system.BlsPublicKeyInfos, error) {
 	if item, ok := p.cache.Get(num.Uint64()); ok {
 		logger.Trace("BlsPublicKeyInfos cache hit", "number", num.Uint64())
 		return item.(system.BlsPublicKeyInfos), nil
@@ -109,14 +112,18 @@ func (p *ChainBlsPubkeyProvider) ResetBlsCache() {
 	p.cache.Purge()
 }
 
-// Calculate KIP-114 Randao header fields
+// CalcRandao calculates Randao-related header values specified in KIP-114.
 // https://github.com/klaytn/kips/blob/kip114/KIPs/kip-114.md
 func (sb *backend) CalcRandao(number *big.Int, prevMixHash []byte) ([]byte, []byte, error) {
 	if sb.blsSecretKey == nil {
 		return nil, nil, errNoBlsKey
 	}
-	if len(prevMixHash) != 32 {
-		logger.Error("invalid prevMixHash", "number", number.Uint64(), "prevMixHash", hexutil.Encode(prevMixHash))
+	parentMixHash := prevMixHash
+	if len(parentMixHash) == 0 {
+		parentMixHash = params.ZeroMixHash
+	}
+	if len(parentMixHash) != 32 {
+		logger.Error("invalid prevMixHash", "number", number.Uint64(), "prevMixHash", hexutil.Encode(parentMixHash))
 		return nil, nil, errInvalidRandaoFields
 	}
 
@@ -127,14 +134,27 @@ func (sb *backend) CalcRandao(number *big.Int, prevMixHash []byte) ([]byte, []by
 	randomReveal := bls.Sign(sb.blsSecretKey, msg[:]).Marshal()
 
 	// calc_mix_hash() = xor(prevMixHash, keccak256(randomReveal))
-	mixHash := calcMixHash(randomReveal, prevMixHash)
+	mixHash := calcMixHash(randomReveal, parentMixHash)
 
 	return randomReveal, mixHash, nil
 }
 
+// VerifyRandao verifies whether Randao-related header values conform to KIP-114.
 func (sb *backend) VerifyRandao(chain consensus.ChainReader, header *types.Header, prevMixHash []byte) error {
 	if header.Number.Sign() == 0 {
 		return nil // Do not verify genesis block
+	}
+
+	if len(header.RandomReveal) != 96 || len(header.MixHash) != 32 {
+		return errInvalidRandaoFields
+	}
+
+	// The VerifyRandao is invoked only since Randao hardfork block number.
+	// Since Randao hardfork, the header fields are cannot be nil because of the check above (header.RandomReveal == nil || header.MixHash == nil).
+	// Therefore it's safe to assume that if prevMixHash == nil, then the given header is exactly Randao hardfork block number.
+	parentMixHash := prevMixHash
+	if len(parentMixHash) == 0 {
+		parentMixHash = params.ZeroMixHash
 	}
 
 	proposer, err := sb.Author(header)
@@ -160,7 +180,7 @@ func (sb *backend) VerifyRandao(chain consensus.ChainReader, header *types.Heade
 	}
 
 	// if not newHeader.mixHash == calc_mix_hash(prevMixHash, newHeader.randomReveal): return False
-	mixHash := calcMixHash(header.RandomReveal, prevMixHash)
+	mixHash := calcMixHash(header.RandomReveal, parentMixHash)
 	if !bytes.Equal(header.MixHash, mixHash) {
 		return errInvalidRandaoFields
 	}
@@ -181,13 +201,4 @@ func calcMixHash(randomReveal, prevMixHash []byte) []byte {
 		mixHash[i] = prevMixHash[i] ^ revealHash[i]
 	}
 	return mixHash
-}
-
-// At the fork block's parent, pretend that prevMixHash is ZeroMixHash.
-func headerMixHash(chain consensus.ChainReader, header *types.Header) []byte {
-	if chain.Config().IsRandaoForkBlockParent(header.Number) {
-		return params.ZeroMixHash
-	} else {
-		return header.MixHash
-	}
 }

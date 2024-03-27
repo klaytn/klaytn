@@ -254,8 +254,7 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 
 	// VerifyRandao must be after verifySigner because it needs the signer (proposer) address
 	if chain.Config().IsRandaoForkEnabled(header.Number) {
-		prevMixHash := headerMixHash(chain, parent)
-		if err := sb.VerifyRandao(chain, header, prevMixHash); err != nil {
+		if err := sb.VerifyRandao(chain, header, parent.MixHash); err != nil {
 			return err
 		}
 	} else if header.RandomReveal != nil || header.MixHash != nil {
@@ -438,8 +437,7 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	}
 
 	if chain.Config().IsRandaoForkEnabled(header.Number) {
-		prevMixHash := headerMixHash(chain, parent)
-		randomReveal, mixHash, err := sb.CalcRandao(header.Number, prevMixHash)
+		randomReveal, mixHash, err := sb.CalcRandao(header.Number, parent.MixHash)
 		if err != nil {
 			return err
 		}
@@ -733,7 +731,9 @@ func (sb *backend) initSnapshot(chain consensus.ChainReader) (*Snapshot, error) 
 	valSet := validator.NewValidatorSet(istanbulExtra.Validators, nil,
 		istanbul.ProposerPolicy(pset.Policy()),
 		pset.CommitteeSize(), chain)
-	valSet.SetMixHash(genesis.MixHash)
+	if len(genesis.MixHash) != 0 {
+		valSet.SetMixHash(genesis.MixHash)
+	}
 	snap := newSnapshot(sb.governance, 0, genesis.Hash(), valSet, chain.Config())
 
 	if err := snap.store(sb.db); err != nil {

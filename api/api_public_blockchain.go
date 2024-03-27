@@ -590,9 +590,11 @@ func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool, rules
 			fields["baseFeePerGas"] = (*hexutil.Big)(head.BaseFee)
 		}
 	}
-	if rules.IsRandao {
+	if len(head.RandomReveal) > 0 {
 		fields["randomReveal"] = hexutil.Bytes(head.RandomReveal)
-		fields["mixHash"] = hexutil.Bytes(head.MixHash)
+	}
+	if len(head.MixHash) > 0 {
+		fields["mixhash"] = hexutil.Bytes(head.MixHash)
 	}
 
 	return fields, nil

@@ -210,7 +210,11 @@ type ChainConfig struct {
 	Kip103ContractAddress common.Address `json:"kip103ContractAddress,omitempty"` // Kip103 contract address already deployed on the network
 
 	// Randao is an optional hardfork
-	// RandaoCompatibleBlock, RandaoRegistryRecords and RandaoRegistryOwner all must be specified to enable Randao
+	// RandaoCompatibleBlock, RandaoRegistryRecords and RandaoRegistryOwner all must be specified to enable Randao.
+	// Since Randao also enables KIP113 (BLS registry) simultaneously, the followings should be done before the hardfork.
+	//   - BLS contract (KIP113) should be deployed
+	//   - Validators information should be registered on the BLS contract
+	//   - Randao registry should be specified with the KIP113 contract address
 	RandaoCompatibleBlock *big.Int        `json:"randaoCompatibleBlock,omitempty"` // RandaoCompatible activate block (nil = no fork)
 	RandaoRegistry        *RegistryConfig `json:"randaoRegistry,omitempty"`        // Registry initial states
 
@@ -415,15 +419,6 @@ func (c *ChainConfig) IsKIP103ForkBlock(num *big.Int) bool {
 		return false
 	}
 	return c.Kip103CompatibleBlock.Cmp(num) == 0
-}
-
-// IsRandaoForkBlockParent returns whethere num is one block before the randao block.
-func (c *ChainConfig) IsRandaoForkBlockParent(num *big.Int) bool {
-	if c.RandaoCompatibleBlock == nil || num == nil {
-		return false
-	}
-	nextNum := new(big.Int).Add(num, common.Big1)
-	return c.RandaoCompatibleBlock.Cmp(nextNum) == 0 // randao == num + 1
 }
 
 // IsRandaoForkBlock returns whether num is equal to the randao block.

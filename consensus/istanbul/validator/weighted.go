@@ -259,7 +259,9 @@ func GetWeightedCouncilData(valSet istanbul.ValidatorSet) (validators []common.A
 			proposers[i] = proposer.Address()
 		}
 		proposersBlockNum = weightedCouncil.proposersBlockNum
-		mixHash = weightedCouncil.mixHash
+		if len(mixHash) != 0 {
+			mixHash = weightedCouncil.mixHash
+		}
 	} else {
 		logger.Error("invalid proposer policy for weightedCouncil")
 	}
@@ -276,13 +278,13 @@ func weightedRandomProposer(valSet istanbul.ValidatorSet, lastProposer common.Ad
 	rules := fork.Rules(new(big.Int).SetUint64(weightedCouncil.blockNum + 1))
 	// After Randao: Select one from ValidatorSet using MixHash as a seed.
 	if rules.IsRandao {
-		if weightedCouncil.mixHash == nil {
-			logger.Error("no mixHash", "number", weightedCouncil.blockNum)
-			return nil
+		mixHash := weightedCouncil.mixHash
+		if len(mixHash) == 0 {
+			mixHash = params.ZeroMixHash
 		}
 		// def proposer_selector(validators, committee_size, round, seed):
 		// select_committee_KIP146(validators, committee_size, seed)[round % len(validators)]
-		committee := SelectRandaoCommittee(weightedCouncil.List(), weightedCouncil.subSize, weightedCouncil.mixHash)
+		committee := SelectRandaoCommittee(weightedCouncil.List(), weightedCouncil.subSize, mixHash)
 		return committee[round%uint64(len(committee))]
 	}
 
@@ -379,14 +381,14 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 	if fork.Rules(view.Sequence).IsRandao {
 		// This committee must include proposers for all rounds because
 		// the proposer is picked from the this committee. See weightedRandomProposer().
-		if valSet.mixHash == nil {
-			logger.Error("no mixHash", "number", valSet.blockNum)
-			return nil
+		mixHash := valSet.mixHash
+		if len(mixHash) == 0 {
+			mixHash = params.ZeroMixHash
 		}
 		// def select_committee_KIP146(validators, committee_size, seed):
 		// shuffled = shuffle_validators_KIP146(validators, seed)
 		// return shuffled[:min(committee_size, len(validators))]
-		return SelectRandaoCommittee(validators, committeeSize, valSet.mixHash)
+		return SelectRandaoCommittee(validators, committeeSize, mixHash)
 	}
 
 	// Before Randao: SelectRandomCommittee, but the first two members are proposer and next proposer
@@ -628,8 +630,10 @@ func (valSet *weightedCouncil) Copy() istanbul.ValidatorSet {
 	newWeightedCouncil.proposers = make([]istanbul.Validator, len(valSet.proposers))
 	copy(newWeightedCouncil.proposers, valSet.proposers)
 
-	newWeightedCouncil.mixHash = make([]byte, len(valSet.mixHash))
-	copy(newWeightedCouncil.mixHash, valSet.mixHash)
+	if valSet.mixHash != nil { // mixHash is nil before Randao HF
+		newWeightedCouncil.mixHash = make([]byte, len(valSet.mixHash))
+		copy(newWeightedCouncil.mixHash, valSet.mixHash)
+	}
 
 	return &newWeightedCouncil
 }
@@ -783,8 +787,8 @@ func filterValidators(isSingleMode bool, govNodeAddr common.Address, weightedVal
 
 // getStakingAmountsOfValidators calculates stakingAmounts of validators.
 // If validators have multiple staking contracts, stakingAmounts will be a sum of stakingAmounts with the same rewardAddress.
-//  - []*weightedValidator : a list of validators which type is converted to weightedValidator
-//  - []float64 : a list of stakingAmounts.
+//   - []*weightedValidator : a list of validators which type is converted to weightedValidator
+//   - []float64 : a list of stakingAmounts.
 func getStakingAmountsOfValidators(validators istanbul.Validators, stakingInfo *reward.StakingInfo) ([]*weightedValidator, []float64, error) {
 	nVals := len(validators)
 	weightedVals := make([]*weightedValidator, nVals)
