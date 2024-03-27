@@ -1,7 +1,6 @@
 package system
 
 import (
-	"encoding/json"
 	"math/big"
 	"testing"
 
@@ -210,7 +209,7 @@ func rebalanceTreasury(t *testing.T, sender *bind.TransactOpts, config *params.C
 		assert.Equal(t, tc.expectBurnt, res.Burnt)
 		assert.Equal(t, tc.expectSuccess, res.Success)
 
-		memo, _ := json.Marshal(res)
+		memo := res.Memo(chain.Config().IsKIP103ForkBlock(backend.BlockChain().CurrentHeader().Number))
 		t.Log(string(memo))
 	}
 }

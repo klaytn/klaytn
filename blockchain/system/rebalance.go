@@ -18,6 +18,7 @@ package system
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"math/big"
 
@@ -145,6 +146,28 @@ func newRebalanceReceipt() *rebalanceResult {
 		Burnt:     big.NewInt(0),
 		Success:   false,
 	}
+}
+
+func (result *rebalanceResult) Memo(isKip103 bool) []byte {
+	var (
+		memo []byte
+		err  error
+	)
+	if isKip103 {
+		type kip103RebalanceResult struct {
+			Zeroed    map[common.Address]*big.Int `json:"retired"`
+			Allocated map[common.Address]*big.Int `json:"newbie"`
+			Burnt     *big.Int                    `json:"burnt"`
+			Success   bool                        `json:"success"`
+		}
+		memo, err = json.Marshal(kip103RebalanceResult{result.Zeroed, result.Allocated, result.Burnt, result.Success})
+	} else {
+		memo, err = json.Marshal(result)
+	}
+	if err != nil {
+		logger.Warn("failed to marshal rebalancing result", "err", err, "result", result)
+	}
+	return memo
 }
 
 func (result *rebalanceResult) fillZeroed(contract RebalanceCaller, state *state.StateDB) error {
