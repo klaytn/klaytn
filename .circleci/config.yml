@@ -39,7 +39,7 @@ executors:
         auth:
           username: $DOCKER_LOGIN
           password: $DOCKER_PASSWORD
-      - image: cimg/redis:6.0
+      - image: circleci/redis:6.0.8-alpine
         auth:
           username: $DOCKER_LOGIN
           password: $DOCKER_PASSWORD
