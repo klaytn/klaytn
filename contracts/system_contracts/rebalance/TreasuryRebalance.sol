@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import "./Ownable.sol";
+import "../lib/Ownable_0.8.sol";
 import "./ITreasuryRebalance.sol";
 
 /**

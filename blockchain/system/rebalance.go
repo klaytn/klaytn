@@ -1,32 +1,46 @@
-package backend
+// Copyright 2023 The klaytn Authors
+// This file is part of the klaytn library.
+//
+// The klaytn library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The klaytn library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+
+package system
 
 import (
 	"context"
-	"errors"
 	"math/big"
 
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
+	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus"
-	"github.com/klaytn/klaytn/contracts/kip103"
-)
-
-var (
-	errNotEnoughRetiredBal = errors.New("the sum of retired accounts' balance is smaller than the distributing amount")
-	errNotProperStatus     = errors.New("cannot read a proper status value")
+	"github.com/klaytn/klaytn/contracts/system_contracts"
 )
 
 // Kip103ContractCaller is an implementation of contractCaller only for KIP-103.
 // The caller interacts with a KIP-103 contract on a read only basis.
 type Kip103ContractCaller struct {
-	state  *state.StateDB        // the state that is under process
-	chain  consensus.ChainReader // chain containing the blockchain information
-	header *types.Header         // the header of a new block that is under process
+	state  *state.StateDB               // the state that is under process
+	chain  backends.BlockChainForCaller // chain containing the blockchain information
+	header *types.Header                // the header of a new block that is under process
+}
+
+func NewKip103ContractCaller(state *state.StateDB, chain backends.BlockChainForCaller, header *types.Header) *Kip103ContractCaller {
+	return &Kip103ContractCaller{state, chain, header}
 }
 
 func (caller *Kip103ContractCaller) CodeAt(ctx context.Context, contract common.Address, blockNumber *big.Int) ([]byte, error) {
@@ -42,7 +56,6 @@ func (caller *Kip103ContractCaller) CallContract(ctx context.Context, call klayt
 	// call.To: the target contract address will be assigned by `BoundContract`
 	// call.Value: nil value is acceptable for `types.NewMessage`
 	// call.Data: a proper value will be assigned by `BoundContract`
-	// No need to handle acccess list here
 	msg := types.NewMessage(call.From, call.To, caller.state.GetNonce(call.From),
 		call.Value, gasLimit, gasPrice, call.Data, false, intrinsicGas, nil)
 
@@ -71,7 +84,7 @@ func newKip103Receipt() *kip103result {
 	}
 }
 
-func (result *kip103result) fillRetired(contract *kip103.TreasuryRebalanceCaller, state *state.StateDB) error {
+func (result *kip103result) fillRetired(contract *system_contracts.TreasuryRebalanceCaller, state *state.StateDB) error {
 	numRetiredBigInt, err := contract.GetRetiredCount(nil)
 	if err != nil {
 		logger.Error("Failed to get RetiredCount from TreasuryRebalance contract", "err", err)
@@ -89,7 +102,7 @@ func (result *kip103result) fillRetired(contract *kip103.TreasuryRebalanceCaller
 	return nil
 }
 
-func (result *kip103result) fillNewbie(contract *kip103.TreasuryRebalanceCaller) error {
+func (result *kip103result) fillNewbie(contract *system_contracts.TreasuryRebalanceCaller) error {
 	numNewbieBigInt, err := contract.GetNewbieCount(nil)
 	if err != nil {
 		logger.Error("Failed to get NewbieCount from TreasuryRebalance contract", "err", err)
@@ -126,10 +139,10 @@ func (result *kip103result) totalNewbieBalance() *big.Int {
 // RebalanceTreasury reads data from a contract, validates stored values, and executes treasury rebalancing (KIP-103).
 // It can change the global state by removing old treasury balances and allocating new treasury balances.
 // The new allocation can be larger than the removed amount, and the difference between two amounts will be burnt.
-func RebalanceTreasury(state *state.StateDB, chain consensus.ChainReader, header *types.Header, c bind.ContractCaller) (*kip103result, error) {
+func RebalanceTreasury(state *state.StateDB, chain backends.BlockChainForCaller, header *types.Header, c bind.ContractCaller) (*kip103result, error) {
 	result := newKip103Receipt()
 
-	caller, err := kip103.NewTreasuryRebalanceCaller(chain.Config().Kip103ContractAddress, c)
+	caller, err := system_contracts.NewTreasuryRebalanceCaller(chain.Config().Kip103ContractAddress, c)
 	if err != nil {
 		return result, err
 	}
@@ -146,12 +159,12 @@ func RebalanceTreasury(state *state.StateDB, chain consensus.ChainReader, header
 
 	// Validation 1) Check the target block number
 	if blockNum, err := caller.RebalanceBlockNumber(nil); err != nil || blockNum.Cmp(header.Number) != 0 {
-		return result, errors.New("cannot find a proper target block number")
+		return result, ErrRebalanceIncorrectBlock
 	}
 
 	// Validation 2) Check whether status is approved. It should be 2 meaning approved
 	if status, err := caller.Status(nil); err != nil || status != 2 {
-		return result, errNotProperStatus
+		return result, ErrRebalanceBadStatus
 	}
 
 	// Validation 3) Check approvals from retirees
@@ -163,7 +176,7 @@ func RebalanceTreasury(state *state.StateDB, chain consensus.ChainReader, header
 	totalRetiredAmount := result.totalRetriedBalance()
 	totalNewbieAmount := result.totalNewbieBalance()
 	if totalRetiredAmount.Cmp(totalNewbieAmount) < 0 {
-		return result, errNotEnoughRetiredBal
+		return result, ErrRebalanceNotEnoughBalance
 	}
 
 	// Execution 1) Clear all balances of retirees

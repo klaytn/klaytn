@@ -7,6 +7,8 @@ pragma solidity ^0.8.0;
 
 import "./registry/Registry.sol";
 import "./registry/RegistryMock.sol";
+import "./rebalance/TreasuryRebalance.sol";
+import "./rebalance/TreasuryRebalanceMock.sol";
 import "./kip113/KIP113.sol";
 import "./kip113/KIP113Mock.sol";
 import "./lib/ERC1967Proxy.sol";
