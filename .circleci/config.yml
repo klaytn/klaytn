@@ -23,7 +23,7 @@ executors:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     resource_class: medium
     docker:
-      - image: klaytn/build_base:1.2-ubuntu18.04-go.1.20.6-solc0.8.13
+      - image: klaytn/build_base:1.12-go.1.22.1-solc0.8.13-ubuntu-20.04
         auth:
           username: $DOCKER_LOGIN
           password: $DOCKER_PASSWORD
@@ -31,7 +31,7 @@ executors:
     working_directory: /go/src/github.com/klaytn/klaytn
     resource_class: xlarge
     docker:
-      - image: klaytn/build_base:1.2-ubuntu18.04-go.1.20.6-solc0.8.13
+      - image: klaytn/build_base:1.12-go.1.22.1-solc0.8.13-ubuntu-20.04
         auth:
           username: $DOCKER_LOGIN
           password: $DOCKER_PASSWORD
@@ -67,14 +67,14 @@ executors:
   rpm-executor: # this executor is for packaging rpm binaries
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
-      - image: klaytn/circleci-rpmbuild:1.20.6-gcc7
+      - image: klaytn/circleci-rpmbuild:1.22.1-gcc7
         auth:
           username: $DOCKER_LOGIN
           password: $DOCKER_PASSWORD
   default:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     docker:
-      - image: cimg/go:1.20.6
+      - image: cimg/go:1.22.1
 
 commands:
   install-darwin-dependencies:
@@ -86,9 +86,9 @@ commands:
             # install awscli
             brew install awscli
             # install golang
-            curl -O https://dl.google.com/go/go1.20.6.darwin-amd64.tar.gz
-            mkdir $HOME/go1.20.6
-            tar -C $HOME/go1.20.6 -xzf go1.20.6.darwin-amd64.tar.gz
+            curl -O https://dl.google.com/go/go1.22.1.darwin-amd64.tar.gz
+            mkdir $HOME/go1.22.1
+            tar -C $HOME/go1.22.1 -xzf go1.22.1.darwin-amd64.tar.gz
   pre-build:
     description: "before build, set version"
     steps:
@@ -96,7 +96,7 @@ commands:
           name: "set variables"
           command: |
             export GOPATH=~/go
-            export PATH=$HOME/go1.20.6/go/bin:$PATH
+            export PATH=$HOME/go1.22.1/go/bin:$PATH
             pat="^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.*"
 
             if [[ $CIRCLE_TAG =~ $pat ]]; then
@@ -124,7 +124,7 @@ commands:
           name: "build and packaging"
           command: |
             export GOPATH=~/go
-            export PATH=$HOME/go1.20.6/go/bin:$PATH
+            export PATH=$HOME/go1.22.1/go/bin:$PATH
             make all
             for item in kcn kpn ken kscn kspn ksen kbn kgen homi; do
               ./build/package-tar.sh << parameters.baobab >> << parameters.os-network >> $item
@@ -140,7 +140,7 @@ commands:
           name: "upload S3 repo"
           command: |
             export GOPATH=~/go
-            export PATH=$HOME/go1.20.6/go/bin:$PATH
+            export PATH=$HOME/go1.22.1/go/bin:$PATH
             KLAYTN_VERSION=$(go run build/rpm/main.go version)
             for item in << parameters.item >>; do aws s3 cp packages/${item}-*.tar.gz s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/; done
   rpm-tagging:
