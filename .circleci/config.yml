@@ -23,7 +23,7 @@ executors:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     resource_class: medium
     docker:
-      - image: klaytn/build_base:1.12-go.1.22.1-solc0.8.13-ubuntu-18.04
+      - image: klaytn/build_base:1.12-go.1.22.1-solc0.8.13-ubuntu-20.04
         auth:
           username: $DOCKER_LOGIN
           password: $DOCKER_PASSWORD
@@ -31,7 +31,7 @@ executors:
     working_directory: /go/src/github.com/klaytn/klaytn
     resource_class: xlarge
     docker:
-      - image: klaytn/build_base:1.12-go.1.22.1-solc0.8.13-ubuntu-18.04
+      - image: klaytn/build_base:1.12-go.1.22.1-solc0.8.13-ubuntu-20.04
         auth:
           username: $DOCKER_LOGIN
           password: $DOCKER_PASSWORD
