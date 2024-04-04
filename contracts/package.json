@@ -3,7 +3,7 @@
     "@nomicfoundation/hardhat-toolbox": "^2.0.2",
     "@openzeppelin/contracts": "^4.9.6",
     "@openzeppelin/contracts-upgradeable": "^4.9.6",
-    "@openzeppelin/hardhat-upgrades": "^1.28.0",
+    "@openzeppelin/hardhat-upgrades": "^3.0.5",
     "@types/lodash": "^4.17.0",
     "bls-signatures": "^2.0.3",
     "hardhat": "2.13",
