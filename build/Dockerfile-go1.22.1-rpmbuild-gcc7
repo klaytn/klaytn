@@ -1,0 +1,16 @@
+FROM centos:centos7
+
+RUN curl https://dl.google.com/go/go1.22.1.linux-amd64.tar.gz | tar xzvf - -C /usr/local
+RUN yum install -y make rpm-build git createrepo python3 gcc unzip
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && unzip awscliv2.zip && ./aws/install && rm awscliv2.zip
+ENV PATH=$PATH:/usr/local/go/bin
+
+# yum installed gcc is too old (4.8.5). Install 7.x to enable c99 (actually gnu11) by default.
+# devtoolset-7 must be installed after centos-release-scl
+RUN yum install -y centos-release-scl scl-utils && yum install -y devtoolset-7-gcc
+
+# Add gcc 7.x in $PATH
+ENV PATH="/opt/rh/devtoolset-7/root/usr/bin:$PATH"
+ENV LD_LIBRARY_PATH="/opt/rh/devtoolset-7/root/usr/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+
+CMD ["/bin/sh"]
