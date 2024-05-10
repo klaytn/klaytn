@@ -104,12 +104,19 @@ func (r *serviceRegistry) callback(method string) *callback {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	namespace, method := elem[0], elem[1]
+
 	// when NonEthCompatible is true, the return formatting for the eth namespace API provided for Ethereum compatibility is disabled.
 	// convert ethereum namespace to klay namespace.
-	if NonEthCompatible && elem[0] == "eth" {
-		return r.services["klay"].callbacks[elem[1]]
+	if NonEthCompatible && namespace == "eth" {
+		return r.services["klay"].callbacks[method]
 	}
-	return r.services[elem[0]].callbacks[elem[1]]
+
+	if namespace == "kaia" {
+		return r.services["klay"].callbacks[method]
+	}
+
+	return r.services[namespace].callbacks[method]
 }
 
 // subscription returns a subscription callback in the given service.
