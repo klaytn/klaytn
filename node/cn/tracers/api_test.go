@@ -205,7 +205,7 @@ func TestTraceCall(t *testing.T) {
 
 	testSuite := []struct {
 		blockNumber rpc.BlockNumber
-		call        kaiaapi.CallArgs
+		call        kaiaapi.TransactionArgs
 		config      *TraceConfig
 		expectErr   error
 		expect      interface{}
@@ -213,10 +213,10 @@ func TestTraceCall(t *testing.T) {
 		// Standard JSON trace upon the genesis, plain transfer.
 		{
 			blockNumber: rpc.BlockNumber(0),
-			call: kaiaapi.CallArgs{
-				From:  accounts[0].addr,
-				To:    &accounts[1].addr,
-				Value: (hexutil.Big)(*big.NewInt(1000)),
+			call: kaiaapi.TransactionArgs{
+				From:      &accounts[0].addr,
+				Recipient: &accounts[1].addr,
+				Amount:    (*hexutil.Big)(big.NewInt(1000)),
 			},
 			config:    nil,
 			expectErr: errors.New("tracing failed: insufficient balance for transfer"),
@@ -225,10 +225,10 @@ func TestTraceCall(t *testing.T) {
 		// Standard JSON trace upon the head, plain transfer.
 		{
 			blockNumber: rpc.BlockNumber(genBlocks),
-			call: kaiaapi.CallArgs{
-				From:  accounts[0].addr,
-				To:    &accounts[1].addr,
-				Value: (hexutil.Big)(*big.NewInt(1000)),
+			call: kaiaapi.TransactionArgs{
+				From:      &accounts[0].addr,
+				Recipient: &accounts[1].addr,
+				Amount:    (*hexutil.Big)(big.NewInt(1000)),
 			},
 			config:    nil,
 			expectErr: nil,
@@ -242,10 +242,10 @@ func TestTraceCall(t *testing.T) {
 		// Standard JSON trace upon the non-existent block, error expects
 		{
 			blockNumber: rpc.BlockNumber(genBlocks + 1),
-			call: kaiaapi.CallArgs{
-				From:  accounts[0].addr,
-				To:    &accounts[1].addr,
-				Value: (hexutil.Big)(*big.NewInt(1000)),
+			call: kaiaapi.TransactionArgs{
+				From:      &accounts[0].addr,
+				Recipient: &accounts[1].addr,
+				Amount:    (*hexutil.Big)(big.NewInt(1000)),
 			},
 			config:    nil,
 			expectErr: fmt.Errorf("the block does not exist (block number: %d)", genBlocks+1),
@@ -254,10 +254,10 @@ func TestTraceCall(t *testing.T) {
 		// Standard JSON trace upon the latest block
 		{
 			blockNumber: rpc.LatestBlockNumber,
-			call: kaiaapi.CallArgs{
-				From:  accounts[0].addr,
-				To:    &accounts[1].addr,
-				Value: (hexutil.Big)(*big.NewInt(1000)),
+			call: kaiaapi.TransactionArgs{
+				From:      &accounts[0].addr,
+				Recipient: &accounts[1].addr,
+				Amount:    (*hexutil.Big)(big.NewInt(1000)),
 			},
 			config:    nil,
 			expectErr: nil,
@@ -271,10 +271,10 @@ func TestTraceCall(t *testing.T) {
 		// Standard JSON trace upon the pending block
 		{
 			blockNumber: rpc.PendingBlockNumber,
-			call: kaiaapi.CallArgs{
-				From:  accounts[0].addr,
-				To:    &accounts[1].addr,
-				Value: (hexutil.Big)(*big.NewInt(1000)),
+			call: kaiaapi.TransactionArgs{
+				From:      &accounts[0].addr,
+				Recipient: &accounts[1].addr,
+				Amount:    (*hexutil.Big)(big.NewInt(1000)),
 			},
 			config:    nil,
 			expectErr: nil,

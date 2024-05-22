@@ -213,7 +213,7 @@ func (s *PrivateAccountAPI) LockAccount(addr common.Address) bool {
 // and release it after the transaction has been submitted to the tx pool.
 func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs, passwd string) (*types.Transaction, error) {
 	// Look up the wallet containing the requested signer
-	account := accounts.Account{Address: args.From}
+	account := accounts.Account{Address: args.from()}
 	wallet, err := s.am.Find(account)
 	if err != nil {
 		return nil, err
@@ -238,8 +238,8 @@ func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs
 	if args.AccountNonce == nil {
 		// Hold the addresse's mutex around signing to prevent concurrent assignment of
 		// the same nonce to multiple accounts.
-		s.nonceLock.LockAddr(args.From)
-		defer s.nonceLock.UnlockAddr(args.From)
+		s.nonceLock.LockAddr(args.from())
+		defer s.nonceLock.UnlockAddr(args.from())
 	}
 	signedTx, err := s.SignTransaction(ctx, args, passwd)
 	if err != nil {
@@ -307,11 +307,11 @@ func (s *PrivateAccountAPI) signNewTransaction(ctx context.Context, args NewTxAr
 // try to sign it with the key associated with args.From. If the given password isn't able to
 // decrypt the key it fails.
 func (s *PrivateAccountAPI) SendAccountUpdate(ctx context.Context, args AccountUpdateTxArgs, passwd string) (common.Hash, error) {
-	if args.Nonce == nil {
+	if args.AccountNonce == nil {
 		// Hold the addresse's mutex around signing to prevent concurrent assignment of
 		// the same nonce to multiple accounts.
-		s.nonceLock.LockAddr(args.From)
-		defer s.nonceLock.UnlockAddr(args.From)
+		s.nonceLock.LockAddr(args.from())
+		defer s.nonceLock.UnlockAddr(args.from())
 	}
 
 	signed, err := s.signNewTransaction(ctx, &args, passwd)
@@ -326,11 +326,11 @@ func (s *PrivateAccountAPI) SendAccountUpdate(ctx context.Context, args AccountU
 // try to sign it with the key associated with args.From. If the given password isn't able to
 // decrypt the key it fails.
 func (s *PrivateAccountAPI) SendValueTransfer(ctx context.Context, args ValueTransferTxArgs, passwd string) (common.Hash, error) {
-	if args.Nonce == nil {
+	if args.AccountNonce == nil {
 		// Hold the addresse's mutex around signing to prevent concurrent assignment of
 		// the same nonce to multiple accounts.
-		s.nonceLock.LockAddr(args.From)
-		defer s.nonceLock.UnlockAddr(args.From)
+		s.nonceLock.LockAddr(args.from())
+		defer s.nonceLock.UnlockAddr(args.from())
 	}
 
 	signed, err := s.signNewTransaction(ctx, &args, passwd)
@@ -360,7 +360,7 @@ func (s *PrivateAccountAPI) SignTransaction(ctx context.Context, args SendTxArgs
 	if err != nil {
 		return nil, err
 	}
-	signedTx, err := s.sign(args.From, passwd, tx)
+	signedTx, err := s.sign(args.from(), passwd, tx)
 	if err != nil {
 		return nil, err
 	}

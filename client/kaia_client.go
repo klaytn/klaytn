@@ -508,23 +508,15 @@ func (ec *Client) SendRawTransaction(ctx context.Context, tx *types.Transaction)
 func (ec *Client) SendUnsignedTransaction(ctx context.Context, from common.Address, to common.Address, gas uint64, gasPrice uint64, value *big.Int, data []byte, input []byte) (common.Hash, error) {
 	var hex hexutil.Bytes
 
-	tGas := hexutil.Uint64(gas)
-	bigGasPrice := new(big.Int).SetUint64(gasPrice)
-	tGasPrice := (*hexutil.Big)(bigGasPrice)
-	hValue := (*hexutil.Big)(value)
-	tData := hexutil.Bytes(data)
-	tInput := hexutil.Bytes(input)
-
-	unsignedTx := api.SendTxArgs{
-		From:      from,
-		Recipient: &to,
-		GasLimit:  &tGas,
-		Price:     tGasPrice,
-		Amount:    hValue,
-		// Nonce : nonce,	Nonce will be determined by Kaia node.
-		Data:    &tData,
-		Payload: &tInput,
-	}
+	unsignedTx := api.SendTxArgs{}
+	unsignedTx.From = &from
+	unsignedTx.Recipient = &to
+	unsignedTx.GasLimit = (*hexutil.Uint64)(&gas)
+	unsignedTx.Price = (*hexutil.Big)(new(big.Int).SetUint64(gasPrice))
+	unsignedTx.Amount = (*hexutil.Big)(value)
+	// Nonce = nonce,	Nonce will be determined by Kaia node.
+	unsignedTx.Data = (*hexutil.Bytes)(&data)
+	unsignedTx.Payload = (*hexutil.Bytes)(&input)
 
 	if err := ec.c.CallContext(ctx, &hex, "kaia_sendTransaction", toSendTxArgs(unsignedTx)); err != nil {
 		return common.Hash{}, err
@@ -574,19 +566,19 @@ func toSendTxArgs(msg api.SendTxArgs) interface{} {
 		"to":   msg.Recipient,
 	}
 	if *msg.GasLimit != 0 {
-		arg["gas"] = (*hexutil.Uint64)(msg.GasLimit)
+		arg["gas"] = msg.GasLimit
 	}
 	if msg.Price != nil {
-		arg["gasPrice"] = (*hexutil.Big)(msg.Price)
+		arg["gasPrice"] = msg.Price
 	}
 	if msg.Amount != nil {
-		arg["value"] = (*hexutil.Big)(msg.Amount)
+		arg["value"] = msg.Amount
 	}
 	if len(*msg.Data) > 0 {
-		arg["data"] = (*hexutil.Bytes)(msg.Data)
+		arg["data"] = msg.Data
 	}
 	if len(*msg.Payload) > 0 {
-		arg["input"] = (*hexutil.Bytes)(msg.Payload)
+		arg["input"] = msg.Recipient
 	}
 
 	return arg

@@ -110,40 +110,293 @@ type NewTxArgs interface {
 	setGasPrice(*hexutil.Big)
 }
 
-// SendTxArgs represents the arguments to submit a new transaction into the transaction pool.
-type SendTxArgs struct {
-	TypeInt              *types.TxType   `json:"typeInt"`
-	From                 common.Address  `json:"from"`
-	Recipient            *common.Address `json:"to"`
-	GasLimit             *hexutil.Uint64 `json:"gas"`
-	Price                *hexutil.Big    `json:"gasPrice"`
-	MaxPriorityFeePerGas *hexutil.Big    `json:"maxPriorityFeePerGas"`
-	MaxFeePerGas         *hexutil.Big    `json:"maxFeePerGas"`
-	Amount               *hexutil.Big    `json:"value"`
-	AccountNonce         *hexutil.Uint64 `json:"nonce"`
-	// We accept "data" and "input" for backwards-compatibility reasons. "input" is the
-	// newer name and should be preferred by clients.
+// TransactionArgs represents the arguments to construct a new transaction
+// into the txpool for eth namespace. For Kaia namespace, use SendTxArgs instead.
+// For the message call, both Kaia and Eth namespace use TransactionArgs.
+type TransactionArgs struct {
+	From         *common.Address `json:"from"`
+	Recipient    *common.Address `json:"to"`
+	GasLimit     *hexutil.Uint64 `json:"gas"`
+	Price        *hexutil.Big    `json:"gasPrice"`
+	Amount       *hexutil.Big    `json:"value"`
+	AccountNonce *hexutil.Uint64 `json:"nonce"`
+
+	// We accept "data" and "input" for backwards-compatibility reasons.
+	// "input" is the newer name and should be preferred by clients.
 	Data    *hexutil.Bytes `json:"data"`
 	Payload *hexutil.Bytes `json:"input"`
 
-	CodeFormat    *params.CodeFormat `json:"codeFormat"`
-	HumanReadable *bool              `json:"humanReadable"`
+	// For EthereumDynamicFee TxType
+	MaxPriorityFeePerGas *hexutil.Big `json:"maxPriorityFeePerGas"`
+	MaxFeePerGas         *hexutil.Big `json:"maxFeePerGas"`
 
-	Key *hexutil.Bytes `json:"key"`
-
+	// For EthereumAccessList TxType
 	AccessList *types.AccessList `json:"accessList,omitempty"`
 	ChainID    *hexutil.Big      `json:"chainId,omitempty"`
+}
 
-	FeePayer *common.Address `json:"feePayer"`
-	FeeRatio *types.FeeRatio `json:"feeRatio"`
+func (args *TransactionArgs) from() common.Address {
+	if args.From == nil {
+		return common.Address{}
+	}
+	return *args.From
+}
 
-	TxSignatures types.TxSignaturesJSON `json:"signatures"`
+func (args *TransactionArgs) gas() *hexutil.Uint64 {
+	return args.GasLimit
+}
+
+func (args *TransactionArgs) gasPrice() *hexutil.Big {
+	return args.Price
+}
+
+func (args *TransactionArgs) nonce() *hexutil.Uint64 {
+	return args.AccountNonce
+}
+
+func (args *TransactionArgs) InputData() []byte {
+	if args.Payload != nil {
+		return *args.Payload
+	}
+	if args.Data != nil {
+		return *args.Data
+	}
+	return nil
+}
+
+func (args *TransactionArgs) setGas(gas *hexutil.Uint64) {
+	args.GasLimit = gas
+}
+
+func (args *TransactionArgs) setGasPrice(gasPrice *hexutil.Big) {
+	args.Price = gasPrice
+}
+
+func (args *TransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsicGas uint64) (*types.Transaction, error) {
+	// Reject invalid combinations of pre- and post-1559 fee styles
+	if args.Price != nil && (args.MaxFeePerGas != nil || args.MaxPriorityFeePerGas != nil) {
+		return nil, errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
+	} else if args.MaxFeePerGas != nil && args.MaxPriorityFeePerGas != nil {
+		if args.MaxFeePerGas.ToInt().Cmp(args.MaxPriorityFeePerGas.ToInt()) < 0 {
+			return nil, errors.New("MaxPriorityFeePerGas is greater than MaxFeePerGas")
+		}
+	}
+
+	// Set sender address or use zero address if none specified.
+	addr := args.from()
+
+	// Set default gas & gas price if none were set
+	gas := globalGasCap
+	if gas == 0 {
+		gas = params.UpperGasLimit
+	}
+	if args.GasLimit != nil {
+		gas = uint64(*args.GasLimit)
+	}
+	if globalGasCap != 0 && globalGasCap < gas {
+		logger.Warn("Caller gas above allowance, capping", "requested", gas, "cap", globalGasCap)
+		gas = globalGasCap
+	}
+
+	// Do not update gasPrice unless any of args.Price and args.MaxFeePerGas is specified.
+	gasPrice := new(big.Int)
+	if args.Price != nil {
+		gasPrice = args.Price.ToInt()
+	} else if args.MaxFeePerGas != nil {
+		gasPrice = args.MaxFeePerGas.ToInt()
+	} else if baseFee.Cmp(new(big.Int).SetUint64(params.ZeroBaseFee)) != 0 {
+		// User specified neither GasPrice nor MaxFeePerGas, use baseFee
+		gasPrice = new(big.Int).Mul(baseFee, common.Big2)
+	}
+
+	value := new(big.Int)
+	if &args.Amount != nil {
+		value = args.Amount.ToInt()
+	}
+
+	var accessList types.AccessList
+	if args.AccessList != nil {
+		accessList = *args.AccessList
+	}
+	return types.NewMessage(addr, args.Recipient, 0, value, gas, gasPrice, args.InputData(), false, intrinsicGas, accessList), nil
+}
+
+// setDefaults fills in default values for unspecified tx fields.
+func (args *TransactionArgs) setDefaults(ctx context.Context, b Backend) error {
+	if args.Price != nil && (args.MaxFeePerGas != nil || args.MaxPriorityFeePerGas != nil) {
+		return errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
+	}
+	// After london, default to 1559 uncles gasPrice is set
+	head := b.CurrentBlock().Header()
+	isMagma := head.BaseFee != nil
+
+	// b.SuggestPrice = unitPrice, for before Magma
+	//                = baseFee,   for after Magma
+	gasPrice, err := b.SuggestPrice(ctx)
+	if err != nil {
+		return err
+	}
+
+	// If user specifies both maxPriorityFee and maxFee, then we do not
+	// need to consult the chain for defaults. It's definitely a London tx.
+	if args.MaxPriorityFeePerGas == nil || args.MaxFeePerGas == nil {
+		if b.ChainConfig().IsEthTxTypeForkEnabled(head.Number) && args.Price == nil {
+			if args.MaxPriorityFeePerGas == nil {
+				args.MaxPriorityFeePerGas = (*hexutil.Big)(gasPrice)
+			}
+			if args.MaxFeePerGas == nil {
+				// Before Magma hard fork, `gasFeeCap` was set to `maxPriorityFeePerGas` by default.
+				args.MaxFeePerGas = args.MaxPriorityFeePerGas
+				if isMagma {
+					// After Magma hard fork, `gasFeeCap` was set to `baseFee*2` by default.
+					args.MaxFeePerGas = (*hexutil.Big)(gasPrice)
+				}
+			}
+			if isMagma {
+				if args.MaxFeePerGas.ToInt().Cmp(new(big.Int).Div(gasPrice, common.Big2)) < 0 {
+					return fmt.Errorf("maxFeePerGas (%v) < BaseFee (%v)", args.MaxFeePerGas, gasPrice)
+				}
+			} else if args.MaxPriorityFeePerGas.ToInt().Cmp(gasPrice) != 0 || args.MaxFeePerGas.ToInt().Cmp(gasPrice) != 0 {
+				return fmt.Errorf("only %s is allowed to be used as maxFeePerGas and maxPriorityPerGas", gasPrice.Text(16))
+			}
+			if args.MaxFeePerGas.ToInt().Cmp(args.MaxPriorityFeePerGas.ToInt()) < 0 {
+				return fmt.Errorf("maxFeePerGas (%v) < maxPriorityFeePerGas (%v)", args.MaxFeePerGas, args.MaxPriorityFeePerGas)
+			}
+		} else {
+			if args.MaxFeePerGas != nil || args.MaxPriorityFeePerGas != nil {
+				return errors.New("maxFeePerGas or maxPriorityFeePerGas specified but london is not active yet")
+			}
+			if args.Price == nil {
+				// TODO-Kaia: Original logic of Ethereum uses b.SuggestTipCap which suggests TipCap, not a GasPrice.
+				// But Kaia currently uses fixed unit price determined by Governance, so using b.SuggestPrice
+				// is fine as now.
+				if b.ChainConfig().IsEthTxTypeForkEnabled(head.Number) {
+					// TODO-Kaia: Kaia is using fixed BaseFee(0) as now but
+					// if we apply dynamic BaseFee, we should add calculated BaseFee instead of params.ZeroBaseFee.
+					gasPrice.Add(gasPrice, new(big.Int).SetUint64(params.ZeroBaseFee))
+				}
+				args.Price = (*hexutil.Big)(gasPrice)
+			}
+		}
+	} else {
+		// Both maxPriorityFee and maxFee set by caller. Sanity-check their internal relation
+		if isMagma {
+			if args.MaxFeePerGas.ToInt().Cmp(new(big.Int).Div(gasPrice, common.Big2)) < 0 {
+				return fmt.Errorf("maxFeePerGas (%v) < BaseFee (%v)", args.MaxFeePerGas, gasPrice)
+			}
+		} else {
+			if args.MaxFeePerGas.ToInt().Cmp(args.MaxPriorityFeePerGas.ToInt()) < 0 {
+				return fmt.Errorf("maxFeePerGas (%v) < maxPriorityFeePerGas (%v)", args.MaxFeePerGas, args.MaxPriorityFeePerGas)
+			}
+		}
+	}
+	if args.Amount == nil {
+		args.Amount = new(hexutil.Big)
+	}
+	if args.AccountNonce == nil {
+		nonce := b.GetPoolNonce(ctx, args.from())
+		args.AccountNonce = (*hexutil.Uint64)(&nonce)
+	}
+	if args.Data != nil && args.Payload != nil && !bytes.Equal(*args.Data, *args.Payload) {
+		return errors.New(`both "data" and "input" are set and not equal. Please use "input" to pass transaction call data`)
+	}
+	if args.Recipient == nil && len(args.InputData()) == 0 {
+		return errors.New(`contract creation without any data provided`)
+	}
+	// Estimate the gas usage if necessary.
+	if args.GasLimit == nil {
+		// These fields are immutable during the estimation, safe to
+		// pass the pointer directly.
+		data := args.InputData()
+		callArgs := TransactionArgs{}
+		callArgs.From = args.From
+		callArgs.Recipient = args.Recipient
+		callArgs.Price = args.Price
+		callArgs.MaxFeePerGas = args.MaxFeePerGas
+		callArgs.MaxPriorityFeePerGas = args.MaxPriorityFeePerGas
+		callArgs.Amount = args.Amount
+		callArgs.Data = (*hexutil.Bytes)(&data)
+		callArgs.AccessList = args.AccessList
+
+		pendingBlockNr := rpc.NewBlockNumberOrHashWithNumber(rpc.PendingBlockNumber)
+		gasCap := uint64(0)
+		if rpcGasCap := b.RPCGasCap(); rpcGasCap != nil {
+			gasCap = rpcGasCap.Uint64()
+		}
+		estimated, err := EthDoEstimateGas(ctx, b, callArgs, pendingBlockNr, gasCap)
+		if err != nil {
+			return err
+		}
+		args.GasLimit = &estimated
+		logger.Trace("Estimate gas usage automatically", "gas", args.GasLimit)
+	}
+	if args.ChainID == nil {
+		id := (*hexutil.Big)(b.ChainConfig().ChainID)
+		args.ChainID = id
+	}
+	return nil
+}
+
+// toTransaction converts the arguments to a transaction.
+// This assumes that setDefaults has been called.
+func (args *TransactionArgs) toTransaction() (*types.Transaction, error) {
+	var tx *types.Transaction
+	switch {
+	case args.MaxFeePerGas != nil:
+		al := types.AccessList{}
+		if args.AccessList != nil {
+			al = *args.AccessList
+		}
+		tx = types.NewTx(&types.TxInternalDataEthereumDynamicFee{
+			ChainID:      (*big.Int)(args.ChainID),
+			AccountNonce: uint64(*args.AccountNonce),
+			GasTipCap:    (*big.Int)(args.MaxPriorityFeePerGas),
+			GasFeeCap:    (*big.Int)(args.MaxFeePerGas),
+			GasLimit:     uint64(*args.GasLimit),
+			Recipient:    args.Recipient,
+			Amount:       (*big.Int)(args.Amount),
+			Payload:      args.InputData(),
+			AccessList:   al,
+		})
+	case args.AccessList != nil:
+		tx = types.NewTx(&types.TxInternalDataEthereumAccessList{
+			ChainID:      (*big.Int)(args.ChainID),
+			AccountNonce: uint64(*args.AccountNonce),
+			Recipient:    args.Recipient,
+			GasLimit:     uint64(*args.GasLimit),
+			Price:        (*big.Int)(args.Price),
+			Amount:       (*big.Int)(args.Amount),
+			Payload:      args.InputData(),
+			AccessList:   *args.AccessList,
+		})
+	default:
+		tx = types.NewTx(&types.TxInternalDataLegacy{
+			AccountNonce: uint64(*args.AccountNonce),
+			Price:        (*big.Int)(args.Price),
+			GasLimit:     uint64(*args.GasLimit),
+			Recipient:    args.Recipient,
+			Amount:       (*big.Int)(args.Amount),
+			Payload:      args.InputData(),
+		})
+	}
+	return tx, nil
+}
+
+// SendTxArgs represents the arguments to submit a new transaction into the transaction pool
+// for a kaia namespace.
+type SendTxArgs struct {
+	TransactionArgs
+	TypeInt       *types.TxType          `json:"typeInt,omitempty"`
+	FeePayer      *common.Address        `json:"feePayer"`
+	FeeRatio      *types.FeeRatio        `json:"feeRatio"`
+	CodeFormat    *params.CodeFormat     `json:"codeFormat"`
+	HumanReadable *bool                  `json:"humanReadable"`
+	Key           *hexutil.Bytes         `json:"key"`
+	TxSignatures  types.TxSignaturesJSON `json:"signatures"`
 }
 
 // setDefaults is a helper function that fills in default values for unspecified common tx fields.
 func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
-	isMagma := b.ChainConfig().IsMagmaForkEnabled(new(big.Int).Add(b.CurrentBlock().Number(), big.NewInt(1)))
-
 	if args.TypeInt == nil {
 		args.TypeInt = new(types.TxType)
 		*args.TypeInt = types.TxTypeLegacyTransaction
@@ -158,36 +411,35 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 			args.ChainID = (*hexutil.Big)(b.ChainConfig().ChainID)
 		}
 	}
+	// After london, default to 1559 uncles gasPrice is set
+	head := b.CurrentBlock().Header()
+	isMagma := head.BaseFee != nil
+
+	// b.SuggestPrice = unitPrice, for before Magma
+	//                = baseFee * 2,   for after Magma
+	gasPrice, err := b.SuggestPrice(ctx)
+	if err != nil {
+		return err
+	}
+
 	// For the transaction that do not use the gasPrice field, the default value of gasPrice is not set.
 	if args.Price == nil && *args.TypeInt != types.TxTypeEthereumDynamicFee {
-		// b.SuggestPrice = unitPrice, for before Magma
-		//                = baseFee * 2,   for after Magma
-		price, err := b.SuggestPrice(ctx)
-		if err != nil {
-			return err
-		}
-		args.Price = (*hexutil.Big)(price)
+		args.Price = (*hexutil.Big)(gasPrice)
 	}
 
 	if *args.TypeInt == types.TxTypeEthereumDynamicFee {
-		gasPrice, err := b.SuggestPrice(ctx)
-		if err != nil {
-			return err
-		}
 		if args.MaxPriorityFeePerGas == nil {
 			args.MaxPriorityFeePerGas = (*hexutil.Big)(gasPrice)
 		}
 		if args.MaxFeePerGas == nil {
-			// Before Magma hard fork, `gasFeeCap` was set to `baseFee*2 + maxPriorityFeePerGas` by default.
-			gasFeeCap := new(big.Int).Add(
-				(*big.Int)(args.MaxPriorityFeePerGas),
-				new(big.Int).Mul(new(big.Int).SetUint64(params.ZeroBaseFee), big.NewInt(2)),
-			)
+			// After EthTxtype, `gasFeeCap` was set to `maxPriorityFeePerGas` by default.
+			// Anyway, if it's different from unitPrice(gasPrice), rejected.
+			args.MaxFeePerGas = args.MaxPriorityFeePerGas
+
+			// After Magma hard fork, `gasFeeCap` was set to `baseFee*2` by default.
 			if isMagma {
-				// After Magma hard fork, `gasFeeCap` was set to `baseFee*2` by default.
-				gasFeeCap = gasPrice
+				args.MaxFeePerGas = (*hexutil.Big)(gasPrice)
 			}
-			args.MaxFeePerGas = (*hexutil.Big)(gasFeeCap)
 		}
 		if isMagma {
 			if args.MaxFeePerGas.ToInt().Cmp(new(big.Int).Div(gasPrice, common.Big2)) < 0 {
@@ -201,7 +453,7 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 		}
 	}
 	if args.AccountNonce == nil {
-		nonce := b.GetPoolNonce(ctx, args.From)
+		nonce := b.GetPoolNonce(ctx, args.from())
 		args.AccountNonce = (*hexutil.Uint64)(&nonce)
 	}
 
@@ -219,28 +471,47 @@ func (args *SendTxArgs) checkArgs() error {
 		return nil
 	}
 
-	argsType := reflect.TypeOf(*args)
-	argsValue := reflect.ValueOf(*args)
-
-	for i := 0; i < argsType.NumField(); i++ {
-		// Skip From since it is an essential field and a non-pointer value
+	checkArg := func(field reflect.StructField, value reflect.Value) error {
+		// Skip From since it is an essential field
 		// Skip TxSignatures since the value is not considered by all APIs
-		if argsType.Field(i).Name == "From" || argsType.Field(i).Name == "TxSignatures" {
-			continue
+		if field.Name == "From" || field.Name == "TxSignatures" {
+			return nil
 		}
-
 		// An args field doesn't have a value but the field name exist on the tx type
-		if argsValue.Field(i).IsNil() && isTxField[*args.TypeInt][argsType.Field(i).Name] {
+		if value.IsNil() && isTxField[*args.TypeInt][field.Name] {
+			// if argsValue.Field(i).IsNil() && isTxField[*args.TypeInt][argsType.Field(i).Name] {
 			// Allow only contract deploying txs to set the recipient as nil
-			if (*args.TypeInt).IsContractDeploy() && argsType.Field(i).Name == "Recipient" {
-				continue
+			if (*args.TypeInt).IsContractDeploy() && field.Name == "To" {
+				return nil
 			}
-			return errors.New((string)(argsType.Field(i).Tag) + " is required for " + (*args.TypeInt).String())
+			return errors.New((string)(field.Tag) + " is required for " + (*args.TypeInt).String())
 		}
 
 		// An args field has a value but the field name doesn't exist on the tx type
-		if !argsValue.Field(i).IsNil() && !isTxField[*args.TypeInt][argsType.Field(i).Name] {
-			return errors.New((string)(argsType.Field(i).Tag) + " is not a field of " + (*args.TypeInt).String())
+		if !value.IsNil() && !isTxField[*args.TypeInt][field.Name] {
+			return errors.New((string)(field.Tag) + " is not a field of " + (*args.TypeInt).String())
+		}
+		return nil
+	}
+
+	// check common fields first
+	argsType := reflect.TypeOf(args.TransactionArgs)
+	argsValue := reflect.ValueOf(args.TransactionArgs)
+	for i := 0; i < argsType.NumField(); i++ {
+		if err := checkArg(argsType.Field(i), argsValue.Field(i)); err != nil {
+			return err
+		}
+	}
+
+	// then, check kaia-specific fields
+	argsType = reflect.TypeOf(*args)
+	argsValue = reflect.ValueOf(*args)
+	for i := 0; i < argsType.NumField(); i++ {
+		if argsType.Field(i).Name == "TransactionArgs" {
+			continue
+		}
+		if err := checkArg(argsType.Field(i), argsValue.Field(i)); err != nil {
+			return err
 		}
 	}
 
@@ -263,7 +534,7 @@ func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 	}
 
 	if !args.TypeInt.IsEthereumTransaction() {
-		values[types.TxValueKeyFrom] = args.From
+		values[types.TxValueKeyFrom] = args.from()
 	}
 	values[types.TxValueKeyNonce] = uint64(*args.AccountNonce)
 	values[types.TxValueKeyGasLimit] = uint64(*args.GasLimit)
@@ -274,7 +545,7 @@ func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 	}
 	if args.TypeInt.IsContractDeploy() || args.TypeInt.IsEthereumTransaction() {
 		// contract deploy type and ethereum tx types allow nil as TxValueKeyTo value
-		values[types.TxValueKeyTo] = (*common.Address)(args.Recipient)
+		values[types.TxValueKeyTo] = args.Recipient
 	} else if args.Recipient != nil {
 		values[types.TxValueKeyTo] = *args.Recipient
 	}
@@ -297,7 +568,7 @@ func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 			values[types.TxValueKeyData] = ([]byte)(*args.Payload)
 		}
 	} else if args.TypeInt.IsEthereumTransaction() {
-		// For Ethereum transactions, Payload is an optional field.
+		// For Ethereum transactions, Input is an optional field.
 		values[types.TxValueKeyData] = []byte{}
 	}
 	if args.CodeFormat != nil {
@@ -363,91 +634,45 @@ func (args *SendTxArgs) toTransaction() (*types.Transaction, error) {
 	return types.NewTransactionWithMap(*args.TypeInt, values)
 }
 
-func (args *SendTxArgs) from() common.Address {
-	return args.From
-}
-
-func (args *SendTxArgs) gas() *hexutil.Uint64 {
-	return args.GasLimit
-}
-
-func (args *SendTxArgs) gasPrice() *hexutil.Big {
-	return args.Price
-}
-
-func (args *SendTxArgs) nonce() *hexutil.Uint64 {
-	return args.AccountNonce
-}
-
-func (args *SendTxArgs) setGas(gas *hexutil.Uint64) {
-	args.GasLimit = gas
-}
-
-func (args *SendTxArgs) setGasPrice(gasPrice *hexutil.Big) {
-	args.Price = gasPrice
-}
-
 type ValueTransferTxArgs struct {
-	From     common.Address  `json:"from"`
-	Gas      *hexutil.Uint64 `json:"gas"`
-	GasPrice *hexutil.Big    `json:"gasPrice"`
-	Nonce    *hexutil.Uint64 `json:"nonce"`
-	To       common.Address  `json:"to"`
-	Value    *hexutil.Big    `json:"value"`
-}
-
-func (args *ValueTransferTxArgs) from() common.Address {
-	return args.From
-}
-
-func (args *ValueTransferTxArgs) gas() *hexutil.Uint64 {
-	return args.Gas
-}
-
-func (args *ValueTransferTxArgs) gasPrice() *hexutil.Big {
-	return args.GasPrice
-}
-
-func (args *ValueTransferTxArgs) nonce() *hexutil.Uint64 {
-	return args.Nonce
-}
-
-func (args *ValueTransferTxArgs) setGas(gas *hexutil.Uint64) {
-	args.Gas = gas
-}
-
-func (args *ValueTransferTxArgs) setGasPrice(gasPrice *hexutil.Big) {
-	args.GasPrice = gasPrice
+	TransactionArgs
 }
 
 // setDefaults is a helper function that fills in default values for unspecified tx fields.
 func (args *ValueTransferTxArgs) setDefaults(ctx context.Context, b Backend) error {
-	if args.Gas == nil {
-		args.Gas = new(hexutil.Uint64)
-		*(*uint64)(args.Gas) = 90000
+	// Check if invalid arguments exist
+	if args.InputData() != nil || args.MaxPriorityFeePerGas != nil || args.MaxFeePerGas != nil || args.AccessList != nil || args.ChainID != nil {
+		return errors.New(fmt.Sprintln(
+			"deny next arguments when it's valueTransferTx", "args.Data", args.Data, "args.Payload", args.Payload,
+			"args.MaxPriorityFeePerGas", args.MaxPriorityFeePerGas, "args.MaxFeePerGas", args.MaxFeePerGas,
+			"args.AccessList", args.AccessList, "args.ChainID", args.ChainID))
 	}
-	if args.GasPrice == nil {
+	if args.GasLimit == nil {
+		args.GasLimit = new(hexutil.Uint64)
+		*(*uint64)(args.GasLimit) = 90000
+	}
+	if args.Price == nil {
 		price, err := b.SuggestPrice(ctx)
 		if err != nil {
 			return err
 		}
-		args.GasPrice = (*hexutil.Big)(price)
+		args.Price = (*hexutil.Big)(price)
 	}
-	if args.Nonce == nil {
-		nonce := b.GetPoolNonce(ctx, args.From)
-		args.Nonce = (*hexutil.Uint64)(&nonce)
+	if args.AccountNonce == nil {
+		nonce := b.GetPoolNonce(ctx, args.from())
+		args.AccountNonce = (*hexutil.Uint64)(&nonce)
 	}
 	return nil
 }
 
 func (args *ValueTransferTxArgs) toTransaction() (*types.Transaction, error) {
 	tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, map[types.TxValueKeyType]interface{}{
-		types.TxValueKeyNonce:    (uint64)(*args.Nonce),
-		types.TxValueKeyGasLimit: (uint64)(*args.Gas),
-		types.TxValueKeyGasPrice: (*big.Int)(args.GasPrice),
+		types.TxValueKeyNonce:    (uint64)(*args.AccountNonce),
+		types.TxValueKeyGasLimit: (uint64)(*args.GasLimit),
+		types.TxValueKeyGasPrice: (*big.Int)(args.Price),
 		types.TxValueKeyFrom:     args.From,
-		types.TxValueKeyTo:       args.To,
-		types.TxValueKeyAmount:   (*big.Int)(args.Value),
+		types.TxValueKeyTo:       args.Recipient,
+		types.TxValueKeyAmount:   (*big.Int)(args.Amount),
 	})
 	if err != nil {
 		return nil, err
@@ -457,53 +682,35 @@ func (args *ValueTransferTxArgs) toTransaction() (*types.Transaction, error) {
 }
 
 type AccountUpdateTxArgs struct {
-	From     common.Address  `json:"from"`
-	Gas      *hexutil.Uint64 `json:"gas"`
-	GasPrice *hexutil.Big    `json:"gasPrice"`
-	Nonce    *hexutil.Uint64 `json:"nonce"`
-	Key      *hexutil.Bytes  `json:"key"`
-}
-
-func (args *AccountUpdateTxArgs) from() common.Address {
-	return args.From
-}
-
-func (args *AccountUpdateTxArgs) gas() *hexutil.Uint64 {
-	return args.Gas
-}
-
-func (args *AccountUpdateTxArgs) gasPrice() *hexutil.Big {
-	return args.GasPrice
-}
-
-func (args *AccountUpdateTxArgs) nonce() *hexutil.Uint64 {
-	return args.Nonce
-}
-
-func (args *AccountUpdateTxArgs) setGas(gas *hexutil.Uint64) {
-	args.Gas = gas
-}
-
-func (args *AccountUpdateTxArgs) setGasPrice(gasPrice *hexutil.Big) {
-	args.GasPrice = gasPrice
+	TransactionArgs
+	Key *hexutil.Bytes `json:"key"`
 }
 
 // setDefaults is a helper function that fills in default values for unspecified tx fields.
 func (args *AccountUpdateTxArgs) setDefaults(ctx context.Context, b Backend) error {
-	if args.Gas == nil {
-		args.Gas = new(hexutil.Uint64)
-		*(*uint64)(args.Gas) = 90000
+	// Check if invalid arguments exist
+	if args.Recipient != nil || args.Amount != nil || args.InputData() != nil || args.MaxPriorityFeePerGas != nil || args.MaxFeePerGas != nil || args.AccessList != nil || args.ChainID != nil {
+		return errors.New(fmt.Sprintln(
+			"deny next arguments when it's valueTransferTx", "args.Recipient", args.Recipient, "args.Amount", args.Amount,
+			"args.Data", args.Data, "args.Payload", args.Payload,
+			"args.MaxPriorityFeePerGas", args.MaxPriorityFeePerGas, "args.MaxFeePerGas", args.MaxFeePerGas,
+			"args.AccessList", args.AccessList, "args.ChainID", args.ChainID))
 	}
-	if args.GasPrice == nil {
+
+	if args.GasLimit == nil {
+		args.GasLimit = new(hexutil.Uint64)
+		*(*uint64)(args.GasLimit) = 90000
+	}
+	if args.Price == nil {
 		price, err := b.SuggestPrice(ctx)
 		if err != nil {
 			return err
 		}
-		args.GasPrice = (*hexutil.Big)(price)
+		args.Price = (*hexutil.Big)(price)
 	}
-	if args.Nonce == nil {
-		nonce := b.GetPoolNonce(ctx, args.From)
-		args.Nonce = (*hexutil.Uint64)(&nonce)
+	if args.AccountNonce == nil {
+		nonce := b.GetPoolNonce(ctx, args.from())
+		args.AccountNonce = (*hexutil.Uint64)(&nonce)
 	}
 	return nil
 }
@@ -515,9 +722,9 @@ func (args *AccountUpdateTxArgs) toTransaction() (*types.Transaction, error) {
 		return nil, err
 	}
 	tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, map[types.TxValueKeyType]interface{}{
-		types.TxValueKeyNonce:      (uint64)(*args.Nonce),
-		types.TxValueKeyGasLimit:   (uint64)(*args.Gas),
-		types.TxValueKeyGasPrice:   (*big.Int)(args.GasPrice),
+		types.TxValueKeyNonce:      (uint64)(*args.AccountNonce),
+		types.TxValueKeyGasLimit:   (uint64)(*args.GasLimit),
+		types.TxValueKeyGasPrice:   (*big.Int)(args.Price),
 		types.TxValueKeyFrom:       args.From,
 		types.TxValueKeyAccountKey: serializer.GetKey(),
 	})
@@ -525,296 +732,5 @@ func (args *AccountUpdateTxArgs) toTransaction() (*types.Transaction, error) {
 		return nil, err
 	}
 
-	return tx, nil
-}
-
-// EthTransactionArgs represents the arguments to construct a new transaction
-// or a message call.
-// TransactionArgs in go-ethereum has been renamed to EthTransactionArgs.
-// TransactionArgs is defined in go-ethereum's internal package, so TransactionArgs is redefined here as EthTransactionArgs.
-type EthTransactionArgs struct {
-	From                 *common.Address `json:"from"`
-	To                   *common.Address `json:"to"`
-	Gas                  *hexutil.Uint64 `json:"gas"`
-	GasPrice             *hexutil.Big    `json:"gasPrice"`
-	MaxFeePerGas         *hexutil.Big    `json:"maxFeePerGas"`
-	MaxPriorityFeePerGas *hexutil.Big    `json:"maxPriorityFeePerGas"`
-	Value                *hexutil.Big    `json:"value"`
-	Nonce                *hexutil.Uint64 `json:"nonce"`
-
-	// We accept "data" and "input" for backwards-compatibility reasons.
-	// "input" is the newer name and should be preferred by clients.
-	// Issue detail: https://github.com/ethereum/go-ethereum/issues/15628
-	Data  *hexutil.Bytes `json:"data"`
-	Input *hexutil.Bytes `json:"input"`
-
-	// Introduced by AccessListTxType transaction.
-	AccessList *types.AccessList `json:"accessList,omitempty"`
-	ChainID    *hexutil.Big      `json:"chainId,omitempty"`
-}
-
-// from retrieves the transaction sender address.
-func (args *EthTransactionArgs) from() common.Address {
-	if args.From == nil {
-		return common.Address{}
-	}
-	return *args.From
-}
-
-func (args *EthTransactionArgs) gas() *hexutil.Uint64 {
-	return args.Gas
-}
-
-func (args *EthTransactionArgs) gasPrice() *hexutil.Big {
-	return args.GasPrice
-}
-
-func (args *EthTransactionArgs) nonce() *hexutil.Uint64 {
-	return args.Nonce
-}
-
-// data retrieves the transaction calldata. Input field is preferred.
-func (args *EthTransactionArgs) data() []byte {
-	if args.Input != nil {
-		return *args.Input
-	}
-	if args.Data != nil {
-		return *args.Data
-	}
-	return nil
-}
-
-func (args *EthTransactionArgs) setGas(gas *hexutil.Uint64) {
-	args.Gas = gas
-}
-
-func (args *EthTransactionArgs) setGasPrice(gasPrice *hexutil.Big) {
-	args.GasPrice = gasPrice
-}
-
-// setDefaults fills in default values for unspecified tx fields.
-func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) error {
-	if args.GasPrice != nil && (args.MaxFeePerGas != nil || args.MaxPriorityFeePerGas != nil) {
-		return errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
-	}
-	// After london, default to 1559 uncles gasPrice is set
-	head := b.CurrentBlock().Header()
-	isMagma := head.BaseFee != nil
-
-	fixedBaseFee := new(big.Int).SetUint64(params.ZeroBaseFee)
-
-	// b.SuggestPrice = unitPrice, for before Magma
-	//                = baseFee,   for after Magma
-	gasPrice, err := b.SuggestPrice(ctx)
-	if err != nil {
-		return err
-	}
-
-	// If user specifies both maxPriorityFee and maxFee, then we do not
-	// need to consult the chain for defaults. It's definitely a London tx.
-	if args.MaxPriorityFeePerGas == nil || args.MaxFeePerGas == nil {
-		if b.ChainConfig().IsEthTxTypeForkEnabled(head.Number) && args.GasPrice == nil {
-			if args.MaxPriorityFeePerGas == nil {
-				args.MaxPriorityFeePerGas = (*hexutil.Big)(gasPrice)
-			}
-			if args.MaxFeePerGas == nil {
-				// Before Magma hard fork, `gasFeeCap` was set to `baseFee*2 + maxPriorityFeePerGas` by default.
-				gasFeeCap := new(big.Int).Add(
-					(*big.Int)(args.MaxPriorityFeePerGas),
-					new(big.Int).Mul(fixedBaseFee, big.NewInt(2)),
-				)
-				if isMagma {
-					// After Magma hard fork, `gasFeeCap` was set to `baseFee*2` by default.
-					gasFeeCap = gasPrice
-				}
-				args.MaxFeePerGas = (*hexutil.Big)(gasFeeCap)
-			}
-			if isMagma {
-				if args.MaxFeePerGas.ToInt().Cmp(new(big.Int).Div(gasPrice, common.Big2)) < 0 {
-					return fmt.Errorf("maxFeePerGas (%v) < BaseFee (%v)", args.MaxFeePerGas, gasPrice)
-				}
-			} else if args.MaxPriorityFeePerGas.ToInt().Cmp(gasPrice) != 0 || args.MaxFeePerGas.ToInt().Cmp(gasPrice) != 0 {
-				return fmt.Errorf("only %s is allowed to be used as maxFeePerGas and maxPriorityPerGas", gasPrice.Text(16))
-			}
-			if args.MaxFeePerGas.ToInt().Cmp(args.MaxPriorityFeePerGas.ToInt()) < 0 {
-				return fmt.Errorf("maxFeePerGas (%v) < maxPriorityFeePerGas (%v)", args.MaxFeePerGas, args.MaxPriorityFeePerGas)
-			}
-		} else {
-			if args.MaxFeePerGas != nil || args.MaxPriorityFeePerGas != nil {
-				return errors.New("maxFeePerGas or maxPriorityFeePerGas specified but london is not active yet")
-			}
-			if args.GasPrice == nil {
-				// TODO-Kaia: Original logic of Ethereum uses b.SuggestTipCap which suggests TipCap, not a GasPrice.
-				// But Kaia currently uses fixed unit price determined by Governance, so using b.SuggestPrice
-				// is fine as now.
-				if b.ChainConfig().IsEthTxTypeForkEnabled(head.Number) {
-					// TODO-Kaia: Kaia is using fixed BaseFee(0) as now but
-					// if we apply dynamic BaseFee, we should add calculated BaseFee instead of params.ZeroBaseFee.
-					gasPrice.Add(gasPrice, new(big.Int).SetUint64(params.ZeroBaseFee))
-				}
-				args.GasPrice = (*hexutil.Big)(gasPrice)
-			}
-		}
-	} else {
-		// Both maxPriorityFee and maxFee set by caller. Sanity-check their internal relation
-		if isMagma {
-			if args.MaxFeePerGas.ToInt().Cmp(new(big.Int).Div(gasPrice, common.Big2)) < 0 {
-				return fmt.Errorf("maxFeePerGas (%v) < BaseFee (%v)", args.MaxFeePerGas, gasPrice)
-			}
-		} else {
-			if args.MaxFeePerGas.ToInt().Cmp(args.MaxPriorityFeePerGas.ToInt()) < 0 {
-				return fmt.Errorf("maxFeePerGas (%v) < maxPriorityFeePerGas (%v)", args.MaxFeePerGas, args.MaxPriorityFeePerGas)
-			}
-		}
-	}
-	if args.Value == nil {
-		args.Value = new(hexutil.Big)
-	}
-	if args.Nonce == nil {
-		nonce := b.GetPoolNonce(ctx, args.from())
-		args.Nonce = (*hexutil.Uint64)(&nonce)
-	}
-	if args.Data != nil && args.Input != nil && !bytes.Equal(*args.Data, *args.Input) {
-		return errors.New(`both "data" and "input" are set and not equal. Please use "input" to pass transaction call data`)
-	}
-	if args.To == nil && len(args.data()) == 0 {
-		return errors.New(`contract creation without any data provided`)
-	}
-	// Estimate the gas usage if necessary.
-	if args.Gas == nil {
-		// These fields are immutable during the estimation, safe to
-		// pass the pointer directly.
-		data := args.data()
-		callArgs := EthTransactionArgs{
-			From:                 args.From,
-			To:                   args.To,
-			GasPrice:             args.GasPrice,
-			MaxFeePerGas:         args.MaxFeePerGas,
-			MaxPriorityFeePerGas: args.MaxPriorityFeePerGas,
-			Value:                args.Value,
-			Data:                 (*hexutil.Bytes)(&data),
-			AccessList:           args.AccessList,
-		}
-		pendingBlockNr := rpc.NewBlockNumberOrHashWithNumber(rpc.PendingBlockNumber)
-		gasCap := uint64(0)
-		if rpcGasCap := b.RPCGasCap(); rpcGasCap != nil {
-			gasCap = rpcGasCap.Uint64()
-		}
-		estimated, err := EthDoEstimateGas(ctx, b, callArgs, pendingBlockNr, gasCap)
-		if err != nil {
-			return err
-		}
-		args.Gas = &estimated
-		logger.Trace("Estimate gas usage automatically", "gas", args.Gas)
-	}
-	if args.ChainID == nil {
-		id := (*hexutil.Big)(b.ChainConfig().ChainID)
-		args.ChainID = id
-	}
-	return nil
-}
-
-// ToMessage change EthTransactionArgs to types.Transaction in Kaia.
-func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsicGas uint64) (*types.Transaction, error) {
-	// Reject invalid combinations of pre- and post-1559 fee styles
-	if args.GasPrice != nil && (args.MaxFeePerGas != nil || args.MaxPriorityFeePerGas != nil) {
-		return nil, errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
-	} else if args.MaxFeePerGas != nil && args.MaxPriorityFeePerGas != nil {
-		if args.MaxFeePerGas.ToInt().Cmp(args.MaxPriorityFeePerGas.ToInt()) < 0 {
-			return nil, errors.New("MaxPriorityFeePerGas is greater than MaxFeePerGas")
-		}
-	}
-	// Set sender address or use zero address if none specified.
-	addr := args.from()
-
-	// Set default gas & gas price if none were set
-	gas := globalGasCap
-	if gas == 0 {
-		gas = params.UpperGasLimit
-	}
-	if args.Gas != nil {
-		gas = uint64(*args.Gas)
-	}
-	if globalGasCap != 0 && globalGasCap < gas {
-		logger.Warn("Caller gas above allowance, capping", "requested", gas, "cap", globalGasCap)
-		gas = globalGasCap
-	}
-
-	// Do not update gasPrice unless any of args.GasPrice and args.MaxFeePerGas is specified.
-	gasPrice := new(big.Int)
-	if baseFee.Cmp(new(big.Int).SetUint64(params.ZeroBaseFee)) == 0 {
-		// If there's no basefee, then it must be a non-1559 execution
-		if args.GasPrice != nil {
-			gasPrice = args.GasPrice.ToInt()
-		} else if args.MaxFeePerGas != nil {
-			gasPrice = args.MaxFeePerGas.ToInt()
-		}
-	} else {
-		if args.GasPrice != nil {
-			gasPrice = args.GasPrice.ToInt()
-		} else if args.MaxFeePerGas != nil {
-			// User specified 1559 gas fields (or none), use those
-			gasPrice = args.MaxFeePerGas.ToInt()
-		} else {
-			// User specified neither GasPrice nor MaxFeePerGas, use baseFee
-			gasPrice = new(big.Int).Mul(baseFee, common.Big2)
-		}
-	}
-
-	value := new(big.Int)
-	if args.Value != nil {
-		value = args.Value.ToInt()
-	}
-	data := args.data()
-
-	var accessList types.AccessList
-	if args.AccessList != nil {
-		accessList = *args.AccessList
-	}
-	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, data, false, intrinsicGas, accessList), nil
-}
-
-// toTransaction converts the arguments to a transaction.
-// This assumes that setDefaults has been called.
-func (args *EthTransactionArgs) toTransaction() (*types.Transaction, error) {
-	var tx *types.Transaction
-	switch {
-	case args.MaxFeePerGas != nil:
-		al := types.AccessList{}
-		if args.AccessList != nil {
-			al = *args.AccessList
-		}
-		tx = types.NewTx(&types.TxInternalDataEthereumDynamicFee{
-			ChainID:      (*big.Int)(args.ChainID),
-			AccountNonce: uint64(*args.Nonce),
-			GasTipCap:    (*big.Int)(args.MaxPriorityFeePerGas),
-			GasFeeCap:    (*big.Int)(args.MaxFeePerGas),
-			GasLimit:     uint64(*args.Gas),
-			Recipient:    args.To,
-			Amount:       (*big.Int)(args.Value),
-			Payload:      args.data(),
-			AccessList:   al,
-		})
-	case args.AccessList != nil:
-		tx = types.NewTx(&types.TxInternalDataEthereumAccessList{
-			ChainID:      (*big.Int)(args.ChainID),
-			AccountNonce: uint64(*args.Nonce),
-			Recipient:    args.To,
-			GasLimit:     uint64(*args.Gas),
-			Price:        (*big.Int)(args.GasPrice),
-			Amount:       (*big.Int)(args.Value),
-			Payload:      args.data(),
-			AccessList:   *args.AccessList,
-		})
-	default:
-		tx = types.NewTx(&types.TxInternalDataLegacy{
-			AccountNonce: uint64(*args.Nonce),
-			Price:        (*big.Int)(args.GasPrice),
-			GasLimit:     uint64(*args.Gas),
-			Recipient:    args.To,
-			Amount:       (*big.Int)(args.Value),
-			Payload:      args.data(),
-		})
-	}
 	return tx, nil
 }

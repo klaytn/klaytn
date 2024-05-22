@@ -57,10 +57,10 @@ func (s *SuiteContractCaller) TearDownTest() {
 }
 
 func setExpectation(m *mocks.MockBlockchainAPI, contract *common.Address, data, result []byte) {
-	arg := api.CallArgs{
-		From: common.Address{},
-		To:   contract,
-		Data: data,
+	arg := api.TransactionArgs{
+		From:      nil,
+		Recipient: contract,
+		Payload:   (*hexutil.Bytes)(&data),
 	}
 
 	m.EXPECT().Call(gomock.Any(), gomock.Eq(arg), gomock.Eq(rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber))).Return(result, nil).Times(1)

@@ -328,8 +328,8 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 	if args.AccountNonce == nil {
 		// Hold the addresse's mutex around signing to prevent concurrent assignment of
 		// the same nonce to multiple accounts.
-		s.nonceLock.LockAddr(args.From)
-		defer s.nonceLock.UnlockAddr(args.From)
+		s.nonceLock.LockAddr(args.from())
+		defer s.nonceLock.UnlockAddr(args.from())
 	}
 
 	signedTx, err := s.SignTransaction(ctx, args)
@@ -429,7 +429,7 @@ func (s *PublicTransactionPoolAPI) SignTransaction(ctx context.Context, args Sen
 	if err != nil {
 		return nil, err
 	}
-	signedTx, err := s.sign(args.From, tx)
+	signedTx, err := s.sign(args.from(), tx)
 	if err != nil {
 		return nil, err
 	}
@@ -501,7 +501,7 @@ func (s *PublicTransactionPoolAPI) PendingTransactions() ([]map[string]interface
 
 // Resend accepts an existing transaction and a new gas price and limit. It will remove
 // the given transaction from the pool and reinsert it with the new gas price and limit.
-func (s *PublicTransactionPoolAPI) Resend(ctx context.Context, sendArgs SendTxArgs, gasPrice *hexutil.Big, gasLimit *hexutil.Uint64) (common.Hash, error) {
+func (s *PublicTransactionPoolAPI) Resend(ctx context.Context, sendArgs TransactionArgs, gasPrice *hexutil.Big, gasLimit *hexutil.Uint64) (common.Hash, error) {
 	return resend(s, ctx, &sendArgs, gasPrice, gasLimit)
 }
 

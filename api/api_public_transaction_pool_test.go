@@ -118,10 +118,9 @@ func TestTxTypeSupport(t *testing.T) {
 	// test for all possible tx types
 	for txType, internalData := range internalDataTypes {
 		// args contains values of tx fields
-		args := SendTxArgs{
-			TypeInt: &txType,
-			From:    testFrom,
-		}
+		args := SendTxArgs{}
+		args.TypeInt = &txType
+		args.From = &testFrom
 
 		// set required fields of each typed tx
 		internalType := reflect.TypeOf(internalData)

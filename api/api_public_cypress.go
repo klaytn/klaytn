@@ -23,6 +23,7 @@ import (
 
 	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/contracts/contracts/system_contracts/misc"
 	"github.com/klaytn/klaytn/networks/rpc"
 )
@@ -48,9 +49,9 @@ func (s *PublicBlockChainAPI) callCypressCreditGetFunc(ctx context.Context, pars
 		return nil, err
 	}
 
-	args := CallArgs{
-		To:   &cypressCreditContractAddress,
-		Data: abiGet,
+	args := TransactionArgs{
+		Recipient: &cypressCreditContractAddress,
+		Payload:   (*hexutil.Bytes)(&abiGet),
 	}
 	ret, err := s.Call(ctx, args, latestBlockNrOrHash)
 	if err != nil {

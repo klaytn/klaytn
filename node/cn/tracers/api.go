@@ -822,7 +822,7 @@ func (api *CommonAPI) TraceTransaction(ctx context.Context, hash common.Hash, co
 // TraceCall lets you trace a given kaia_call. It collects the structured logs
 // created during the execution of EVM if the given transaction was added on
 // top of the provided block and returns them as a JSON object.
-func (api *CommonAPI) TraceCall(ctx context.Context, args kaiaapi.CallArgs, blockNrOrHash rpc.BlockNumberOrHash, config *TraceConfig) (interface{}, error) {
+func (api *CommonAPI) TraceCall(ctx context.Context, args kaiaapi.TransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, config *TraceConfig) (interface{}, error) {
 	if !api.unsafeTrace {
 		if atomic.LoadInt32(&heavyAPIRequestCount) >= HeavyAPIRequestLimit {
 			return nil, fmt.Errorf("heavy debug api requests exceed the limit: %d", int64(HeavyAPIRequestLimit))
@@ -856,7 +856,7 @@ func (api *CommonAPI) TraceCall(ctx context.Context, args kaiaapi.CallArgs, bloc
 	}
 
 	// Execute the trace
-	intrinsicGas, err := types.IntrinsicGas(args.InputData(), nil, args.To == nil, api.backend.ChainConfig().Rules(block.Number()))
+	intrinsicGas, err := types.IntrinsicGas(args.InputData(), nil, args.Recipient == nil, api.backend.ChainConfig().Rules(block.Number()))
 	if err != nil {
 		return nil, err
 	}

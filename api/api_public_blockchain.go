@@ -271,34 +271,7 @@ func (s *PublicBlockChainAPI) IsSenderTxHashIndexingEnabled() bool {
 	return s.b.IsSenderTxHashIndexingEnabled()
 }
 
-// CallArgs represents the arguments for a call.
-type CallArgs struct {
-	From                 common.Address  `json:"from"`
-	To                   *common.Address `json:"to"`
-	Gas                  hexutil.Uint64  `json:"gas"`
-	GasPrice             *hexutil.Big    `json:"gasPrice"`
-	MaxFeePerGas         *hexutil.Big    `json:"maxFeePerGas"`
-	MaxPriorityFeePerGas *hexutil.Big    `json:"maxPriorityFeePerGas"`
-	Value                hexutil.Big     `json:"value"`
-	Data                 hexutil.Bytes   `json:"data"`
-	Input                hexutil.Bytes   `json:"input"`
-
-	// Introduced by AccessListTxType transaction.
-	AccessList *types.AccessList `json:"accessList,omitempty"`
-	ChainID    *hexutil.Big      `json:"chainId,omitempty"`
-}
-
-func (args *CallArgs) InputData() []byte {
-	if args.Input != nil {
-		return args.Input
-	}
-	if args.Data != nil {
-		return args.Data
-	}
-	return nil
-}
-
-func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.BlockNumberOrHash, vmCfg vm.Config, timeout time.Duration, globalGasCap *big.Int) (*blockchain.ExecutionResult, uint64, error) {
+func DoCall(ctx context.Context, b Backend, args TransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, vmCfg vm.Config, timeout time.Duration, globalGasCap *big.Int) (*blockchain.ExecutionResult, uint64, error) {
 	defer func(start time.Time) { logger.Debug("Executing EVM call finished", "runtime", time.Since(start)) }(time.Now())
 
 	state, header, err := b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
@@ -317,7 +290,7 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.Blo
 	// this makes sure resources are cleaned up.
 	defer cancel()
 
-	intrinsicGas, err := types.IntrinsicGas(args.InputData(), nil, args.To == nil, b.ChainConfig().Rules(header.Number))
+	intrinsicGas, err := types.IntrinsicGas(args.InputData(), nil, args.Recipient == nil, b.ChainConfig().Rules(header.Number))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -377,7 +350,7 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.Blo
 
 // Call executes the given transaction on the state for the given block number or hash.
 // It doesn't make and changes in the state/blockchain and is useful to execute and retrieve values.
-func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
+func (s *PublicBlockChainAPI) Call(ctx context.Context, args TransactionArgs, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
 	gasCap := big.NewInt(0)
 	if rpcGasCap := s.b.RPCGasCap(); rpcGasCap != nil {
 		gasCap = rpcGasCap
@@ -393,7 +366,7 @@ func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNrOr
 	return result.Return(), result.Unwrap()
 }
 
-func (s *PublicBlockChainAPI) EstimateComputationCost(ctx context.Context, args CallArgs, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Uint64, error) {
+func (s *PublicBlockChainAPI) EstimateComputationCost(ctx context.Context, args TransactionArgs, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Uint64, error) {
 	gasCap := big.NewInt(0)
 	if rpcGasCap := s.b.RPCGasCap(); rpcGasCap != nil {
 		gasCap = rpcGasCap
@@ -403,7 +376,7 @@ func (s *PublicBlockChainAPI) EstimateComputationCost(ctx context.Context, args 
 }
 
 // EstimateGas returns an estimate of the amount of gas needed to execute the given transaction against the latest block.
-func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (hexutil.Uint64, error) {
+func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args TransactionArgs) (hexutil.Uint64, error) {
 	gasCap := uint64(0)
 	if rpcGasCap := s.b.RPCGasCap(); rpcGasCap != nil {
 		gasCap = rpcGasCap.Uint64()
@@ -411,23 +384,25 @@ func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (h
 	return s.DoEstimateGas(ctx, s.b, args, big.NewInt(int64(gasCap)))
 }
 
-func (s *PublicBlockChainAPI) DoEstimateGas(ctx context.Context, b Backend, args CallArgs, gasCap *big.Int) (hexutil.Uint64, error) {
-	var feeCap *big.Int
-	if args.GasPrice != nil {
-		feeCap = args.GasPrice.ToInt()
-	} else {
-		feeCap = common.Big0
+func (s *PublicBlockChainAPI) DoEstimateGas(ctx context.Context, b Backend, args TransactionArgs, gasCap *big.Int) (hexutil.Uint64, error) {
+	var gasLimit uint64 = 0
+	if args.GasLimit != nil {
+		gasLimit = uint64(*args.GasLimit)
+	}
+	feeCap := common.Big0
+	if args.Price != nil {
+		feeCap = args.Price.ToInt()
 	}
 
 	state, _, err := b.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
 	if err != nil {
 		return 0, err
 	}
-	balance := state.GetBalance(args.From) // from can't be nil
+	balance := state.GetBalance(args.from()) // from can't be nil
 
 	// Create a helper to check if a gas allowance results in an executable transaction
 	executable := func(gas uint64) (bool, *blockchain.ExecutionResult, error) {
-		args.Gas = hexutil.Uint64(gas)
+		args.GasLimit = (*hexutil.Uint64)(&gas)
 		result, _, err := DoCall(ctx, b, args, rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber), vm.Config{ComputationCostLimit: params.OpcodeComputationCostLimitInfinite}, s.b.RPCEVMTimeout(), gasCap)
 		if err != nil {
 			if errors.Is(err, blockchain.ErrIntrinsicGas) {
@@ -438,7 +413,7 @@ func (s *PublicBlockChainAPI) DoEstimateGas(ctx context.Context, b Backend, args
 		return result.Failed(), result, nil
 	}
 
-	return blockchain.DoEstimateGas(ctx, uint64(args.Gas), gasCap.Uint64(), args.Value.ToInt(), feeCap, balance, executable)
+	return blockchain.DoEstimateGas(ctx, gasLimit, gasCap.Uint64(), args.Amount.ToInt(), feeCap, balance, executable)
 }
 
 // ExecutionResult groups all structured logs emitted by the EVM
@@ -462,7 +437,7 @@ type AccessListResult struct {
 
 // CreateAccessList creates a EIP-2930 type AccessList for the given transaction.
 // Reexec and BlockNrOrHash can be specified to create the accessList on top of a certain state.
-func (s *PublicBlockChainAPI) CreateAccessList(ctx context.Context, args EthTransactionArgs, blockNrOrHash *rpc.BlockNumberOrHash) (interface{}, error) {
+func (s *PublicBlockChainAPI) CreateAccessList(ctx context.Context, args TransactionArgs, blockNrOrHash *rpc.BlockNumberOrHash) (interface{}, error) {
 	return doCreateAccessList(ctx, s.b, args, blockNrOrHash)
 }
 
@@ -674,61 +649,4 @@ func newRPCTransactionFromBlockHash(b *types.Block, hash common.Hash) map[string
 		}
 	}
 	return nil
-}
-
-func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsicGas uint64) (*types.Transaction, error) {
-	if args.GasPrice != nil && (args.MaxFeePerGas != nil || args.MaxPriorityFeePerGas != nil) {
-		return nil, errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
-	} else if args.MaxFeePerGas != nil && args.MaxPriorityFeePerGas != nil {
-		if args.MaxFeePerGas.ToInt().Cmp(args.MaxPriorityFeePerGas.ToInt()) < 0 {
-			return nil, errors.New("MaxPriorityFeePerGas is greater than MaxFeePerGas")
-		}
-	}
-
-	// Set sender address or use zero address if none specified.
-	addr := args.From
-
-	// Set default gas & gas price if none were set
-	gas := globalGasCap
-	if gas == 0 {
-		gas = params.UpperGasLimit
-	}
-	if args.Gas != 0 {
-		gas = uint64(args.Gas)
-	}
-	if globalGasCap != 0 && globalGasCap < gas {
-		logger.Warn("Caller gas above allowance, capping", "requested", gas, "cap", globalGasCap)
-		gas = globalGasCap
-	}
-
-	// Do not update gasPrice unless any of args.GasPrice and args.MaxFeePerGas is specified.
-	gasPrice := new(big.Int)
-	if baseFee.Cmp(new(big.Int).SetUint64(params.ZeroBaseFee)) == 0 {
-		// If baseFee is zero, then it must be a magma hardfork
-		if args.GasPrice != nil {
-			gasPrice = args.GasPrice.ToInt()
-		} else if args.MaxFeePerGas != nil {
-			gasPrice = args.MaxFeePerGas.ToInt()
-		}
-	} else {
-		if args.GasPrice != nil {
-			gasPrice = args.GasPrice.ToInt()
-		} else if args.MaxFeePerGas != nil {
-			// User specified 1559 gas fields (or none), use those
-			gasPrice = args.MaxFeePerGas.ToInt()
-		} else {
-			// User specified neither GasPrice nor MaxFeePerGas, use baseFee
-			gasPrice = new(big.Int).Mul(baseFee, common.Big2)
-		}
-	}
-	value := new(big.Int)
-	if &args.Value != nil {
-		value = args.Value.ToInt()
-	}
-
-	var accessList types.AccessList
-	if args.AccessList != nil {
-		accessList = *args.AccessList
-	}
-	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, args.InputData(), false, intrinsicGas, accessList), nil
 }

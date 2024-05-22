@@ -697,7 +697,7 @@ func (diff *EthStateOverride) Apply(state *state.StateDB) error {
 //
 // Note, this function doesn't make and changes in the state/blockchain and is
 // useful to execute and retrieve values.
-func (api *EthereumAPI) Call(ctx context.Context, args EthTransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, overrides *EthStateOverride) (hexutil.Bytes, error) {
+func (api *EthereumAPI) Call(ctx context.Context, args TransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, overrides *EthStateOverride) (hexutil.Bytes, error) {
 	bcAPI := api.publicBlockChainAPI.b
 	gasCap := uint64(0)
 	if rpcGasCap := bcAPI.RPCGasCap(); rpcGasCap != nil {
@@ -716,7 +716,7 @@ func (api *EthereumAPI) Call(ctx context.Context, args EthTransactionArgs, block
 
 // EstimateGas returns an estimate of the amount of gas needed to execute the
 // given transaction against the current pending block.
-func (api *EthereumAPI) EstimateGas(ctx context.Context, args EthTransactionArgs, blockNrOrHash *rpc.BlockNumberOrHash) (hexutil.Uint64, error) {
+func (api *EthereumAPI) EstimateGas(ctx context.Context, args TransactionArgs, blockNrOrHash *rpc.BlockNumberOrHash) (hexutil.Uint64, error) {
 	bcAPI := api.publicBlockChainAPI.b
 	bNrOrHash := rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber)
 	if blockNrOrHash != nil {
@@ -1145,8 +1145,8 @@ func newEthTransactionReceipt(header *types.Header, tx *types.Transaction, b Bac
 
 // SendTransaction creates a transaction for the given argument, sign it and submit it to the
 // transaction pool.
-func (api *EthereumAPI) SendTransaction(ctx context.Context, args EthTransactionArgs) (common.Hash, error) {
-	if args.Nonce == nil {
+func (api *EthereumAPI) SendTransaction(ctx context.Context, args TransactionArgs) (common.Hash, error) {
+	if args.AccountNonce == nil {
 		// Hold the addresses mutex around signing to prevent concurrent assignment of
 		// the same nonce to multiple accounts.
 		api.publicTransactionPoolAPI.nonceLock.LockAddr(args.from())
@@ -1179,7 +1179,7 @@ type EthSignTransactionResult struct {
 // FillTransaction fills the defaults (nonce, gas, gasPrice or 1559 fields)
 // on a given unsigned transaction, and returns it to the caller for further
 // processing (signing + broadcast).
-func (api *EthereumAPI) FillTransaction(ctx context.Context, args EthTransactionArgs) (*EthSignTransactionResult, error) { // Set some sanity defaults and terminate on failure
+func (api *EthereumAPI) FillTransaction(ctx context.Context, args TransactionArgs) (*EthSignTransactionResult, error) { // Set some sanity defaults and terminate on failure
 	if err := args.setDefaults(ctx, api.publicTransactionPoolAPI.b); err != nil {
 		return nil, err
 	}
@@ -1228,16 +1228,16 @@ func (api *EthereumAPI) Sign(addr common.Address, data hexutil.Bytes) (hexutil.B
 // SignTransaction will sign the given transaction with the from account.
 // The node needs to have the private key of the account corresponding with
 // the given from address and it needs to be unlocked.
-func (api *EthereumAPI) SignTransaction(ctx context.Context, args EthTransactionArgs) (*EthSignTransactionResult, error) {
+func (api *EthereumAPI) SignTransaction(ctx context.Context, args TransactionArgs) (*EthSignTransactionResult, error) {
 	b := api.publicTransactionPoolAPI.b
 
-	if args.Gas == nil {
+	if args.GasLimit == nil {
 		return nil, fmt.Errorf("gas not specified")
 	}
-	if args.GasPrice == nil && (args.MaxPriorityFeePerGas == nil || args.MaxFeePerGas == nil) {
+	if args.Price == nil && (args.MaxPriorityFeePerGas == nil || args.MaxFeePerGas == nil) {
 		return nil, fmt.Errorf("missing gasPrice or maxFeePerGas/maxPriorityFeePerGas")
 	}
-	if args.Nonce == nil {
+	if args.AccountNonce == nil {
 		return nil, fmt.Errorf("nonce not specified")
 	}
 	if err := args.setDefaults(ctx, b); err != nil {
@@ -1288,7 +1288,7 @@ func (api *EthereumAPI) PendingTransactions() ([]*EthRPCTransaction, error) {
 
 // Resend accepts an existing transaction and a new gas price and limit. It will remove
 // the given transaction from the pool and reinsert it with the new gas price and limit.
-func (api *EthereumAPI) Resend(ctx context.Context, sendArgs EthTransactionArgs, gasPrice *hexutil.Big, gasLimit *hexutil.Uint64) (common.Hash, error) {
+func (api *EthereumAPI) Resend(ctx context.Context, sendArgs TransactionArgs, gasPrice *hexutil.Big, gasLimit *hexutil.Uint64) (common.Hash, error) {
 	return resend(api.publicTransactionPoolAPI, ctx, &sendArgs, gasPrice, gasLimit)
 }
 
@@ -1383,7 +1383,7 @@ func (api *EthereumAPI) rpcMarshalBlock(block *types.Block, inclMiner, inclTx, f
 	return fields, nil
 }
 
-func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, overrides *EthStateOverride, timeout time.Duration, globalGasCap uint64) (*blockchain.ExecutionResult, error) {
+func EthDoCall(ctx context.Context, b Backend, args TransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, overrides *EthStateOverride, timeout time.Duration, globalGasCap uint64) (*blockchain.ExecutionResult, error) {
 	defer func(start time.Time) { logger.Debug("Executing EVM call finished", "runtime", time.Since(start)) }(time.Now())
 
 	state, header, err := b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
@@ -1412,7 +1412,7 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	} else {
 		baseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
 	}
-	intrinsicGas, err := types.IntrinsicGas(args.data(), nil, args.To == nil, b.ChainConfig().Rules(header.Number))
+	intrinsicGas, err := types.IntrinsicGas(args.InputData(), nil, args.Recipient == nil, b.ChainConfig().Rules(header.Number))
 	if err != nil {
 		return nil, err
 	}
@@ -1462,23 +1462,23 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	return result, nil
 }
 
-func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, gasCap uint64) (hexutil.Uint64, error) {
+func EthDoEstimateGas(ctx context.Context, b Backend, args TransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, gasCap uint64) (hexutil.Uint64, error) {
 	// Use zero address if sender unspecified.
 	if args.From == nil {
 		args.From = new(common.Address)
 	}
 
 	var gasLimit uint64 = 0
-	if args.Gas != nil {
-		gasLimit = uint64(*args.Gas)
+	if args.GasLimit != nil {
+		gasLimit = uint64(*args.GasLimit)
 	}
 
 	// Normalize the max fee per gas the call is willing to spend.
 	var feeCap *big.Int = common.Big0
-	if args.GasPrice != nil && (args.MaxFeePerGas != nil || args.MaxPriorityFeePerGas != nil) {
+	if args.Price != nil && (args.MaxFeePerGas != nil || args.MaxPriorityFeePerGas != nil) {
 		return 0, errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
-	} else if args.GasPrice != nil {
-		feeCap = args.GasPrice.ToInt()
+	} else if args.Price != nil {
+		feeCap = args.Price.ToInt()
 	} else if args.MaxFeePerGas != nil {
 		feeCap = args.MaxFeePerGas.ToInt()
 	}
@@ -1490,7 +1490,7 @@ func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, b
 	balance := state.GetBalance(*args.From) // from can't be nil
 
 	executable := func(gas uint64) (bool, *blockchain.ExecutionResult, error) {
-		args.Gas = (*hexutil.Uint64)(&gas)
+		args.GasLimit = (*hexutil.Uint64)(&gas)
 		result, err := EthDoCall(ctx, b, args, rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber), nil, b.RPCEVMTimeout(), gasCap)
 		if err != nil {
 			if errors.Is(err, blockchain.ErrIntrinsicGas) {
@@ -1503,7 +1503,7 @@ func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, b
 		return result.Failed(), result, nil
 	}
 
-	return blockchain.DoEstimateGas(ctx, gasLimit, gasCap, args.Value.ToInt(), feeCap, balance, executable)
+	return blockchain.DoEstimateGas(ctx, gasLimit, gasCap, args.Amount.ToInt(), feeCap, balance, executable)
 }
 
 // checkTxFee is an internal function used to check whether the fee of
@@ -1530,7 +1530,7 @@ type accessListResult struct {
 	GasUsed    hexutil.Uint64    `json:"gasUsed"`
 }
 
-func doCreateAccessList(ctx context.Context, b Backend, args EthTransactionArgs, blockNrOrHash *rpc.BlockNumberOrHash) (interface{}, error) {
+func doCreateAccessList(ctx context.Context, b Backend, args TransactionArgs, blockNrOrHash *rpc.BlockNumberOrHash) (interface{}, error) {
 	bNrOrHash := rpc.NewBlockNumberOrHashWithNumber(rpc.PendingBlockNumber)
 	if blockNrOrHash != nil {
 		bNrOrHash = *blockNrOrHash
@@ -1548,14 +1548,14 @@ func doCreateAccessList(ctx context.Context, b Backend, args EthTransactionArgs,
 
 // CreateAccessList creates an EIP-2930 type AccessList for the given transaction.
 // Reexec and BlockNrOrHash can be specified to create the accessList on top of a certain state.
-func (api *EthereumAPI) CreateAccessList(ctx context.Context, args EthTransactionArgs, blockNrOrHash *rpc.BlockNumberOrHash) (interface{}, error) {
+func (api *EthereumAPI) CreateAccessList(ctx context.Context, args TransactionArgs, blockNrOrHash *rpc.BlockNumberOrHash) (interface{}, error) {
 	return doCreateAccessList(ctx, api.publicKaiaAPI.b, args, blockNrOrHash)
 }
 
 // AccessList creates an access list for the given transaction.
 // If the accesslist creation fails an error is returned.
 // If the transaction itself fails, an vmErr is returned.
-func AccessList(ctx context.Context, b Backend, blockNrOrHash rpc.BlockNumberOrHash, args EthTransactionArgs) (acl types.AccessList, gasUsed uint64, vmErr error, err error) {
+func AccessList(ctx context.Context, b Backend, blockNrOrHash rpc.BlockNumberOrHash, args TransactionArgs) (acl types.AccessList, gasUsed uint64, vmErr error, err error) {
 	// Retrieve the execution context
 	db, header, err := b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if db == nil || err != nil {
@@ -1571,17 +1571,17 @@ func AccessList(ctx context.Context, b Backend, blockNrOrHash rpc.BlockNumberOrH
 	precompiles := vm.ActivePrecompiles(rules)
 
 	toMsg := func() (*types.Transaction, error) {
-		intrinsicGas, err := types.IntrinsicGas(args.data(), nil, args.To == nil, rules)
+		intrinsicGas, err := types.IntrinsicGas(args.InputData(), nil, args.Recipient == nil, rules)
 		if err != nil {
 			return nil, err
 		}
 		return args.ToMessage(gasCap, header.BaseFee, intrinsicGas)
 	}
 
-	if args.Gas == nil {
+	if args.GasLimit == nil {
 		// Set gaslimit to maximum if the gas is not specified
 		upperGasLimit := hexutil.Uint64(params.UpperGasLimit)
-		args.Gas = &upperGasLimit
+		args.GasLimit = &upperGasLimit
 	}
 	if msg, err := toMsg(); err == nil {
 		baseFee := new(big.Int).SetUint64(params.ZeroBaseFee)
@@ -1597,10 +1597,10 @@ func AccessList(ctx context.Context, b Backend, blockNrOrHash rpc.BlockNumberOrH
 		return nil, 0, nil, err
 	}
 	var to common.Address
-	if args.To != nil {
-		to = *args.To
+	if args.Recipient != nil {
+		to = *args.Recipient
 	} else {
-		to = crypto.CreateAddress(args.from(), uint64(*args.Nonce))
+		to = crypto.CreateAddress(args.from(), uint64(*args.AccountNonce))
 	}
 
 	// Create an initial tracer
