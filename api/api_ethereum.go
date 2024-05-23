@@ -1116,13 +1116,8 @@ func newEthTransactionReceipt(header *types.Header, tx *types.Transaction, b Bac
 		"logs":              receipt.Logs,
 		"logsBloom":         receipt.Bloom,
 		"type":              hexutil.Uint(byte(typeInt)),
+		"effectiveGasPrice": receipt.EffectiveGasPrice,
 	}
-
-	// After Magma hard fork : return header.baseFee
-	// After EthTxType hard fork : use zero baseFee to calculate effective gas price for EthereumDynamicFeeTx :
-	//  return gas price of tx.
-	// Before EthTxType hard fork : return gas price of tx. (typed ethereum txs are not available.)
-	fields["effectiveGasPrice"] = hexutil.Uint64(tx.EffectiveGasPrice(header).Uint64())
 
 	// Always use the "status" field and Ignore the "root" field.
 	if receipt.Status != types.ReceiptStatusSuccessful {

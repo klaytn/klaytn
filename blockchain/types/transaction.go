@@ -309,10 +309,11 @@ func (tx *Transaction) EffectiveGasTip(baseFee *big.Int) *big.Int {
 }
 
 func (tx *Transaction) EffectiveGasPrice(header *Header) *big.Int {
+	// If Magma is enabled, it will return BaseFee
 	if header != nil && header.BaseFee != nil {
-		return header.BaseFee
+		return new(big.Int).Set(header.BaseFee)
 	}
-	// Only enters if Magma is not enabled. If Magma is enabled, it will return BaseFee in the above if statement.
+	// Only enters if Magma is not enabled.
 	if tx.Type() == TxTypeEthereumDynamicFee {
 		te := tx.GetTxInternalData().(TxInternalDataBaseFee)
 		return te.GetGasFeeCap()

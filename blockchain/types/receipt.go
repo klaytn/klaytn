@@ -21,6 +21,7 @@
 package types
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"unsafe"
@@ -28,6 +29,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 )
 
@@ -80,13 +82,13 @@ const (
 	ReceiptStatusErrNotSupported                         = uint(0x1d)
 	ReceiptStatusErrInvalidCodeFormat                    = uint(0x1e)
 	ReceiptStatusLast                                    = uint(0x1f) // Last value which is not an actual ReceiptStatus
-//	ReceiptStatusErrInvalidJumpDestination   // TODO-Klaytn-Issue615
-//	ReceiptStatusErrInvalidOpcode            // Default case, because no static message available
-//	ReceiptStatusErrStackUnderflow           // Default case, because no static message available
-//	ReceiptStatusErrStackOverflow            // Default case, because no static message available
-//	ReceiptStatusErrInsufficientBalance      // No receipt available for this error
-//	ReceiptStatusErrTotalTimeLimitReached    // No receipt available for this error
-//	ReceiptStatusErrGasUintOverflow          // TODO-Klaytn-Issue615
+	//	ReceiptStatusErrInvalidJumpDestination   // TODO-Klaytn-Issue615
+	//	ReceiptStatusErrInvalidOpcode            // Default case, because no static message available
+	//	ReceiptStatusErrStackUnderflow           // Default case, because no static message available
+	//	ReceiptStatusErrStackOverflow            // Default case, because no static message available
+	//	ReceiptStatusErrInsufficientBalance      // No receipt available for this error
+	//	ReceiptStatusErrTotalTimeLimitReached    // No receipt available for this error
+	//	ReceiptStatusErrGasUintOverflow          // TODO-Klaytn-Issue615
 
 )
 
@@ -98,9 +100,10 @@ type Receipt struct {
 	Logs   []*Log `json:"logs"              gencodec:"required"`
 
 	// Implementation fields (don't reorder!)
-	TxHash          common.Hash    `json:"transactionHash" gencodec:"required"`
-	ContractAddress common.Address `json:"contractAddress"`
-	GasUsed         uint64         `json:"gasUsed" gencodec:"required"`
+	TxHash            common.Hash    `json:"transactionHash" gencodec:"required"`
+	ContractAddress   common.Address `json:"contractAddress"`
+	GasUsed           uint64         `json:"gasUsed" gencodec:"required"`
+	EffectiveGasPrice *hexutil.Big   `json:"effectiveGasPrice"`
 }
 
 type receiptMarshaling struct {
@@ -214,13 +217,26 @@ func (r *ReceiptForStorage) DecodeRLP(s *rlp.Stream) error {
 type Receipts []*Receipt
 
 // Len returns the number of receipts in this list.
-func (r Receipts) Len() int { return len(r) }
+func (rs Receipts) Len() int { return len(rs) }
 
 // GetRlp returns the RLP encoding of one receipt from the list.
-func (r Receipts) GetRlp(i int) []byte {
-	bytes, err := rlp.EncodeToBytes(r[i])
+func (rs Receipts) GetRlp(i int) []byte {
+	bytes, err := rlp.EncodeToBytes(rs[i])
 	if err != nil {
 		panic(err)
 	}
 	return bytes
+}
+
+// DeriveFields fills the receipts with their computed fields based on consensus
+// only effectiveGasPrice is calculated here.
+func (rs Receipts) DeriveFields(config *params.ChainConfig, hash common.Hash, number uint64, header *Header, txs Transactions) error {
+	if len(txs) != len(rs) {
+		return errors.New("transaction and receipt count mismatch")
+	}
+
+	for i := 0; i < len(rs); i++ {
+		rs[i].EffectiveGasPrice = (*hexutil.Big)(txs[i].EffectiveGasPrice(header))
+	}
+	return nil
 }

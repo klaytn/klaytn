@@ -219,7 +219,7 @@ func RpcOutputReceipt(header *types.Header, tx *types.Transaction, blockHash com
 	fields["logsBloom"] = receipt.Bloom
 	fields["gasUsed"] = hexutil.Uint64(receipt.GasUsed)
 
-	fields["effectiveGasPrice"] = hexutil.Uint64(tx.EffectiveGasPrice(header).Uint64())
+	fields["effectiveGasPrice"] = receipt.EffectiveGasPrice
 
 	if receipt.Logs == nil {
 		fields["logs"] = [][]*types.Log{}

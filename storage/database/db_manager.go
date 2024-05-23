@@ -315,6 +315,7 @@ type DBManager interface {
 
 	Stat(string) (string, error)
 	Compact([]byte, []byte) error
+	SetChainConfig(config *params.ChainConfig)
 }
 
 type DBEntryType uint8
@@ -427,9 +428,10 @@ func getDBEntryConfig(originalDBC *DBConfig, i DBEntryType, dbDir string) *DBCon
 }
 
 type databaseManager struct {
-	config *DBConfig
-	dbs    []Database
-	cm     *cacheManager
+	config      *DBConfig
+	dbs         []Database
+	cm          *cacheManager
+	chainConfig *params.ChainConfig
 
 	// TODO-Kaia need to refine below.
 	// -merge status variable
@@ -1432,7 +1434,7 @@ func (dbm *databaseManager) ReadReceipts(blockHash common.Hash, number uint64) t
 	if len(data) == 0 {
 		return nil
 	}
-	// Convert the revceipts from their database form to their internal representation
+	// Convert the receipts from their database form to their internal representation
 	storageReceipts := []*types.ReceiptForStorage{}
 	if err := rlp.DecodeBytes(data, &storageReceipts); err != nil {
 		logger.Error("Invalid receipt array RLP", "blockHash", blockHash, "err", err)
@@ -1441,6 +1443,16 @@ func (dbm *databaseManager) ReadReceipts(blockHash common.Hash, number uint64) t
 	receipts := make(types.Receipts, len(storageReceipts))
 	for i, receipt := range storageReceipts {
 		receipts[i] = (*types.Receipt)(receipt)
+	}
+
+	block := dbm.ReadBlock(blockHash, number)
+	if block == nil {
+		logger.Error("Missing block but have receipt", "hash", blockHash, "number", number)
+		return nil
+	}
+	if err := receipts.DeriveFields(dbm.chainConfig, blockHash, number, block.Header(), block.Transactions()); err != nil {
+		logger.Error("Failed to derive block receipts fields", "hash", blockHash, "number", number, "err", err)
+		return nil
 	}
 	return receipts
 }
@@ -2950,6 +2962,10 @@ func (dbm *databaseManager) ReadChainDataFetcherCheckpoint() (uint64, error) {
 		return 0, nil
 	}
 	return binary.BigEndian.Uint64(data), nil
+}
+
+func (dbm *databaseManager) SetChainConfig(config *params.ChainConfig) {
+	dbm.chainConfig = config
 }
 
 func (dbm *databaseManager) NewSnapshotDBBatch() SnapshotDBBatch {
