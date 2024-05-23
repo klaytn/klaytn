@@ -22,12 +22,16 @@ package filters
 
 import (
 	"context"
+	"fmt"
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/gxhash"
 	"github.com/klaytn/klaytn/crypto"
@@ -232,7 +236,8 @@ func genReceipt(failed bool, cumulativeGasUsed uint64) *types.Receipt {
 
 func TestFilters(t *testing.T) {
 	var (
-		db         = database.NewMemoryDBManager()
+		db = database.NewMemoryDBManager()
+
 		mux        = new(event.TypeMux)
 		txFeed     = new(event.Feed)
 		rmLogsFeed = new(event.Feed)
@@ -241,75 +246,120 @@ func TestFilters(t *testing.T) {
 		backend    = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig}
 		key1, _    = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 		addr       = crypto.PubkeyToAddress(key1.PublicKey)
-
+		signer     = types.NewLondonSigner(big.NewInt(1))
+		// Logging contract
+		contract  = common.Address{0xfe}
+		contract2 = common.Address{0xff}
+		abiStr    = `[{"inputs":[],"name":"log0","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"t1","type":"uint256"}],"name":"log1","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"t1","type":"uint256"},{"internalType":"uint256","name":"t2","type":"uint256"}],"name":"log2","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"t1","type":"uint256"},{"internalType":"uint256","name":"t2","type":"uint256"},{"internalType":"uint256","name":"t3","type":"uint256"}],"name":"log3","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"t1","type":"uint256"},{"internalType":"uint256","name":"t2","type":"uint256"},{"internalType":"uint256","name":"t3","type":"uint256"},{"internalType":"uint256","name":"t4","type":"uint256"}],"name":"log4","outputs":[],"stateMutability":"nonpayable","type":"function"}]`
+		bytecode  = common.FromHex("608060405234801561001057600080fd5b50600436106100575760003560e01c80630aa731851461005c5780632a4c08961461006657806378b9a1f314610082578063c670f8641461009e578063c683d6a3146100ba575b600080fd5b6100646100d6565b005b610080600480360381019061007b9190610143565b6100dc565b005b61009c60048036038101906100979190610196565b6100e8565b005b6100b860048036038101906100b391906101d6565b6100f2565b005b6100d460048036038101906100cf9190610203565b6100fa565b005b600080a0565b808284600080a3505050565b8082600080a25050565b80600080a150565b80828486600080a450505050565b600080fd5b6000819050919050565b6101208161010d565b811461012b57600080fd5b50565b60008135905061013d81610117565b92915050565b60008060006060848603121561015c5761015b610108565b5b600061016a8682870161012e565b935050602061017b8682870161012e565b925050604061018c8682870161012e565b9150509250925092565b600080604083850312156101ad576101ac610108565b5b60006101bb8582860161012e565b92505060206101cc8582860161012e565b9150509250929050565b6000602082840312156101ec576101eb610108565b5b60006101fa8482850161012e565b91505092915050565b6000806000806080858703121561021d5761021c610108565b5b600061022b8782880161012e565b945050602061023c8782880161012e565b935050604061024d8782880161012e565b925050606061025e8782880161012e565b9150509295919450925056fea264697066735822122073a4b156f487e59970dc1ef449cc0d51467268f676033a17188edafcee861f9864736f6c63430008110033")
+		genesis   = blockchain.Genesis{Config: params.TestChainConfig, Alloc: blockchain.GenesisAlloc{
+			addr:      {Balance: big.NewInt(0).Mul(big.NewInt(100), big.NewInt(params.KAIA))},
+			contract:  {Balance: big.NewInt(0), Code: bytecode},
+			contract2: {Balance: big.NewInt(0), Code: bytecode},
+		}}
 		hash1 = common.BytesToHash([]byte("topic1"))
 		hash2 = common.BytesToHash([]byte("topic2"))
 		hash3 = common.BytesToHash([]byte("topic3"))
 		hash4 = common.BytesToHash([]byte("topic4"))
 	)
 	defer db.Close()
-
-	genesis := blockchain.GenesisBlockForTesting(db, addr, big.NewInt(1000000))
-	chain, receipts := blockchain.GenerateChain(params.TestChainConfig, genesis, gxhash.NewFaker(), db, 1000, func(i int, gen *blockchain.BlockGen) {
+	contractABI, err := abi.JSON(strings.NewReader(abiStr))
+	if err != nil {
+		t.Fatal(err)
+	}
+	chain, _ := blockchain.GenerateChain(params.TestChainConfig, genesis.MustCommit(db), gxhash.NewFaker(), db, 1000, func(i int, gen *blockchain.BlockGen) {
 		switch i {
 		case 1:
-			receipt := genReceipt(false, 0)
-			receipt.Logs = []*types.Log{
-				{
-					Address: addr,
-					Topics:  []common.Hash{hash1},
-				},
+			data, err := contractABI.Pack("log1", hash1.Big())
+			if err != nil {
+				t.Fatal(err)
 			}
-			gen.AddUncheckedReceipt(receipt)
-			gen.AddUncheckedTx(types.NewTransaction(1, common.HexToAddress("0x1"), big.NewInt(1), 1, big.NewInt(1), nil))
+			tx, _ := types.SignTx(types.NewTx(&types.TxInternalDataLegacy{
+				AccountNonce: 0,
+				Price:        big.NewInt(30000),
+				GasLimit:     30000,
+				Recipient:    &contract,
+				Payload:      data,
+				Amount:       big.NewInt(0),
+			}), signer, key1)
+			gen.AddTx(tx)
+			tx2, _ := types.SignTx(types.NewTx(&types.TxInternalDataLegacy{
+				AccountNonce: 1,
+				Price:        big.NewInt(30000),
+				GasLimit:     30000,
+				Recipient:    &contract2,
+				Payload:      data,
+				Amount:       big.NewInt(0),
+			}), signer, key1)
+			gen.AddTx(tx2)
 		case 2:
-			receipt := genReceipt(false, 0)
-			receipt.Logs = []*types.Log{
-				{
-					Address: addr,
-					Topics:  []common.Hash{hash2},
-				},
+			data, err := contractABI.Pack("log2", hash2.Big(), hash1.Big())
+			if err != nil {
+				t.Fatal(err)
 			}
-			gen.AddUncheckedReceipt(receipt)
-			gen.AddUncheckedTx(types.NewTransaction(2, common.HexToAddress("0x2"), big.NewInt(2), 2, big.NewInt(2), nil))
+			tx, _ := types.SignTx(types.NewTx(&types.TxInternalDataLegacy{
+				AccountNonce: 2,
+				Price:        big.NewInt(30000),
+				GasLimit:     30000,
+				Recipient:    &contract2,
+				Payload:      data,
+				Amount:       big.NewInt(0),
+			}), signer, key1)
+			gen.AddTx(tx)
 
 		case 998:
-			receipt := genReceipt(false, 0)
-			receipt.Logs = []*types.Log{
-				{
-					Address: addr,
-					Topics:  []common.Hash{hash3},
-				},
+			data, err := contractABI.Pack("log1", hash3.Big())
+			if err != nil {
+				t.Fatal(err)
 			}
-			gen.AddUncheckedReceipt(receipt)
-			gen.AddUncheckedTx(types.NewTransaction(998, common.HexToAddress("0x998"), big.NewInt(998), 998, big.NewInt(998), nil))
+			tx, _ := types.SignTx(types.NewTx(&types.TxInternalDataLegacy{
+				AccountNonce: 3,
+				Price:        big.NewInt(30000),
+				GasLimit:     30000,
+				Recipient:    &contract2,
+				Payload:      data,
+				Amount:       big.NewInt(0),
+			}), signer, key1)
+			gen.AddTx(tx)
 		case 999:
-			receipt := genReceipt(false, 0)
-			receipt.Logs = []*types.Log{
-				{
-					Address: addr,
-					Topics:  []common.Hash{hash4},
-				},
+			data, err := contractABI.Pack("log1", hash4.Big())
+			if err != nil {
+				t.Fatal(err)
 			}
-			gen.AddUncheckedReceipt(receipt)
-			gen.AddUncheckedTx(types.NewTransaction(999, common.HexToAddress("0x999"), big.NewInt(999), 999, big.NewInt(999), nil))
+			tx, _ := types.SignTx(types.NewTx(&types.TxInternalDataLegacy{
+				AccountNonce: 4,
+				Price:        big.NewInt(30000),
+				GasLimit:     30000,
+				Recipient:    &contract2,
+				Payload:      data,
+				Amount:       big.NewInt(0),
+			}), signer, key1)
+			gen.AddTx(tx)
 		}
 	})
-	for i, block := range chain {
-		db.WriteBlock(block)
-		db.WriteCanonicalHash(block.Hash(), block.NumberU64())
-		db.WriteHeadBlockHash(block.Hash())
-		db.WriteReceipts(block.Hash(), block.NumberU64(), receipts[i])
+	bc, err := blockchain.NewBlockChain(db, nil, params.TestChainConfig, gxhash.NewFaker(), vm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = bc.InsertChain(chain)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	filter := NewRangeFilter(backend, 0, -1, []common.Address{addr}, [][]common.Hash{{hash1, hash2, hash3, hash4}})
+	for i, block := range chain {
+		readBlock := db.ReadBlock(block.Hash(), block.NumberU64())
+		if readBlock == nil {
+			fmt.Println(i, ": block num is", block.NumberU64(), ", and it doesn't have block inside")
+		}
+	}
+	filter := NewRangeFilter(backend, 0, -1, []common.Address{contract2}, [][]common.Hash{{hash1, hash2, hash3, hash4}})
 
 	logs, _ := filter.Logs(context.Background())
 	if len(logs) != 4 {
 		t.Error("expected 4 log, got", len(logs))
 	}
 
-	filter = NewRangeFilter(backend, 900, 999, []common.Address{addr}, [][]common.Hash{{hash3}})
+	filter = NewRangeFilter(backend, 900, 999, []common.Address{contract2}, [][]common.Hash{{hash3}})
 	logs, _ = filter.Logs(context.Background())
 	if len(logs) != 1 {
 		t.Error("expected 1 log, got", len(logs))
@@ -318,7 +368,7 @@ func TestFilters(t *testing.T) {
 		t.Errorf("expected log[0].Topics[0] to be %x, got %x", hash3, logs[0].Topics[0])
 	}
 
-	filter = NewRangeFilter(backend, 990, -1, []common.Address{addr}, [][]common.Hash{{hash3}})
+	filter = NewRangeFilter(backend, 990, -1, []common.Address{contract2}, [][]common.Hash{{hash3}})
 	logs, _ = filter.Logs(context.Background())
 	if len(logs) != 1 {
 		t.Error("expected 1 log, got", len(logs))
@@ -330,8 +380,8 @@ func TestFilters(t *testing.T) {
 	filter = NewRangeFilter(backend, 1, 10, nil, [][]common.Hash{{hash1, hash2}})
 
 	logs, _ = filter.Logs(context.Background())
-	if len(logs) != 2 {
-		t.Error("expected 2 log, got", len(logs))
+	if len(logs) != 3 {
+		t.Error("expected 3 log, got", len(logs))
 	}
 
 	failHash := common.BytesToHash([]byte("fail"))
