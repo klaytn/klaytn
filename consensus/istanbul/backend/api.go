@@ -328,7 +328,7 @@ func (api *APIExtension) makeRPCBlockOutput(b *types.Block,
 			rpcTransactions[i] = kaiaApi.RpcOutputReceipt(head, tx, hash, head.Number.Uint64(), uint64(i), receipts[i], api.chain.Config())
 		} else {
 			// fill the transaction output if receipt is not found
-			rpcTransactions[i] = kaiaApi.NewRPCTransaction(b, tx, hash, head.Number.Uint64(), uint64(i), api.chain.Config())
+			rpcTransactions[i] = kaiaApi.NewRPCTransaction(head, tx, hash, head.Number.Uint64(), uint64(i), api.chain.Config())
 		}
 	}
 

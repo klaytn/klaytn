@@ -135,7 +135,11 @@ func (s *PublicTransactionPoolAPI) GetTransactionBySenderTxHash(ctx context.Cont
 func (s *PublicTransactionPoolAPI) GetTransactionByHash(ctx context.Context, hash common.Hash) map[string]interface{} {
 	// Try to return an already finalized transaction
 	if tx, blockHash, blockNumber, index := s.b.ChainDB().ReadTxAndLookupInfo(hash); tx != nil {
-		return newRPCTransaction(nil, tx, blockHash, blockNumber, index, s.b.ChainConfig())
+		header, err := s.b.HeaderByHash(ctx, blockHash)
+		if err != nil {
+			return nil
+		}
+		return newRPCTransaction(header, tx, blockHash, blockNumber, index, s.b.ChainConfig())
 	}
 	// No finalized transaction, try to retrieve it from the pool
 	if tx := s.b.GetPoolTransaction(hash); tx != nil {
@@ -210,7 +214,7 @@ func RpcOutputReceipt(header *types.Header, tx *types.Transaction, blockHash com
 		return nil
 	}
 
-	fields := newRPCTransaction(nil, tx, blockHash, blockNumber, index, config)
+	fields := newRPCTransaction(header, tx, blockHash, blockNumber, index, config)
 
 	if receipt.Status != types.ReceiptStatusSuccessful {
 		fields["status"] = hexutil.Uint(types.ReceiptStatusFailed)
