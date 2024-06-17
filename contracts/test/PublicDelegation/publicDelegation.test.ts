@@ -100,7 +100,7 @@ describe("PublicDelegation tests", function () {
     });
     it("#updateCommissionRate: can't set commissionRate to more than MAX_COMMISSION_RATE", async function () {
       const { pd1 } = await loadFixture(cnV3PublicDelegationFixture);
-      await expect(pd1.updateCommissionRate(3001)).to.be.revertedWith(
+      await expect(pd1.updateCommissionRate(10001)).to.be.revertedWith(
         "Commission rate is too high."
       );
     });

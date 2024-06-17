@@ -26,7 +26,7 @@ abstract contract PublicDelegationStorage is IPublicDelegation {
 
     uint256 public constant VERSION = 1;
 
-    uint256 public constant MAX_COMMISSION_RATE = 3e3; // 30%
+    uint256 public constant MAX_COMMISSION_RATE = 1e4; // 100%
 
     uint256 public constant COMMISSION_DENOMINATOR = 1e4;
 

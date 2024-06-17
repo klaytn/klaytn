@@ -771,7 +771,7 @@ describe("CnStakingV3 tests", function () {
         );
 
         // check public delegation contract
-        expect(await pd1.MAX_COMMISSION_RATE()).to.equal(3e3);
+        expect(await pd1.MAX_COMMISSION_RATE()).to.equal(1e4);
         expect(await pd1.COMMISSION_DENOMINATOR()).to.equal(1e4);
         expect(await pd1.CONTRACT_TYPE()).to.equal("PublicDelegation");
         expect(await pd1.VERSION()).to.equal(1);
@@ -786,7 +786,7 @@ describe("CnStakingV3 tests", function () {
         // Too high commission rate
         const pdParam = new ethers.utils.AbiCoder().encode(
           ["tuple(address, address,  uint256, string)"],
-          [[deployer.address, deployer.address, 3001, "GC"]]
+          [[deployer.address, deployer.address, 10001, "GC"]]
         );
 
         await expect(
