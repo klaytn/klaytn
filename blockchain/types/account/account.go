@@ -148,7 +148,7 @@ func NewAccountWithType(t AccountType) (Account, error) {
 	return nil, ErrUndefinedAccountType
 }
 
-// NewAccountWithType creates an Account object initialized with the given map.
+// NewAccountWithMap creates an Account object initialized with the given map.
 func NewAccountWithMap(t AccountType, values map[AccountValueKeyType]interface{}) (Account, error) {
 	switch t {
 	case LegacyAccountType:
